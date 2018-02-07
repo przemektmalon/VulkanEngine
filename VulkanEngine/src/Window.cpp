@@ -1,0 +1,63 @@
+#include "PCH.hpp"
+#include "Window.hpp"
+
+#ifdef _WIN32
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+#endif
+
+void Window::create(WindowCreateInfo * c)
+{
+#ifdef _WIN32
+
+	win32WindowClass.cbSize = sizeof(WNDCLASSEX);
+	win32WindowClass.lpfnWndProc = WndProc;
+	win32WindowClass.lpszClassName = LPCSTR(c->title);
+	win32WindowClass.hInstance = c->win32InstanceHandle;
+	win32WindowClass.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
+	win32WindowClass.style = CS_OWNDC;
+	win32WindowClass.cbClsExtra = 0;
+	win32WindowClass.cbWndExtra = 0;
+
+	if (!RegisterClassEx(&win32WindowClass))
+		DBG_SEVERE("Could not register win32 window class");
+
+	DWORD windowStyle;
+	if (c->borderless)
+		windowStyle = WS_POPUP;
+	else
+		windowStyle = (WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+
+	win32WindowHandle = CreateWindowEx(0, win32WindowClass.lpszClassName, win32WindowClass.lpszClassName, windowStyle,
+										c->posX, c->posY, c->width, c->height, 0, 0, c->win32InstanceHandle, 0);
+
+	if (!win32WindowHandle)
+		DBG_SEVERE("Could not create win32 window");
+
+	ShowWindow(win32WindowHandle, 1);
+
+#endif
+}
+
+bool Window::processMessages()
+{
+#ifdef _WIN32
+	MSG msg;
+	if (PeekMessage(&msg, win32WindowHandle, 0, 0, PM_REMOVE)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		return true;
+	}
+	return false;
+#endif
+}
+
+#ifdef _WIN32
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+#endif
