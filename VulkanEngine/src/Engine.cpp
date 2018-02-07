@@ -7,12 +7,14 @@
 */
 void Engine::start()
 {
+	DBG_INFO("Launching engine");
 #ifdef _WIN32
 	win32InstanceHandle = GetModuleHandle(NULL);
 #endif
 
 	createWindow();
 	initVulkanInstance();
+	initVulkanDevice();
 
 	while (engineRunning)
 	{
@@ -30,6 +32,7 @@ void Engine::start()
 */
 void Engine::createWindow()
 {
+	DBG_INFO("Creating window");
 	// Window creator requires OS specific handles
 	WindowCreateInfo wci;
 #ifdef _WIN32
@@ -52,6 +55,7 @@ void Engine::createWindow()
 */
 void Engine::initVulkanInstance()
 {
+	DBG_INFO("Creating vulkan instance");
 	VkApplicationInfo appInfo;
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pNext = 0;
@@ -88,6 +92,7 @@ void Engine::initVulkanInstance()
 		DBG_SEVERE("Could not create Vulkan instance");
 
 #ifdef ENABLE_VULKAN_VALIDATION
+	DBG_INFO("Creating validation layer debug callback");
 	VkDebugReportCallbackCreateInfoEXT createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
 	createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
@@ -99,8 +104,50 @@ void Engine::initVulkanInstance()
 		DBG_WARNING("Failed to create debug callback");
 	}
 #endif
+}
 
-	
+/*
+	@brief	Queries vulkan instance for device information, finds best one, initialises
+*/
+void Engine::initVulkanDevice()
+{
+	DBG_INFO("Picking Vulkan device")
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr);
+
+	if (deviceCount == 0)
+		DBG_SEVERE("No GPUs with Vulkan support!");
+
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(vkInstance, &deviceCount, devices.data());
+
+	for (const auto& device : devices) 
+	{
+		bool deviceSuitable = false;
+
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+		for (const auto& queueFamily : queueFamilies)
+		{
+			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			{
+				deviceSuitable = true;
+				break;
+			}
+		}
+
+		if (deviceSuitable)
+		{
+			physicalDevice = device;
+			break;
+		}
+	}
+
+	if (physicalDevice == VK_NULL_HANDLE)
+		DBG_SEVERE("Faled to find a suitable GPU");
 }
 
 void Engine::quit()
@@ -129,4 +176,5 @@ HINSTANCE Engine::win32InstanceHandle;
 #endif
 Window* Engine::window;
 VkInstance Engine::vkInstance;
+VkPhysicalDevice EnginephysicalDevice = VK_NULL_HANDLE;
 bool Engine::engineRunning = true;
