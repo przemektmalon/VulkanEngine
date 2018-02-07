@@ -8,6 +8,7 @@
 #endif
 
 #include "vulkan/vulkan.h"
+#include "Types.hpp"
 
 #define ENABLE_VULKAN_VALIDATION
 

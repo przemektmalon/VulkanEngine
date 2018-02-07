@@ -131,6 +131,7 @@
   <ItemGroup>
     <ClInclude Include="include\Engine.hpp" />
     <ClInclude Include="include\PCH.hpp" />
+    <ClInclude Include="include\Types.hpp" />
     <ClInclude Include="include\Window.hpp" />
   </ItemGroup>
   <ItemGroup>

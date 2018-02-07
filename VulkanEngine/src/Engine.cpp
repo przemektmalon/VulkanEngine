@@ -12,9 +12,10 @@ void Engine::start()
 	win32InstanceHandle = GetModuleHandle(NULL);
 #endif
 
-	createWindow();
 	initVulkanInstance();
-	initVulkanDevice();
+	createWindow();
+	pickVulkanPhysicalDevice();
+	initVulkanLogicalDevice();
 
 	while (engineRunning)
 	{
@@ -107,9 +108,9 @@ void Engine::initVulkanInstance()
 }
 
 /*
-	@brief	Queries vulkan instance for device information, finds best one, initialises
+	@brief	Queries vulkan instance for physical device information, picks best one
 */
-void Engine::initVulkanDevice()
+void Engine::pickVulkanPhysicalDevice()
 {
 	DBG_INFO("Picking Vulkan device")
 	uint32_t deviceCount = 0;
@@ -130,29 +131,85 @@ void Engine::initVulkanDevice()
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
+		int i = 0;
+
 		for (const auto& queueFamily : queueFamilies)
 		{
-			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			VkBool32 presentSupport = false;
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, window->vkSurface, &presentSupport);
+			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT && presentSupport)
 			{
 				deviceSuitable = true;
 				break;
 			}
+			++i;
 		}
 
 		if (deviceSuitable)
 		{
-			physicalDevice = device;
+			vkPhysicalDevice = device;
 			break;
 		}
 	}
 
-	if (physicalDevice == VK_NULL_HANDLE)
+	if (vkPhysicalDevice == VK_NULL_HANDLE)
 		DBG_SEVERE("Faled to find a suitable GPU");
 }
 
+/*
+	@brief	Creates a Vulkan logical device (from the *best* physical device) with specific features and queues
+*/
+void Engine::initVulkanLogicalDevice()
+{
+	DBG_INFO("Creating Vulkan logical device");
+	VkDeviceQueueCreateInfo qci;
+	qci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	qci.pNext = 0;
+	qci.flags = 0;
+	qci.queueFamilyIndex = 0;
+	qci.queueCount = 1;
+	float priority = 1.f;
+	qci.pQueuePriorities = &priority;
+
+	VkPhysicalDeviceFeatures pdf = {};
+
+	VkDeviceCreateInfo dci;
+	dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	dci.pNext = 0;
+	dci.flags = 0;
+	dci.queueCreateInfoCount = 1;
+	dci.pQueueCreateInfos = &qci;
+#ifdef ENABLE_VULKAN_VALIDATION
+	dci.enabledLayerCount = 1;
+	auto layerName = "VK_LAYER_LUNARG_standard_validation";
+	dci.ppEnabledLayerNames = &layerName;
+#elif
+	dci.enabledLayerCount = 0;
+	dci.ppEnabledLayerNames = 0;
+#endif
+	dci.enabledExtensionCount = 0;
+	dci.ppEnabledExtensionNames = 0;
+	dci.pEnabledFeatures = &pdf;
+
+	if (vkCreateDevice(vkPhysicalDevice, &dci, 0, &vkDevice) != VK_SUCCESS)
+		DBG_SEVERE("Could not create Vulkan logical device");
+
+	vkGetDeviceQueue(vkDevice, 0, 0, &vkGraphicsQueue);
+	vkGetDeviceQueue(vkDevice, 0, 0, &vkPresentQueue); /// Todo: Support for AMD gpus
+}
+
+/*
+	@brief	Cleanup memory on exit
+*/
 void Engine::quit()
 {
+	DBG_INFO("Exiting");
+#ifdef ENABLE_VULKAN_VALIDATION
+	PFN_vkDestroyDebugReportCallbackEXT(vkGetInstanceProcAddr(vkInstance, "vkDestroyDebugReportCallbackEXT"))(vkInstance, debugCallbackInfo, 0);
+#endif
+	window->destroy();
 	vkDestroyInstance(vkInstance, nullptr);
+	vkDestroyDevice(vkDevice, nullptr);
 }
 
 #ifdef ENABLE_VULKAN_VALIDATION
@@ -176,5 +233,7 @@ HINSTANCE Engine::win32InstanceHandle;
 #endif
 Window* Engine::window;
 VkInstance Engine::vkInstance;
-VkPhysicalDevice Engine::physicalDevice = VK_NULL_HANDLE;
+VkPhysicalDevice Engine::vkPhysicalDevice = VK_NULL_HANDLE;
+VkDevice Engine::vkDevice;
+VkQueue Engine::vkGraphicsQueue;
 bool Engine::engineRunning = true;

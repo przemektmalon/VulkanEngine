@@ -11,7 +11,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void Window::create(WindowCreateInfo * c)
 {
 #ifdef _WIN32
-
 	win32WindowClass.cbSize = sizeof(WNDCLASSEX);
 	win32WindowClass.lpfnWndProc = WndProc;
 	win32WindowClass.lpszClassName = LPCSTR(c->title);
@@ -38,7 +37,20 @@ void Window::create(WindowCreateInfo * c)
 
 	ShowWindow(win32WindowHandle, 1);
 
+	VkWin32SurfaceCreateInfoKHR sci;
+	sci.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+	sci.pNext = 0;
+	sci.flags = 0;
+	sci.hinstance = Engine::win32InstanceHandle;
+	sci.hwnd = win32WindowHandle;
+
+	vkCreateWin32SurfaceKHR(Engine::vkInstance, &sci, 0, &vkSurface);
 #endif
+}
+
+void Window::destroy()
+{
+	vkDestroySurfaceKHR(Engine::vkInstance, vkSurface, 0);
 }
 
 bool Window::processMessages()

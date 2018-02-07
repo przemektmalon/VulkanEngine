@@ -30,6 +30,9 @@
     <ClInclude Include="include\Window.hpp">
       <Filter>Header Files\OS</Filter>
     </ClInclude>
+    <ClInclude Include="include\Types.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Engine.cpp">

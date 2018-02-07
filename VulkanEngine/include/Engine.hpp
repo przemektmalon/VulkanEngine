@@ -25,13 +25,17 @@ public:
 #endif
 	static Window* window;
 	static VkInstance vkInstance;
-	static VkPhysicalDevice physicalDevice;
+	static VkPhysicalDevice vkPhysicalDevice;
+	static VkDevice vkDevice;
+	static VkQueue vkGraphicsQueue;
+	static VkQueue vkPresentQueue;
 	static bool engineRunning;
 
 	static void start();
 	static void createWindow();
 	static void initVulkanInstance();
-	static void initVulkanDevice();
+	static void pickVulkanPhysicalDevice();
+	static void initVulkanLogicalDevice();
 	static void quit();
 
 #ifdef ENABLE_VULKAN_VALIDATION

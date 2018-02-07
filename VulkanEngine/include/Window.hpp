@@ -23,10 +23,12 @@ public:
 	~Window() {}
 
 	void create(WindowCreateInfo* c);
+	void destroy();
 
 	// Returns true if all messages have been processed
 	bool processMessages();
 
+	VkSurfaceKHR vkSurface;
 #ifdef _WIN32
 	HINSTANCE win32InstanceHandle;	// Instance handle for this .exe
 	WNDCLASSEX win32WindowClass;	// Window class describing WndProc, icon, cursor, etc
