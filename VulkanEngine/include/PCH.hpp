@@ -31,6 +31,7 @@ bit 7 - background intensity
 	std::stringstream ss; \
 	ss << msg; \
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b11001111); \
+	std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
 	std::cout << "! SEVERE  -"; \
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
 	std::cout << " " << ss.str() << std::endl; \
@@ -60,7 +61,7 @@ bit 7 - background intensity
 	std::stringstream ss; \
 	ss << msg; \
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00011111); \
-	std::cout << "Info      -"; \
+	std::cout << " Info     -"; \
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
 	std::cout << " " << ss.str() << std::endl; }
 

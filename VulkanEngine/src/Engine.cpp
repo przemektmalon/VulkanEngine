@@ -176,5 +176,5 @@ HINSTANCE Engine::win32InstanceHandle;
 #endif
 Window* Engine::window;
 VkInstance Engine::vkInstance;
-VkPhysicalDevice EnginephysicalDevice = VK_NULL_HANDLE;
+VkPhysicalDevice Engine::physicalDevice = VK_NULL_HANDLE;
 bool Engine::engineRunning = true;
