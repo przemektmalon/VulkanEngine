@@ -1,4 +1,5 @@
 #include "PCH.hpp"
+#include "Engine.hpp"
 #include "Window.hpp"
 
 #ifdef _WIN32
@@ -57,7 +58,16 @@ bool Window::processMessages()
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	return DefWindowProc(hWnd, message, wParam, lParam);
+	switch (message)
+	{
+	case WM_KEYDOWN:
+	{
+		Engine::engineRunning = false;
+		break;
+	}
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
 }
 
 #endif

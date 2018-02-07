@@ -4,8 +4,12 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
+#define VK_USE_PLATFORM_WIN32_KHR
 #endif
 
+#include "vulkan/vulkan.h"
+
+#define ENABLE_VULKAN_VALIDATION
 
 // Debugging output
 #ifdef _WIN32
@@ -22,6 +26,7 @@ bit 6 - background red
 bit 7 - background intensity
 */
 
+#ifdef _MSC_VER
 #define DBG_SEVERE(msg) { \
 	std::stringstream ss; \
 	ss << msg; \
@@ -29,7 +34,19 @@ bit 7 - background intensity
 	std::cout << "! SEVERE  -"; \
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
 	std::cout << " " << ss.str() << std::endl; \
-	MessageBoxA(NULL, LPCSTR(ss.str().c_str()), "Severe Error!", MB_OK); }
+	MessageBoxA(NULL, LPCSTR(ss.str().c_str()), "Severe Error!", MB_OK); \
+	DebugBreak(); }
+#else
+#define DBG_SEVERE(msg) { \
+	std::stringstream ss; \
+	ss << msg; \
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b11001111); \
+	std::cout << "! SEVERE  -"; \
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
+	std::cout << " " << ss.str() << std::endl; \
+	MessageBoxA(NULL, LPCSTR(ss.str().c_str()), "Severe Error!", MB_OK); \
+	__builtin_trap(); }
+#endif
 
 #define DBG_WARNING(msg) { \
 	std::stringstream ss; \
