@@ -1,5 +1,6 @@
 
 #define _CRT_SECURE_NO_WARNINGS
+#define NOMINMAX
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -54,6 +55,7 @@ bit 7 - background intensity
 	std::stringstream ss; \
 	ss << msg; \
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b01101111); \
+	std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
 	std::cout << "! Warning -"; \
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
 	std::cout << " " << ss.str() << std::endl; }

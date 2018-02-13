@@ -29,6 +29,8 @@ public:
 	bool processMessages();
 
 	VkSurfaceKHR vkSurface;
+	u32 resX;
+	u32 resY;
 #ifdef _WIN32
 	HINSTANCE win32InstanceHandle;	// Instance handle for this .exe
 	WNDCLASSEX win32WindowClass;	// Window class describing WndProc, icon, cursor, etc

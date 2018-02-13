@@ -7,9 +7,15 @@ class Window;
 
 	App launch.
 	Construct win32 window.
-	! Construct vulkan instance, devices, surfaces etc
-
+	Construct vulkan instance, devices, surfaces etc
+	! Create vulkan swapchain
 */
+
+struct SwapChainSupportDetails {
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentModes;
+};
 
 /*
 	@brief Main engine class that collates the engine sub-classes and sub-systems
@@ -29,6 +35,10 @@ public:
 	static VkDevice vkDevice;
 	static VkQueue vkGraphicsQueue;
 	static VkQueue vkPresentQueue;
+	static VkSwapchainKHR vkSwapChain;
+	static std::vector<VkImage> vkSwapChainImages;
+	static VkFormat swapChainImageFormat;
+	static VkExtent2D swapChainExtent;
 	static bool engineRunning;
 
 	static void start();
@@ -36,6 +46,7 @@ public:
 	static void initVulkanInstance();
 	static void pickVulkanPhysicalDevice();
 	static void initVulkanLogicalDevice();
+	static void initVulkanSwapChain();
 	static void quit();
 
 #ifdef ENABLE_VULKAN_VALIDATION
