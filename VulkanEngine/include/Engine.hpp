@@ -36,11 +36,22 @@ public:
 	static VkQueue vkGraphicsQueue;
 	static VkQueue vkPresentQueue;
 	static VkSwapchainKHR vkSwapChain;
+	static VkPipeline vkPipeline;
+	static VkPipelineLayout vkPipelineLayout;
+	static VkRenderPass vkRenderPass;
+	static VkCommandPool vkCommandPool;
+	static std::vector<VkCommandBuffer> vkCommandBuffers;
+	static std::vector<VkFramebuffer> vkFramebuffers;
 	static std::vector<VkImage> vkSwapChainImages;
 	static std::vector<VkImageView> vkSwapChainImageViews;
 	static VkFormat swapChainImageFormat;
 	static VkExtent2D swapChainExtent;
 	static bool engineRunning;
+
+	static VkSemaphore imageAvailableSemaphore;
+	static VkSemaphore renderFinishedSemaphore;
+
+	static void render();
 
 	static void start();
 	static void createWindow();
@@ -49,6 +60,13 @@ public:
 	static void initVulkanLogicalDevice();
 	static void initVulkanSwapChain();
 	static void initVulkanImageViews();
+	static void initVulkanRenderPass();
+	static void initVulkanGraphicsPipeline();
+	static void initVulkanFramebuffers();
+	static void initVulkanCommandPool();
+	static void initVulkanCommandBuffers();
+	static void initVulkanSemaphores();
+	static VkShaderModule createShaderModule(const std::vector<char>& code);
 	static void quit();
 
 #ifdef ENABLE_VULKAN_VALIDATION
