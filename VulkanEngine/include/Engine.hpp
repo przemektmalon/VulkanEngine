@@ -37,6 +37,7 @@ public:
 	static VkQueue vkPresentQueue;
 	static VkSwapchainKHR vkSwapChain;
 	static std::vector<VkImage> vkSwapChainImages;
+	static std::vector<VkImageView> vkSwapChainImageViews;
 	static VkFormat swapChainImageFormat;
 	static VkExtent2D swapChainExtent;
 	static bool engineRunning;
@@ -47,6 +48,7 @@ public:
 	static void pickVulkanPhysicalDevice();
 	static void initVulkanLogicalDevice();
 	static void initVulkanSwapChain();
+	static void initVulkanImageViews();
 	static void quit();
 
 #ifdef ENABLE_VULKAN_VALIDATION

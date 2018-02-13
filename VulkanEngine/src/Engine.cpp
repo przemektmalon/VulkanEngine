@@ -17,13 +17,13 @@ void Engine::start()
 	pickVulkanPhysicalDevice();
 	initVulkanLogicalDevice();
 	initVulkanSwapChain();
+	initVulkanImageViews();
 
 	while (engineRunning)
 	{
-		if (!window->processMessages())
-		{
-
-		}
+		while (window->processMessages()) { /* Invoke timer ? */ }
+		
+		// Rendering and engine logic
 	}
 
 	quit();
@@ -200,6 +200,9 @@ void Engine::initVulkanLogicalDevice()
 	vkGetDeviceQueue(vkDevice, 0, 0, &vkPresentQueue); /// Todo: Support for AMD gpus which have non-universal queues
 }
 
+/*
+	@brief	Create the optimal vulkan swapchain
+*/
 void Engine::initVulkanSwapChain()
 {
 	SwapChainSupportDetails details;
@@ -324,6 +327,35 @@ void Engine::initVulkanSwapChain()
 }
 
 /*
+	@brief	Create image views for swap chain images
+*/
+void Engine::initVulkanImageViews()
+{
+	vkSwapChainImageViews.resize(vkSwapChainImages.size());
+
+	for (size_t i = 0; i < vkSwapChainImages.size(); i++) {
+		VkImageViewCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		createInfo.image = vkSwapChainImages[i];
+		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		createInfo.format = swapChainImageFormat;
+		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		createInfo.subresourceRange.baseMipLevel = 0;
+		createInfo.subresourceRange.levelCount = 1;
+		createInfo.subresourceRange.baseArrayLayer = 0;
+		createInfo.subresourceRange.layerCount = 1;
+
+		if (vkCreateImageView(vkDevice, &createInfo, nullptr, &vkSwapChainImageViews[i]) != VK_SUCCESS) {
+			DBG_SEVERE("Failed to create vulkan image views");
+		}
+	}
+}
+
+/*
 	@brief	Cleanup memory on exit
 */
 void Engine::quit()
@@ -332,9 +364,15 @@ void Engine::quit()
 #ifdef ENABLE_VULKAN_VALIDATION
 	PFN_vkDestroyDebugReportCallbackEXT(vkGetInstanceProcAddr(vkInstance, "vkDestroyDebugReportCallbackEXT"))(vkInstance, debugCallbackInfo, 0);
 #endif
+
+	for (auto imageView : vkSwapChainImageViews) {
+		vkDestroyImageView(vkDevice, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(vkDevice, vkSwapChain, nullptr);
 	window->destroy();
-	vkDestroyInstance(vkInstance, nullptr);
 	vkDestroyDevice(vkDevice, nullptr);
+	vkDestroyInstance(vkInstance, nullptr);
 }
 
 #ifdef ENABLE_VULKAN_VALIDATION
@@ -364,6 +402,7 @@ VkQueue Engine::vkGraphicsQueue;
 VkQueue Engine::vkPresentQueue;
 VkSwapchainKHR Engine::vkSwapChain;
 std::vector<VkImage> Engine::vkSwapChainImages;
+std::vector<VkImageView> Engine::vkSwapChainImageViews;
 VkFormat Engine::swapChainImageFormat;
 VkExtent2D Engine::swapChainExtent;
 bool Engine::engineRunning = true;

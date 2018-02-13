@@ -23,6 +23,8 @@ void Window::create(WindowCreateInfo * c)
 	if (!RegisterClassEx(&win32WindowClass))
 		DBG_SEVERE("Could not register win32 window class");
 
+	windowName = c->title;
+
 	DWORD windowStyle;
 	if (c->borderless)
 		windowStyle = WS_POPUP;
@@ -51,6 +53,9 @@ void Window::create(WindowCreateInfo * c)
 void Window::destroy()
 {
 	vkDestroySurfaceKHR(Engine::vkInstance, vkSurface, 0);
+#ifdef _WIN32
+	UnregisterClass(windowName.c_str(), Engine::win32InstanceHandle);
+#endif
 }
 
 bool Window::processMessages()
@@ -58,7 +63,7 @@ bool Window::processMessages()
 #ifdef _WIN32
 	MSG msg;
 	if (PeekMessage(&msg, win32WindowHandle, 0, 0, PM_REMOVE)) {
-		TranslateMessage(&msg);
+		//TranslateMessage(&msg);
 		DispatchMessage(&msg);
 		return true;
 	}
@@ -77,9 +82,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		Engine::engineRunning = false;
 		break;
 	}
+	case WM_CLOSE:
+	{
+		DestroyWindow(hWnd);
+		PostQuitMessage(0);
+		break;
+	}
+	case WM_DESTROY:
+	{
+		PostQuitMessage(0);
+		Engine::engineRunning = false;
+		break;
+	}
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
+	return 0;
 }
 
 #endif
