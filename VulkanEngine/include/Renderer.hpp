@@ -7,6 +7,7 @@ class Renderer
 public:
 
 	void initialise();
+	void cleanup();
 	void render();
 
 	VkDevice vkDevice;
@@ -40,4 +41,6 @@ public:
 	void initVulkanSemaphores();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	
+	void cleanupSwapChain();
+	void recreateVulkanSwapChain();
 };

@@ -42,13 +42,6 @@ public:
 		seconds += rhs.getSeconds();
 	}
 
-	Time operator-(Time& rhs)
-	{
-		Time ret;
-		ret.setMicroSeconds(microSeconds - rhs.getMicroSeconds());
-		return ret;
-	}
-
 	Time operator+(Time& rhs)
 	{
 		Time ret;
@@ -72,3 +65,17 @@ private:
 	double milliSeconds;
 	double seconds;
 };
+
+Time operator-(Time& lhs, Time& rhs)
+{
+	Time ret;
+	ret.setMicroSeconds(lhs.getMicroSeconds() - rhs.getMicroSeconds());
+	return ret;
+}
+
+Time operator-(Time lhs, Time rhs)
+{
+	Time ret;
+	ret.setMicroSeconds(lhs.getMicroSeconds() - rhs.getMicroSeconds());
+	return ret;
+}

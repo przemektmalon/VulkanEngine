@@ -16,6 +16,15 @@ void Renderer::initialise()
 	initVulkanSemaphores();
 }
 
+void Renderer::cleanup()
+{
+	cleanupSwapChain();
+	vkDestroySemaphore(vkDevice, renderFinishedSemaphore, 0);
+	vkDestroySemaphore(vkDevice, imageAvailableSemaphore, 0);
+	vkDestroyCommandPool(vkDevice, vkCommandPool, 0);
+	vkDestroyDevice(vkDevice, 0);
+}
+
 void Renderer::render()
 {
 	uint32_t imageIndex;
@@ -518,4 +527,34 @@ VkShaderModule Renderer::createShaderModule(const std::vector<char>& code)
 	}
 
 	return shaderModule;
+}
+
+void Renderer::cleanupSwapChain()
+{
+	for (auto framebuffer : vkFramebuffers) {
+		vkDestroyFramebuffer(vkDevice, framebuffer, nullptr);
+	}
+
+	vkFreeCommandBuffers(vkDevice, vkCommandPool, u32(vkCommandBuffers.size()), vkCommandBuffers.data());
+	vkDestroyPipeline(vkDevice, vkPipeline, nullptr);
+	vkDestroyPipelineLayout(vkDevice, vkPipelineLayout, nullptr);
+	vkDestroyRenderPass(vkDevice, vkRenderPass, nullptr);
+
+	for (auto imageView : vkSwapChainImageViews) {
+		vkDestroyImageView(vkDevice, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(vkDevice, vkSwapChain, nullptr);
+}
+
+void Renderer::recreateVulkanSwapChain()
+{
+	vkDeviceWaitIdle(vkDevice);
+
+	initVulkanSwapChain();
+	initVulkanImageViews();
+	initVulkanRenderPass();
+	initVulkanGraphicsPipeline();
+	initVulkanFramebuffers();
+	initVulkanCommandBuffers();
 }

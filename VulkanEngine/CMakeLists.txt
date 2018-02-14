@@ -14,9 +14,7 @@ set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 set(PROJECT_NAME "${VulkanEngine}")
 
-project(PROJECT_NAME)
-
-FindVulkan
+project(VulkanEngine)
 
 file(GLOB INCLUDES ${INCLUDE_DIR}/*.hpp)
 file(GLOB SROUCES ${SRC_DIR}/*.cpp)
@@ -25,6 +23,6 @@ set(CMAKE_CXX_STANDARD 14)
 
 include_directories(${INCLUDE_DIR} ${Vulkan_INCLUDE_DIRS})
 
-add_executable(3D ${SOURCES} ${INCLUDES})
+add_executable(VulkanEngine ${SOURCES} ${INCLUDES})
 
-target_link_libraries(3D ${Vulkan_LIBRARIES})
+target_link_libraries(VulkanEngine ${Vulkan_LIBRARIES})

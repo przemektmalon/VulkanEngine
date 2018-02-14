@@ -22,8 +22,9 @@ void Engine::start()
 	renderer->initialise();
 	
 	Time initTime = clock.time() - engineStartTime;
-
 	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
+
+	Time frameTime = clock.time();
 
 	while (engineRunning)
 	{
@@ -32,6 +33,9 @@ void Engine::start()
 		// Rendering and engine logic
 
 		renderer->render();
+
+		frameTime = frameTime - clock.time();
+		printf("%f\n", 1.f / frameTime.getSecondsf());
 	}
 
 	quit();
@@ -164,23 +168,8 @@ void Engine::quit()
 {
 	DBG_INFO("Exiting");
 
-	/*vkDestroyCommandPool(vkDevice, vkCommandPool, nullptr);
-
-	for (auto framebuffer : vkFramebuffers) {
-		vkDestroyFramebuffer(vkDevice, framebuffer, nullptr);
-	}
-
-	vkDestroyPipeline(vkDevice, vkPipeline, nullptr);
-	vkDestroyPipelineLayout(vkDevice, vkPipelineLayout, nullptr);
-	vkDestroyRenderPass(vkDevice, vkRenderPass, nullptr);
-
-	for (auto imageView : vkSwapChainImageViews) {
-		vkDestroyImageView(vkDevice, imageView, nullptr);
-	}
-
-	vkDestroySwapchainKHR(vkDevice, vkSwapChain, nullptr);*/
+	renderer->cleanup();
 	window->destroy();
-	//vkDestroyDevice(vkDevice, nullptr);
 #ifdef ENABLE_VULKAN_VALIDATION
 	PFN_vkDestroyDebugReportCallbackEXT(vkGetInstanceProcAddr(vkInstance, "vkDestroyDebugReportCallbackEXT"))(vkInstance, debugCallbackInfo, 0);
 #endif
