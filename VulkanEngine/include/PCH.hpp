@@ -38,7 +38,7 @@ bit 7 - background intensity
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
 	std::cout << " " << ss.str() << std::endl; \
 	MessageBoxA(NULL, LPCSTR(ss.str().c_str()), "Severe Error!", MB_OK); \
-	DebugBreak(); }
+	DebugBreak(); } 
 #else
 #define DBG_SEVERE(msg) { \
 	std::stringstream ss; \

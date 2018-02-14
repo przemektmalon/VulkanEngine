@@ -131,7 +131,9 @@
   <ItemGroup>
     <ClInclude Include="include\Engine.hpp" />
     <ClInclude Include="include\PCH.hpp" />
+    <ClInclude Include="include\Renderer.hpp" />
     <ClInclude Include="include\Types.hpp" />
+    <ClInclude Include="include\VulkanWrappers.hpp" />
     <ClInclude Include="include\Window.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -141,6 +143,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Renderer.cpp" />
+    <ClCompile Include="src\VulkanWrappers.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
