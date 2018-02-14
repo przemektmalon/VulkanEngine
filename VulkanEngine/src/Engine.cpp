@@ -9,6 +9,7 @@
 void Engine::start()
 {
 	DBG_INFO("Launching engine");
+	engineStartTime = clock.time();
 #ifdef _WIN32
 	win32InstanceHandle = GetModuleHandle(NULL);
 #endif
@@ -20,6 +21,9 @@ void Engine::start()
 	renderer = new Renderer();
 	renderer->initialise();
 	
+	Time initTime = clock.time() - engineStartTime;
+
+	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
 
 	while (engineRunning)
 	{
@@ -202,6 +206,7 @@ VkDebugReportCallbackEXT Engine::debugCallbackInfo;
 #ifdef _WIN32
 HINSTANCE Engine::win32InstanceHandle;
 #endif
+Clock Engine::clock;
 Window* Engine::window;
 Renderer* Engine::renderer;
 VkInstance Engine::vkInstance;
@@ -209,4 +214,4 @@ VkPhysicalDevice Engine::vkPhysicalDevice = VK_NULL_HANDLE;
 std::vector<PhysicalDeviceDetails> Engine::physicalDevicesDetails;
 int Engine::physicalDeviceIndex;
 bool Engine::engineRunning = true;
-
+Time Engine::engineStartTime;

@@ -129,9 +129,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\Clock.hpp" />
     <ClInclude Include="include\Engine.hpp" />
     <ClInclude Include="include\PCH.hpp" />
     <ClInclude Include="include\Renderer.hpp" />
+    <ClInclude Include="include\Time.hpp" />
     <ClInclude Include="include\Types.hpp" />
     <ClInclude Include="include\VulkanWrappers.hpp" />
     <ClInclude Include="include\Window.hpp" />

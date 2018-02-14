@@ -1,6 +1,8 @@
 #pragma once
 #include "PCH.hpp"
 #include "VulkanWrappers.hpp"
+#include "Clock.hpp"
+#include "Time.hpp"
 
 class Window;
 class Renderer;
@@ -31,6 +33,7 @@ public:
 #ifdef _WIN32
 	static HINSTANCE win32InstanceHandle;
 #endif
+	static Clock clock;
 	static Window* window;
 	static Renderer* renderer;
 
@@ -40,4 +43,5 @@ public:
 	static int physicalDeviceIndex;
 	
 	static bool engineRunning;
+	static Time engineStartTime;
 };
