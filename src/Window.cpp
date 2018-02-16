@@ -30,7 +30,7 @@ void Window::create(WindowCreateInfo * c)
 	if (c->borderless)
 		windowStyle = WS_POPUP;
 	else
-		windowStyle = (WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+		windowStyle = (WS_OVERLAPPED | WS_SYSMENU);
 
 	win32WindowHandle = CreateWindowEx(0, win32WindowClass.lpszClassName, win32WindowClass.lpszClassName, windowStyle,
 										c->posX, c->posY, c->width, c->height, 0, 0, c->win32InstanceHandle, 0);

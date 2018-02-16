@@ -39,6 +39,6 @@ public:
 	void initVulkanSemaphores();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	
-	void cleanupSwapChain();
+	void cleanupVulkanSwapChain();
 	void recreateVulkanSwapChain();
 };

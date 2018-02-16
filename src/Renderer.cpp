@@ -18,7 +18,7 @@ void Renderer::initialise()
 
 void Renderer::cleanup()
 {
-	cleanupSwapChain();
+	cleanupVulkanSwapChain();
 	vkDestroySemaphore(vkDevice, renderFinishedSemaphore, 0);
 	vkDestroySemaphore(vkDevice, imageAvailableSemaphore, 0);
 	vkDestroyCommandPool(vkDevice, vkCommandPool, 0);
@@ -31,7 +31,11 @@ void Renderer::render()
 	VkResult result = vkAcquireNextImageKHR(vkDevice, vkSwapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
 	if (result != VK_SUCCESS)
+	{
+		cleanupVulkanSwapChain();
+		recreateVulkanSwapChain();
 		return;
+	}
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -97,7 +101,7 @@ void Renderer::initVulkanLogicalDevice()
 	dci.enabledLayerCount = 1;
 	auto layerName = "VK_LAYER_LUNARG_standard_validation";
 	dci.ppEnabledLayerNames = &layerName;
-#elif
+#else
 	dci.enabledLayerCount = 0;
 	dci.ppEnabledLayerNames = 0;
 #endif
@@ -529,7 +533,7 @@ VkShaderModule Renderer::createShaderModule(const std::vector<char>& code)
 	return shaderModule;
 }
 
-void Renderer::cleanupSwapChain()
+void Renderer::cleanupVulkanSwapChain()
 {
 	for (auto framebuffer : vkFramebuffers) {
 		vkDestroyFramebuffer(vkDevice, framebuffer, nullptr);

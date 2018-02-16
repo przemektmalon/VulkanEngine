@@ -25,6 +25,8 @@ void Engine::start()
 	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
 
 	Time frameTime;
+	double fpsDisplay = 0.f;
+	int frames = 0;
 	while (engineRunning)
 	{
 		frameTime = clock.time();
@@ -32,10 +34,19 @@ void Engine::start()
 		while (window->processMessages()) { /* Invoke timer ? */ }
 		
 		// Rendering and engine logic
-
 		renderer->render();
 
 		frameTime = clock.time() - frameTime;
+
+		// FPS display
+		++frames;
+		fpsDisplay += frameTime.getSeconds();
+		if (fpsDisplay > 1.f)
+		{
+			printf("%f\n", double(frames) / fpsDisplay);
+			fpsDisplay = 0.f;
+			frames = 0;
+		}
 	}
 
 	quit();
@@ -97,7 +108,7 @@ void Engine::createVulkanInstance()
 	instInfo.enabledLayerCount = 1;
 	auto layerName = "VK_LAYER_LUNARG_standard_validation";
 	instInfo.ppEnabledLayerNames = &layerName;
-#elif
+#else
 	instInfo.enabledLayerCount = 0;
 	instInfo.ppEnabledLayerNames = 0;
 #endif
