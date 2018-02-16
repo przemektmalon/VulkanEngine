@@ -11,6 +11,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void Window::create(WindowCreateInfo * c)
 {
 #ifdef _WIN32
+	memset(&win32WindowClass, 0, sizeof(WNDCLASSEX));
 	win32WindowClass.cbSize = sizeof(WNDCLASSEX);
 	win32WindowClass.lpfnWndProc = WndProc;
 	win32WindowClass.lpszClassName = LPCSTR(c->title);

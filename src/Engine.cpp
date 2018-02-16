@@ -24,18 +24,18 @@ void Engine::start()
 	Time initTime = clock.time() - engineStartTime;
 	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
 
-	Time frameTime = clock.time();
-
+	Time frameTime;
 	while (engineRunning)
 	{
+		frameTime = clock.time();
+
 		while (window->processMessages()) { /* Invoke timer ? */ }
 		
 		// Rendering and engine logic
 
 		renderer->render();
 
-		frameTime = frameTime - clock.time();
-		printf("%f\n", 1.f / frameTime.getSecondsf());
+		frameTime = clock.time() - frameTime;
 	}
 
 	quit();

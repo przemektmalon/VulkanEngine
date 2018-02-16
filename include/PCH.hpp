@@ -67,7 +67,7 @@ bit 7 - background intensity
 	std::cout << " Info     -"; \
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
 	std::cout << " " << ss.str() << std::endl; }
-
+	
 #endif
 
 
