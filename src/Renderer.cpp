@@ -216,7 +216,7 @@ void Renderer::initVulkanSwapChain()
 }
 
 /*
-@brief	Create image views for swap chain images
+	@brief	Create image views for swap chain images
 */
 void Renderer::initVulkanImageViews()
 {

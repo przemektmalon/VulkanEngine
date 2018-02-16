@@ -125,7 +125,7 @@ void Engine::createVulkanInstance()
 */
 void Engine::queryVulkanPhysicalDeviceDetails()
 {
-	DBG_INFO("Picking Vulkan device")
+	DBG_INFO("Picking Vulkan device");
 		uint32_t deviceCount = 0;
 	vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr);
 

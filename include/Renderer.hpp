@@ -28,8 +28,6 @@ public:
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
 
-	
-	
 	void initVulkanLogicalDevice();
 	void initVulkanSwapChain();
 	void initVulkanImageViews();
