@@ -1,6 +1,7 @@
 #include "PCH.hpp"
 #include "Engine.hpp"
 #include "Window.hpp"
+#include "Keyboard.hpp"
 
 #ifdef _WIN32
 
@@ -80,7 +81,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_KEYDOWN:
 	{
-		Engine::engineRunning = false;
+		Keyboard::keyState[wParam] = 1;
+		auto check = [](u8 pKey) -> bool { return Keyboard::isKeyPressed(pKey); };
+		Event newEvent(Event::KeyDown); 
+		newEvent.constructKey(wParam, 
+			check(Key::KC_RIGHT_SHIFT) || check(Key::KC_LEFT_SHIFT), 
+			check(Key::KC_LEFT_ALT) || check(Key::KC_RIGHT_ALT), 
+			check(Key::KC_RIGHT_SUPER) || check(Key::KC_LEFT_SUPER), 
+			check(Key::KC_CAPS), 
+			check(Key::KC_RIGHT_CTRL) || check(Key::KC_LEFT_CTRL));
+		Engine::window->eventQ.pushEvent(newEvent);
+		break;
+	}
+	case WM_KEYUP:
+	{
+		Keyboard::keyState[wParam] = 0;
+		auto check = [](u8 pKey) -> bool { return Keyboard::isKeyPressed(pKey); };
+		Event newEvent(Event::KeyUp);
+		newEvent.constructKey(wParam,
+			check(Key::KC_RIGHT_SHIFT) || check(Key::KC_LEFT_SHIFT),
+			check(Key::KC_LEFT_ALT) || check(Key::KC_RIGHT_ALT),
+			check(Key::KC_RIGHT_SUPER) || check(Key::KC_LEFT_SUPER),
+			check(Key::KC_CAPS),
+			check(Key::KC_RIGHT_CTRL) || check(Key::KC_LEFT_CTRL));
+		Engine::window->eventQ.pushEvent(newEvent);
+		break;
 		break;
 	}
 	case WM_CLOSE:

@@ -33,6 +33,22 @@ void Engine::start()
 
 		while (window->processMessages()) { /* Invoke timer ? */ }
 		
+		Event ev;
+		while (window->eventQ.pollEvent(ev)) {
+			switch (ev.type) {
+			case Event::KeyDown: {
+				if (ev.keyEvent.key.code == Key::KC_ESCAPE)
+					engineRunning = false;
+				std::cout << "Key down: " << char(ev.keyEvent.key.code) << std::endl;
+				break;
+			}
+			case Event::KeyUp: {
+				std::cout << "Key up: " << char(ev.keyEvent.key.code) << std::endl;
+				break;
+			}
+			}
+		}
+
 		// Rendering and engine logic
 		renderer->render();
 
@@ -43,7 +59,7 @@ void Engine::start()
 		fpsDisplay += frameTime.getSeconds();
 		if (fpsDisplay > 1.f)
 		{
-			printf("%f\n", double(frames) / fpsDisplay);
+			//printf("%f\n", double(frames) / fpsDisplay);
 			fpsDisplay = 0.f;
 			frames = 0;
 		}

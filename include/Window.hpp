@@ -1,5 +1,6 @@
 #pragma once
 #include "PCH.hpp"
+#include "Event.hpp"
 
 struct WindowCreateInfo
 {
@@ -32,6 +33,7 @@ public:
 	u32 resX;
 	u32 resY;
 	std::string windowName;
+	EventQ eventQ;
 #ifdef _WIN32
 	HINSTANCE win32InstanceHandle;	// Instance handle for this .exe
 	WNDCLASSEX win32WindowClass;	// Window class describing WndProc, icon, cursor, etc

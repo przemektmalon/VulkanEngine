@@ -117,6 +117,8 @@ bit 7 - background intensity
 
 #include <unordered_map>
 
+#include <queue>
+
 /// Algorithms includes
 
 #include <algorithm>
