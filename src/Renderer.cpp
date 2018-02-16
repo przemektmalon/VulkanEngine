@@ -15,6 +15,7 @@ void Renderer::initialise()
 	initVulkanGraphicsPipeline();
 	initVulkanFramebuffers();
 	initVulkanCommandPool();
+	initVulkanVertexBuffer();
 	initVulkanCommandBuffers();
 	initVulkanSemaphores();
 }
@@ -25,6 +26,8 @@ void Renderer::initialise()
 void Renderer::cleanup()
 {
 	cleanupVulkanSwapChain();
+	vkDestroyBuffer(vkDevice, vkVertexBuffer, nullptr);
+	vkFreeMemory(vkDevice, vkVertexBufferMemory, nullptr);
 	vkDestroySemaphore(vkDevice, renderFinishedSemaphore, 0);
 	vkDestroySemaphore(vkDevice, imageAvailableSemaphore, 0);
 	vkDestroyCommandPool(vkDevice, vkCommandPool, 0);
@@ -340,10 +343,15 @@ void Renderer::initVulkanGraphicsPipeline()
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -479,6 +487,40 @@ void Renderer::initVulkanCommandPool()
 }
 
 /*
+	@brief	Create Vulkan vertex buffer
+*/
+void Renderer::initVulkanVertexBuffer()
+{
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	if (vkCreateBuffer(vkDevice, &bufferInfo, nullptr, &vkVertexBuffer) != VK_SUCCESS) {
+		DBG_SEVERE("Failed to create Vulkan vertex buffer");
+	}
+
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(vkDevice, vkVertexBuffer, &memRequirements);
+
+	VkMemoryAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = Engine::getPhysicalDeviceDetails().getMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	if (vkAllocateMemory(vkDevice, &allocInfo, nullptr, &vkVertexBufferMemory) != VK_SUCCESS) {
+		DBG_SEVERE("Failed to allocate vertex buffer memory");
+	}
+
+	vkBindBufferMemory(vkDevice, vkVertexBuffer, vkVertexBufferMemory, 0);
+
+	void* data;
+	vkMapMemory(vkDevice, vkVertexBufferMemory, 0, bufferInfo.size, 0, &data);
+	memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+	vkUnmapMemory(vkDevice, vkVertexBufferMemory);
+}
+
+/*
 	@brief	Create Vulkan command buffers
 */
 void Renderer::initVulkanCommandBuffers()
@@ -519,7 +561,11 @@ void Renderer::initVulkanCommandBuffers()
 
 		vkCmdBindPipeline(vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline);
 
-		vkCmdDraw(vkCommandBuffers[i], 3, 1, 0, 0);
+		VkBuffer vertexBuffers[] = { vkVertexBuffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+		vkCmdDraw(vkCommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 		vkCmdEndRenderPass(vkCommandBuffers[i]);
 

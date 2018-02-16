@@ -97,4 +97,19 @@ void PhysicalDeviceDetails::queryDetails()
 		else
 			suitabilityScore -= 100000;
 	}
+
+	// Query device memory properties
+	{
+		vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, &memoryProperties);
+	}
+}
+
+u32 PhysicalDeviceDetails::getMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties)
+{
+	for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {
+		if ((typeFilter & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+			return i;
+		}
+	}
+	DBG_SEVERE("Suitable memory type not found");
 }

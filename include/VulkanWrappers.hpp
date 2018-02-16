@@ -26,4 +26,8 @@ struct PhysicalDeviceDetails
 	};
 
 	SwapChainSupportDetails swapChainDetails;
+
+	VkPhysicalDeviceMemoryProperties memoryProperties;
+
+	u32 getMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties);
 };

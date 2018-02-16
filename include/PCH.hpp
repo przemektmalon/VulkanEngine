@@ -129,6 +129,8 @@ bit 7 - background intensity
 
 #include <queue>
 
+#include <array>
+
 /// Algorithms includes
 
 #include <algorithm>
