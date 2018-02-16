@@ -1,6 +1,9 @@
 #pragma once
 #include "PCH.hpp"
 
+/*
+	@brief	Stores all details about a Vulkan physical device and its capabilities (GPU/CPU/Integrated)
+*/
 struct PhysicalDeviceDetails
 {
 	PhysicalDeviceDetails(VkPhysicalDevice device) : suitabilityScore(0), vkPhysicalDevice(device), graphicsQueueFamily(-1), presentQueueFamily(-1), computeQueueFamily(-1), transferQueueFamily(-1) {}

@@ -3,6 +3,9 @@
 
 typedef s32 KeyCode;
 
+/*
+	@brief	Key object. Specified key codes (modelled after Win32 virtual key codes)
+*/
 class Key
 {
 public:
@@ -84,6 +87,9 @@ public:
 	KeyCode code;
 };
 
+/*
+	@brief	Static keyboard class. Stores keyboard state.
+*/
 class Keyboard
 {
 public:

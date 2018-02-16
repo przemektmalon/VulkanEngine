@@ -4,11 +4,16 @@
 #include "Keyboard.hpp"
 
 #ifdef _WIN32
-
+/*
+	@brief	Window proc function for receiving Window messages (user input among others)
+*/
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 #endif
 
+/*
+	@brief	Create a window surface for drawing to screen
+*/
 void Window::create(WindowCreateInfo * c)
 {
 #ifdef _WIN32
@@ -52,6 +57,9 @@ void Window::create(WindowCreateInfo * c)
 #endif
 }
 
+/*
+	@brief	Destroy the window
+*/
 void Window::destroy()
 {
 	vkDestroySurfaceKHR(Engine::vkInstance, vkSurface, 0);
@@ -60,6 +68,10 @@ void Window::destroy()
 #endif
 }
 
+/*
+	@brief	Process window related messages. 
+	@note	This function should detect user input (keyboard, mouse)
+*/
 bool Window::processMessages()
 {
 #ifdef _WIN32
@@ -74,7 +86,9 @@ bool Window::processMessages()
 }
 
 #ifdef _WIN32
-
+/*
+	@brief	Window proc function for receiving Window messages (user input among others)
+*/
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)

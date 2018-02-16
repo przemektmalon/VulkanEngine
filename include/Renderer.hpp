@@ -2,6 +2,9 @@
 #include "PCH.hpp"
 #include "Engine.hpp"
 
+/*
+	@brief	Collates Vulkan objects and controls rendering pipeline
+*/
 class Renderer
 {
 public:

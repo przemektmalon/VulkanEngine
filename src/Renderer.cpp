@@ -3,6 +3,9 @@
 #include "Window.hpp"
 #include "VulkanWrappers.hpp"
 
+/*
+	@brief	Initialise renderer and Vulkan objects
+*/
 void Renderer::initialise()
 {
 	initVulkanLogicalDevice();
@@ -16,6 +19,9 @@ void Renderer::initialise()
 	initVulkanSemaphores();
 }
 
+/*
+	@brief	Cleanup Vulkan objects
+*/
 void Renderer::cleanup()
 {
 	cleanupVulkanSwapChain();
@@ -25,6 +31,9 @@ void Renderer::cleanup()
 	vkDestroyDevice(vkDevice, 0);
 }
 
+/*
+	@brief	Render
+*/
 void Renderer::render()
 {
 	uint32_t imageIndex;
@@ -32,8 +41,8 @@ void Renderer::render()
 
 	if (result != VK_SUCCESS)
 	{
-		cleanupVulkanSwapChain();
-		recreateVulkanSwapChain();
+		//cleanupVulkanSwapChain();
+		//recreateVulkanSwapChain();
 		return;
 	}
 
@@ -249,6 +258,9 @@ void Renderer::initVulkanImageViews()
 	}
 }
 
+/*
+	@brief	Create a Vulkan render pass
+*/
 void Renderer::initVulkanRenderPass()
 {
 	DBG_INFO("Creating Vulkan render pass");
@@ -301,6 +313,9 @@ static std::vector<char> readFile(const std::string& filename) {
 	return buffer;
 }
 
+/*
+	@brief	Load shaders and create Vulkan graphics pipeline
+*/
 void Renderer::initVulkanGraphicsPipeline()
 {
 	DBG_INFO("Creating vulkan graphics pipeline");
@@ -418,6 +433,9 @@ void Renderer::initVulkanGraphicsPipeline()
 	vkDestroyShaderModule(vkDevice, vertShaderModule, nullptr);
 }
 
+/*
+	@brief	Create Vulkan framebuffers
+*/
 void Renderer::initVulkanFramebuffers()
 {
 	DBG_INFO("Creating Vulkan framebuffers");
@@ -444,6 +462,9 @@ void Renderer::initVulkanFramebuffers()
 	}
 }
 
+/*
+	@brief	Create Vulkan command pool
+*/
 void Renderer::initVulkanCommandPool()
 {
 	DBG_INFO("Creating Vulkan command pool");
@@ -457,6 +478,9 @@ void Renderer::initVulkanCommandPool()
 	}
 }
 
+/*
+	@brief	Create Vulkan command buffers
+*/
 void Renderer::initVulkanCommandBuffers()
 {
 	DBG_INFO("Creating Vulkan command buffers");
@@ -505,6 +529,9 @@ void Renderer::initVulkanCommandBuffers()
 	}
 }
 
+/*
+	@brief	Create Vulkan semaphores
+*/
 void Renderer::initVulkanSemaphores()
 {
 	DBG_INFO("Creating Vulkan semaphores");
@@ -518,6 +545,9 @@ void Renderer::initVulkanSemaphores()
 	}
 }
 
+/*
+	@brief	Create Vulkan shader module
+*/
 VkShaderModule Renderer::createShaderModule(const std::vector<char>& code)
 {
 	VkShaderModuleCreateInfo createInfo = {};
@@ -533,6 +563,9 @@ VkShaderModule Renderer::createShaderModule(const std::vector<char>& code)
 	return shaderModule;
 }
 
+/*
+	@brief	Clean up Vulkan swapchain
+*/
 void Renderer::cleanupVulkanSwapChain()
 {
 	for (auto framebuffer : vkFramebuffers) {
@@ -551,6 +584,10 @@ void Renderer::cleanupVulkanSwapChain()
 	vkDestroySwapchainKHR(vkDevice, vkSwapChain, nullptr);
 }
 
+/*
+	@brief	Recreate Vulkan swap chain
+	@note	Call swapchain cleanup function before doing this
+*/
 void Renderer::recreateVulkanSwapChain()
 {
 	vkDeviceWaitIdle(vkDevice);

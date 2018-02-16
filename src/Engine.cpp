@@ -204,6 +204,9 @@ void Engine::quit()
 }
 
 #ifdef ENABLE_VULKAN_VALIDATION
+/*
+	@brief	Vulkan validation. Debugging output.
+*/
 VKAPI_ATTR VkBool32 VKAPI_CALL Engine::debugCallbackFunc(VkDebugReportFlagsEXT flags,
 													VkDebugReportObjectTypeEXT objType,
 													uint64_t obj,
@@ -213,7 +216,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Engine::debugCallbackFunc(VkDebugReportFlagsEXT f
 													const char* msg,
 													void* userData)
 {
-	DBG_WARNING(msg);
+	DBG_WARNING(msg << "\n" << "        NOTE: The line numbers are incorrect for Vulkan warnings");
 	return VK_FALSE;
 }
 VkDebugReportCallbackEXT Engine::debugCallbackInfo;

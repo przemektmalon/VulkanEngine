@@ -2,6 +2,9 @@
 #include "PCH.hpp"
 #include "Time.hpp"
 
+/*
+	@brief	High resolution clock wrapper
+*/
 class Clock
 {
 public:

@@ -2,6 +2,10 @@
 #include "PCH.hpp"
 #include "Event.hpp"
 
+/*
+	@brief	Data required to create a window
+	@note	OS specific handles required (HINSTANCE on Win32, XCB connection on linux)
+*/
 struct WindowCreateInfo
 {
 	WindowCreateInfo() : posX(0), posY(0), borderless(true) {}
@@ -17,6 +21,9 @@ struct WindowCreateInfo
 	bool borderless; // _WIN32 ?
 };
 
+/*
+	@brief	On screen window and its data. Owns Vulkan surface object. Owns event queue.
+*/
 class Window
 {
 public:

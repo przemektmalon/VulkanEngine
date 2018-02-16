@@ -23,7 +23,7 @@
 
 #define ENABLE_VULKAN_VALIDATION
 
-// Debugging output
+// Debugging output macros
 #ifdef _WIN32
 
 /*

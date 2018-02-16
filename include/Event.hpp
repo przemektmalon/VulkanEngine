@@ -2,6 +2,9 @@
 #include "PCH.hpp"
 #include "Keyboard.hpp"
 
+/*
+	@brief	Event superclass. Unions all types of events and their metadata.
+*/
 struct Event
 {
 	enum Type { MouseMove, MouseDown, MouseUp, MouseWheel, KeyDown, KeyUp, WindowResized, WindowMoved };
@@ -28,6 +31,9 @@ struct Event
 	}
 };
 
+/*
+	@brief	Event queue. Used for pushing and polling events (user input)
+*/
 class EventQ
 {
 private:
@@ -53,6 +59,9 @@ public:
 	}
 };
 
+/*
+	@brief	Specialised key event class. Can be passed to functions expecting a key event.
+*/
 class KeyEvent : private Event
 {
 public:
