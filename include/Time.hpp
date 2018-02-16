@@ -1,6 +1,9 @@
 #pragma once
 #include "Types.hpp"
 
+/*
+	@brief	Time operations
+*/
 class Time
 {
 public:

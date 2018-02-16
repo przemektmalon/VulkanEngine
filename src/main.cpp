@@ -2,7 +2,7 @@
 #include "Engine.hpp"
 
 /*
-	@brief	Entry point.
+	@brief	Entry point
 */
 int main(int argc, char* argv[])
 {
