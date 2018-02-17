@@ -104,6 +104,9 @@ void PhysicalDeviceDetails::queryDetails()
 	}
 }
 
+/*
+	@brief	Get the requested memory type index
+*/
 u32 PhysicalDeviceDetails::getMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties)
 {
 	for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {

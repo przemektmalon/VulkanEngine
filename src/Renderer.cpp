@@ -92,6 +92,8 @@ void Renderer::render()
 void Renderer::initVulkanLogicalDevice()
 {
 	DBG_INFO("Creating Vulkan logical device");
+	
+	// Initialise one queue for our device which will be used for everything (rendering presenting transferring operations)
 	VkDeviceQueueCreateInfo qci = {};
 	qci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 	qci.pNext = 0;
@@ -109,6 +111,7 @@ void Renderer::initVulkanLogicalDevice()
 	dci.flags = 0;
 	dci.queueCreateInfoCount = 1;
 	dci.pQueueCreateInfos = &qci;
+	// Enable validation for vulkan calls, for debugging
 #ifdef ENABLE_VULKAN_VALIDATION
 	dci.enabledLayerCount = 1;
 	auto layerName = "VK_LAYER_LUNARG_standard_validation";
@@ -135,18 +138,21 @@ void Renderer::initVulkanLogicalDevice()
 void Renderer::initVulkanSwapChain()
 {
 	DBG_INFO("Creating Vulkan swap chain");
-	
+
 	auto& device = Engine::getPhysicalDeviceDetails();
 
 	VkSurfaceFormatKHR surfaceFormat;
 	VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
 	VkExtent2D extent;
 
+	// Find a suitable image format for drawing (ie. GL_RGBA8)
 	if (device.swapChainDetails.formats.size() == 1 && device.swapChainDetails.formats[0].format == VK_FORMAT_UNDEFINED) {
+		// If the only format returned by query is undefined then we can choose any format we want
 		surfaceFormat = { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 	}
 	else
 	{
+		// If the query returns a list of formats choose the one we want (RGBA8)
 		bool foundSuitable = false;
 		for (const auto& availableFormat : device.swapChainDetails.formats) {
 			if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -154,10 +160,12 @@ void Renderer::initVulkanSwapChain()
 				foundSuitable = true;
 			}
 		}
+		// If the device doesn't support the one we want choose the first one returned
 		if (!foundSuitable)
 			surfaceFormat = device.swapChainDetails.formats[0];
 	}
 
+	// Choose a suitable present mode (Mailbox => double or triple buffering
 	for (const auto& availablePresentMode : device.swapChainDetails.presentModes) {
 		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
 			presentMode = availablePresentMode;
@@ -168,10 +176,13 @@ void Renderer::initVulkanSwapChain()
 		}
 	}
 
+	// Choose a resolution for our drawing image
 	if (device.swapChainDetails.capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+		// If we have a current extent (ie. the size of our surface as filled in when we queried swap chain capabilities) choose that
 		extent = device.swapChainDetails.capabilities.currentExtent;
 	}
 	else {
+		// If we dont have a current extent then choose the highest one supported
 		VkExtent2D actualExtent = { Engine::window->resX, Engine::window->resY };
 
 		actualExtent.width = std::max(device.swapChainDetails.capabilities.minImageExtent.width, std::min(device.swapChainDetails.capabilities.maxImageExtent.width, actualExtent.width));
@@ -180,11 +191,13 @@ void Renderer::initVulkanSwapChain()
 		extent = actualExtent;
 	}
 
+	// Choose the number of images we'll have in the swap chain (2 or 3 == double or triple buffering)
 	u32 imageCount = device.swapChainDetails.capabilities.minImageCount + 1;
 	if (device.swapChainDetails.capabilities.maxImageCount > 0 && imageCount > device.swapChainDetails.capabilities.maxImageCount) {
 		imageCount = device.swapChainDetails.capabilities.maxImageCount;
 	}
 
+	// Fill in the create struct for our swap chain with the collected information
 	VkSwapchainCreateInfoKHR createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	createInfo.surface = Engine::window->vkSurface;
@@ -200,23 +213,25 @@ void Renderer::initVulkanSwapChain()
 	createInfo.queueFamilyIndexCount = 0; // Optional
 	createInfo.pQueueFamilyIndices = nullptr; // Optional
 
-											  /*QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-											  uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
+	// If we have several queue families then we will need to look into sharing modes
+	/*
+		QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+		uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
 
-											  if (indices.graphicsFamily != indices.presentFamily) {
-											  createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-											  createInfo.queueFamilyIndexCount = 2;
-											  createInfo.pQueueFamilyIndices = queueFamilyIndices;
-											  }
-											  else {
-											  createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-											  }*/
+		if (indices.graphicsFamily != indices.presentFamily) {
+			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			createInfo.queueFamilyIndexCount = 2;
+			createInfo.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else {
+			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
+	*/
 
 	createInfo.preTransform = device.swapChainDetails.capabilities.currentTransform;
 	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;
-
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	if (vkCreateSwapchainKHR(vkDevice, &createInfo, nullptr, &vkSwapChain) != VK_SUCCESS) {
@@ -239,6 +254,7 @@ void Renderer::initVulkanImageViews()
 	DBG_INFO("Creating Vulkan image views");
 	vkSwapChainImageViews.resize(vkSwapChainImages.size());
 
+	// Views describe how the GPU will write to or sample the image (ie. mip mapping)
 	for (size_t i = 0; i < vkSwapChainImages.size(); i++) {
 		VkImageViewCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -323,9 +339,11 @@ void Renderer::initVulkanGraphicsPipeline()
 {
 	DBG_INFO("Creating vulkan graphics pipeline");
 
+	// Read spir-v compiled shader code from file
 	auto vertShaderCode = readFile("shaders/vert.spv");
 	auto fragShaderCode = readFile("shaders/frag.spv");
 
+	// Create our shader modules
 	VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
 	VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
@@ -343,9 +361,11 @@ void Renderer::initVulkanGraphicsPipeline()
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
+	// Get the vertex layout format
 	auto bindingDescription = Vertex::getBindingDescription();
 	auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
+	// For submitting vertex layout info
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
@@ -353,11 +373,13 @@ void Renderer::initVulkanGraphicsPipeline()
 	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
 	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
+	// Assembly info (triangles quads lines strips etc)
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
+	// Viewport
 	VkViewport viewport = {};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
@@ -366,10 +388,12 @@ void Renderer::initVulkanGraphicsPipeline()
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
+	// Scissor
 	VkRect2D scissor = {};
 	scissor.offset = { 0, 0 };
 	scissor.extent = swapChainExtent;
 
+	// Submit info for viewport(s)
 	VkPipelineViewportStateCreateInfo viewportState = {};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportState.viewportCount = 1;
@@ -377,6 +401,7 @@ void Renderer::initVulkanGraphicsPipeline()
 	viewportState.scissorCount = 1;
 	viewportState.pScissors = &scissor;
 
+	// Rasterizer info (culling, polygon fill mode, etc)
 	VkPipelineRasterizationStateCreateInfo rasterizer = {};
 	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	rasterizer.depthClampEnable = VK_FALSE;
@@ -387,11 +412,13 @@ void Renderer::initVulkanGraphicsPipeline()
 	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 
+	// Multisampling (doesnt work well with deffered renderer without convoluted methods)
 	VkPipelineMultisampleStateCreateInfo multisampling = {};
 	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampling.sampleShadingEnable = VK_FALSE;
 	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+	// Color blending info (for transparency)
 	VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	colorBlendAttachment.blendEnable = VK_FALSE;
@@ -407,6 +434,7 @@ void Renderer::initVulkanGraphicsPipeline()
 	colorBlending.blendConstants[2] = 0.0f;
 	colorBlending.blendConstants[3] = 0.0f;
 
+	// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources indirectly)
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 0;
@@ -416,6 +444,7 @@ void Renderer::initVulkanGraphicsPipeline()
 		DBG_SEVERE("Failed to create Vulkan pipeline layout");
 	}
 
+	// Collate all the data necessary to create pipeline
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.stageCount = 2;
@@ -437,6 +466,7 @@ void Renderer::initVulkanGraphicsPipeline()
 		DBG_SEVERE("Failed to create Vulkan graphics pipeline");
 	}
 
+	// Pipeline saves the shader modules we can delete them
 	vkDestroyShaderModule(vkDevice, fragShaderModule, nullptr);
 	vkDestroyShaderModule(vkDevice, vertShaderModule, nullptr);
 }
@@ -450,6 +480,8 @@ void Renderer::initVulkanFramebuffers()
 
 	vkFramebuffers.resize(vkSwapChainImageViews.size());
 
+	// Create a framebuffer for each image in our swap chain (two if double buffering, etc)
+	// If we have more attachments for normal and pbr data we will attach more than one image to each framebuffer
 	for (size_t i = 0; i < vkSwapChainImageViews.size(); i++) {
 		VkImageView attachments[] = {
 			vkSwapChainImageViews[i]
@@ -471,7 +503,7 @@ void Renderer::initVulkanFramebuffers()
 }
 
 /*
-	@brief	Create Vulkan command pool
+	@brief	Create Vulkan command pool for submitting commands to a particular queue
 */
 void Renderer::initVulkanCommandPool()
 {
