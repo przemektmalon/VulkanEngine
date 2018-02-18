@@ -57,6 +57,8 @@ public:
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 
+	VkBuffer vkVertexStagingBuffer;
+	VkDeviceMemory vkVertexStagingBufferMemory;
 	VkBuffer vkVertexBuffer;
 	VkDeviceMemory vkVertexBufferMemory;
 
@@ -80,7 +82,9 @@ public:
 	void initVulkanCommandBuffers();
 	void initVulkanSemaphores();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
-	
+	void createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+	void copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+
 	void cleanupVulkanSwapChain();
 	void recreateVulkanSwapChain();
 };
