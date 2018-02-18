@@ -15,6 +15,7 @@ void Renderer::initialise()
 	initVulkanGraphicsPipeline();
 	initVulkanFramebuffers();
 	initVulkanCommandPool();
+	initVulkanIndexBuffer();
 	initVulkanVertexBuffer();
 	initVulkanCommandBuffers();
 	initVulkanSemaphores();
@@ -26,6 +27,8 @@ void Renderer::initialise()
 void Renderer::cleanup()
 {
 	cleanupVulkanSwapChain();
+	vkDestroyBuffer(vkDevice, vkIndexBuffer, nullptr);
+	vkFreeMemory(vkDevice, vkIndexBufferMemory, nullptr);
 	vkDestroyBuffer(vkDevice, vkVertexBuffer, nullptr);
 	vkFreeMemory(vkDevice, vkVertexBufferMemory, nullptr);
 	vkDestroySemaphore(vkDevice, renderFinishedSemaphore, 0);
@@ -525,19 +528,43 @@ void Renderer::initVulkanVertexBuffer()
 {
 	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkVertexStagingBuffer, vkVertexStagingBufferMemory);
+	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkStagingBuffer, vkStagingBufferMemory);
 
 	void* data;
-	vkMapMemory(vkDevice, vkVertexStagingBufferMemory, 0, bufferSize, 0, &data);
+	vkMapMemory(vkDevice, vkStagingBufferMemory, 0, bufferSize, 0, &data);
 	memcpy(data, vertices.data(), (size_t)bufferSize);
-	vkUnmapMemory(vkDevice, vkVertexStagingBufferMemory);
+	vkUnmapMemory(vkDevice, vkStagingBufferMemory);
 
 	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkVertexBuffer, vkVertexBufferMemory);
 
-	copyVulkanBuffer(vkVertexStagingBuffer, vkVertexBuffer, bufferSize);
+	copyVulkanBuffer(vkStagingBuffer, vkVertexBuffer, bufferSize);
 
-	vkDestroyBuffer(vkDevice, vkVertexStagingBuffer, 0);
-	vkFreeMemory(vkDevice, vkVertexStagingBufferMemory, 0);
+	vkDestroyBuffer(vkDevice, vkStagingBuffer, 0);
+	vkFreeMemory(vkDevice, vkStagingBufferMemory, 0);
+}
+
+/*
+	@brief	Create Vulkan index buffer
+*/
+void Renderer::initVulkanIndexBuffer()
+{
+	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	vkMapMemory(vkDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, indices.data(), (size_t)bufferSize);
+	vkUnmapMemory(vkDevice, stagingBufferMemory);
+
+	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkIndexBuffer, vkIndexBufferMemory);
+
+	copyVulkanBuffer(stagingBuffer, vkIndexBuffer, bufferSize);
+
+	vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
+	vkFreeMemory(vkDevice, stagingBufferMemory, nullptr);
 }
 
 /*
@@ -582,11 +609,15 @@ void Renderer::initVulkanCommandBuffers()
 
 		vkCmdBindPipeline(vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline);
 
+		
+
 		VkBuffer vertexBuffers[] = { vkVertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
+		vkCmdBindIndexBuffer(vkCommandBuffers[i], vkIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-		vkCmdDraw(vkCommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+		//vkCmdDraw(vkCommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 		vkCmdEndRenderPass(vkCommandBuffers[i]);
 
@@ -630,6 +661,9 @@ VkShaderModule Renderer::createShaderModule(const std::vector<char>& code)
 	return shaderModule;
 }
 
+/*
+	@brief	Create a vulkan buffer with the specified size, usage and properties
+*/
 void Renderer::createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer & buffer, VkDeviceMemory & bufferMemory)
 {
 	VkBufferCreateInfo bufferInfo = {};
@@ -657,6 +691,9 @@ void Renderer::createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, V
 	vkBindBufferMemory(vkDevice, buffer, bufferMemory, 0);
 }
 
+/*
+	@brief	Copy a vulkan buffer
+*/
 void Renderer::copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
 {
 	VkCommandBufferAllocateInfo allocInfo = {};

@@ -57,18 +57,27 @@ public:
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 
-	VkBuffer vkVertexStagingBuffer;
-	VkDeviceMemory vkVertexStagingBufferMemory;
+	VkBuffer vkStagingBuffer;
+	VkDeviceMemory vkStagingBufferMemory;
+
 	VkBuffer vkVertexBuffer;
 	VkDeviceMemory vkVertexBufferMemory;
+
+	VkBuffer vkIndexBuffer;
+	VkDeviceMemory vkIndexBufferMemory;
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
 
 	const std::vector<Vertex> vertices = {
-		{ { 0.0f, -0.5f },{ 1.0f, 1.0f, 1.0f } },
-	{ { 0.5f, 0.5f },{ 0.0f, 1.0f, 0.0f } },
-	{ { -0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } }
+		{ { -0.5f, -0.5f },{ 1.0f, 0.0f, 0.0f } },
+	{ { 0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
+	{ { 0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } },
+	{ { -0.5f, 0.5f },{ 1.0f, 1.0f, 1.0f } }
+	};
+
+	const std::vector<uint16_t> indices = {
+		0, 1, 2, 2, 3, 0
 	};
 
 	void initVulkanLogicalDevice();
@@ -79,6 +88,7 @@ public:
 	void initVulkanFramebuffers();
 	void initVulkanCommandPool();
 	void initVulkanVertexBuffer();
+	void initVulkanIndexBuffer();
 	void initVulkanCommandBuffers();
 	void initVulkanSemaphores();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
