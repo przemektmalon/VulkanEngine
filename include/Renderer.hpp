@@ -31,6 +31,12 @@ struct Vertex
 	}
 };
 
+struct UniformBufferObject {
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
+};
+
 /*
 	@brief	Collates Vulkan objects and controls rendering pipeline
 */
@@ -48,6 +54,9 @@ public:
 	VkSwapchainKHR vkSwapChain;
 	VkPipeline vkPipeline;
 	VkPipelineLayout vkPipelineLayout;
+	VkDescriptorSetLayout vkDescriptorSetLayout;
+	VkDescriptorPool vkDescriptorPool;
+	VkDescriptorSet vkDescriptorSet;
 	VkRenderPass vkRenderPass;
 	VkCommandPool vkCommandPool;
 	std::vector<VkCommandBuffer> vkCommandBuffers;
@@ -66,6 +75,9 @@ public:
 	VkBuffer vkIndexBuffer;
 	VkDeviceMemory vkIndexBufferMemory;
 
+	VkBuffer vkUniformBuffer;
+	VkDeviceMemory vkUniformBufferMemory;
+
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
 
@@ -80,20 +92,29 @@ public:
 		0, 1, 2, 2, 3, 0
 	};
 
+	
+	UniformBufferObject ubo;
+
 	void initVulkanLogicalDevice();
 	void initVulkanSwapChain();
 	void initVulkanImageViews();
 	void initVulkanRenderPass();
+	void initVulkanDescriptorSetLayout();
 	void initVulkanGraphicsPipeline();
 	void initVulkanFramebuffers();
 	void initVulkanCommandPool();
 	void initVulkanVertexBuffer();
 	void initVulkanIndexBuffer();
+	void initVulkanUniformBuffer();
+	void initVulkanDescriptorPool();
+	void initVulkanDescriptorSet();
 	void initVulkanCommandBuffers();
 	void initVulkanSemaphores();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	void createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+
+	void updateUniformBuffer();
 
 	void cleanupVulkanSwapChain();
 	void recreateVulkanSwapChain();
