@@ -37,13 +37,13 @@ void Engine::start()
 		while (window->eventQ.pollEvent(ev)) {
 			switch (ev.type) {
 			case Event::KeyDown: {
-				if (ev.keyEvent.key.code == Key::KC_ESCAPE)
+				if (ev.eventUnion.keyEvent.key.code == Key::KC_ESCAPE)
 					engineRunning = false;
-				std::cout << "Key down: " << char(ev.keyEvent.key.code) << std::endl;
+				std::cout << "Key down: " << char(ev.eventUnion.keyEvent.key.code) << std::endl;
 				break;
 			}
 			case Event::KeyUp: {
-				std::cout << "Key up: " << char(ev.keyEvent.key.code) << std::endl;
+				std::cout << "Key up: " << char(ev.eventUnion.keyEvent.key.code) << std::endl;
 				break;
 			}
 			}
@@ -109,7 +109,12 @@ void Engine::createVulkanInstance()
 
 	std::vector<const char *> enabledExtensions;
 	enabledExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+#ifdef _WIN32
 	enabledExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#endif
+#ifdef __linux__
+	enabledExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#endif
 #ifdef ENABLE_VULKAN_VALIDATION
 	enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 #endif
@@ -225,6 +230,9 @@ VkDebugReportCallbackEXT Engine::debugCallbackInfo;
 
 #ifdef _WIN32
 HINSTANCE Engine::win32InstanceHandle;
+#endif
+#ifdef __linux__
+xcb_connection_t * Engine::connection;
 #endif
 Clock Engine::clock;
 Window* Engine::window;

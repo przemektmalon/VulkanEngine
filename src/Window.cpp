@@ -53,7 +53,50 @@ void Window::create(WindowCreateInfo * c)
 	sci.hinstance = Engine::win32InstanceHandle;
 	sci.hwnd = win32WindowHandle;
 
-	vkCreateWin32SurfaceKHR(Engine::vkInstance, &sci, 0, &vkSurface);
+	vkCreateWin32SurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface);
+#endif
+#ifdef __linux__
+	int screenp = 0;
+	connection = xcb_connect(NULL, &screenp);
+	if (xcb_connection_has_error(connection))
+		throw std::runtime_error("failed to connect to X server using XCB");
+
+	xcb_screen_iterator_t iter = xcb_setup_roots_iterator(xcb_get_setup(connection));
+
+	for (int s = screenp; s > 0; s--)
+		xcb_screen_next(&iter);
+	
+	screen = iter.data;
+	window = xcb_generate_id(connection);
+	uint32_t eventMask = XCB_CW_EVENT_MASK;
+	uint32_t valueList[] = { 0 };
+	xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 0, 0, c->width, c->height,
+						0, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual, eventMask, valueList);
+	//Code to set window name
+	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8, strlen(c->title), c->title);
+	
+	//Sets window destroy
+	xcb_intern_atom_cookie_t wmDeleteCookie = xcb_intern_atom(connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
+	xcb_intern_atom_cookie_t wmProtocolsCookie = xcb_intern_atom(connection, 0, strlen("WM_PROTOCOLS"), "WM_PROTOCOLS");
+	xcb_intern_atom_reply_t *wmDeleteReply = xcb_intern_atom_reply(connection, wmDeleteCookie, NULL);
+	xcb_intern_atom_reply_t *wmProtocolsReply = xcb_intern_atom_reply(connection, wmProtocolsCookie, NULL);
+	wmDeleteWin = wmDeleteReply->atom;
+	wmProtocols = wmProtocolsReply->atom;
+
+	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window,
+						wmProtocolsReply->atom, 4, 32, 1, &wmDeleteReply->atom);
+	
+	
+	xcb_map_window(connection, window);
+	xcb_flush(connection);
+
+	VkXcbSurfaceCreateInfoKHR sci = {};
+	sci.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+	sci.pNext = NULL;
+	sci.flags = 0;
+	sci.connection = Window::connection;
+	sci.window = Window::window;
+	VkResult result = vkCreateXcbSurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface);
 #endif
 }
 

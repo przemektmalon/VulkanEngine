@@ -62,7 +62,8 @@ public:
 		KC_NUMPAD7,
 		KC_NUMPAD8,
 		KC_NUMPAD9,
-
+		
+		#ifdef _WIN32
 		KC_BACKSPACE = VK_BACK,
 		KC_TAB = VK_TAB,
 		KC_DELETE = VK_DELETE,
@@ -83,6 +84,29 @@ public:
 		KC_RIGHT_ALT = VK_RMENU,
 		KC_CAPS = VK_CAPITAL,
 		KC_ESCAPE = VK_ESCAPE
+		#endif
+		#ifdef __linux__
+		KC_BACKSPACE = 22,
+		KC_TAB = 23,
+		KC_DELETE = 119,
+		KC_ENTER = 36,
+		KC_LEFT = 113,
+		KC_RIGHT = 114,
+		KC_UP = 111,
+		KC_DOWN = 116,
+
+		KC_LEFT_SUPER = 133,
+		KC_RIGHT_SUPER = 133,
+		KC_RETURN = 36,
+		KC_LEFT_SHIFT = 50,
+		KC_RIGHT_SHIFT = 62,
+		KC_LEFT_CTRL = 37,
+		KC_RIGHT_CTRL = 105,
+		KC_LEFT_ALT = 64,
+		KC_RIGHT_ALT = 64,
+		KC_CAPS = 66,
+		KC_ESCAPE = 9
+		#endif
 	};
 	KeyCode code;
 };

@@ -33,6 +33,10 @@ public:
 #ifdef _WIN32
 	static HINSTANCE win32InstanceHandle;
 #endif
+#ifdef __linux__
+	static xcb_connection_t * connection;
+#endif
+
 	static Clock clock;
 	static Window* window;
 	static Renderer* renderer;
