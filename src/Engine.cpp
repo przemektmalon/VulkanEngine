@@ -45,7 +45,6 @@ void Engine::start()
 
 		while (window->processMessages()) { /* Invoke timer ? */ }
 		
-		#if defined(_WIN32)
 		Event ev;
 		while (window->eventQ.pollEvent(ev)) {
 			DBG_INFO("Keystroke");
@@ -62,22 +61,23 @@ void Engine::start()
 			}
 			}
 		}
-		#endif
-		/*
+		
+		//Temporary - needed so that window close event is recognised
 		#if defined(__linux__)
-		event = xcb_wait_for_event(connection);
-		switch (event->response_type & ~0x80) {
-            case XCB_CLIENT_MESSAGE: {
-                cm = (xcb_client_message_event_t *)event;
+		while( event = xcb_poll_for_event(connection)){
+			switch (event->response_type & ~0x80) {
+				case XCB_CLIENT_MESSAGE: {
+					cm = (xcb_client_message_event_t *)event;
 
-                if (window->isWmDeleteWin(cm->data.data32[0]))
-                	engineRunning = false;
-                break;
-            }
+					if (window->isWmDeleteWin(cm->data.data32[0]))
+						engineRunning = false;
+					break;
+				}
+			}
+			free(event);
 		}
-		free(event);
 		#endif
-		*/
+		
 		// Rendering and engine logic
 		renderer->updateUniformBuffer();
 		renderer->render();

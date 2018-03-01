@@ -35,12 +35,10 @@ public:
 
 	void create(WindowCreateInfo* c);
 	void destroy();
-	bool isWmDeleteWin(xcb_atom_t message){
-		return wmDeleteWin == message;
-	}
 	// Returns true if all messages have been processed
 	bool processMessages();
-
+	bool isWmDeleteWin(xcb_atom_t message);
+	
 	VkSurfaceKHR vkSurface;
 	u32 resX;
 	u32 resY;
