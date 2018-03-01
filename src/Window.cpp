@@ -56,23 +56,16 @@ void Window::create(WindowCreateInfo * c)
 	vkCreateWin32SurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface);
 #endif
 #ifdef __linux__
-	int screenp = 0;
-	connection = xcb_connect(NULL, &screenp);
-	if (xcb_connection_has_error(connection))
-		throw std::runtime_error("failed to connect to X server using XCB");
-
+	connection = c->connection;
 	xcb_screen_iterator_t iter = xcb_setup_roots_iterator(xcb_get_setup(connection));
-
-	for (int s = screenp; s > 0; s--)
-		xcb_screen_next(&iter);
 	
 	screen = iter.data;
 	window = xcb_generate_id(connection);
-	uint32_t eventMask = XCB_CW_EVENT_MASK;
-	uint32_t valueList[] = { 0 };
+ 	uint32_t eventMask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+  	uint32_t valueList[] = {screen->black_pixel, 0};
 	xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 0, 0, c->width, c->height,
 						0, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual, eventMask, valueList);
-	//Code to set window name
+	
 	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window, XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8, strlen(c->title), c->title);
 	
 	//Sets window destroy
@@ -85,8 +78,6 @@ void Window::create(WindowCreateInfo * c)
 
 	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window,
 						wmProtocolsReply->atom, 4, 32, 1, &wmDeleteReply->atom);
-	
-	
 	xcb_map_window(connection, window);
 	xcb_flush(connection);
 
@@ -109,6 +100,9 @@ void Window::destroy()
 #ifdef _WIN32
 	UnregisterClass(windowName.c_str(), Engine::win32InstanceHandle);
 #endif
+#ifdef __linux__
+	xcb_destroy_window(connection, window);
+#endif
 }
 
 /*
@@ -124,8 +118,9 @@ bool Window::processMessages()
 		DispatchMessage(&msg);
 		return true;
 	}
-	return false;
 #endif
+	return false;
+
 }
 
 #ifdef _WIN32

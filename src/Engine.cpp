@@ -13,6 +13,12 @@ void Engine::start()
 #ifdef _WIN32
 	win32InstanceHandle = GetModuleHandle(NULL);
 #endif
+#ifdef __linux__
+	int screenp = 0;
+	connection = xcb_connect(NULL, NULL);
+	if (xcb_connection_has_error(connection))
+		throw std::runtime_error("failed to connect to X server using XCB");
+#endif
 
 	createVulkanInstance();
 	createWindow();
@@ -23,18 +29,26 @@ void Engine::start()
 	
 	Time initTime = clock.time() - engineStartTime;
 	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
+	
+	#ifdef __linux__
+	xcb_generic_event_t *event;
+	xcb_client_message_event_t *cm;
+	#endif
 
 	Time frameTime;
 	double fpsDisplay = 0.f;
 	int frames = 0;
 	while (engineRunning)
 	{
+		
 		frameTime = clock.time();
 
 		while (window->processMessages()) { /* Invoke timer ? */ }
 		
+		#if defined(_WIN32)
 		Event ev;
 		while (window->eventQ.pollEvent(ev)) {
+			DBG_INFO("Keystroke");
 			switch (ev.type) {
 			case Event::KeyDown: {
 				if (ev.eventUnion.keyEvent.key.code == Key::KC_ESCAPE)
@@ -48,7 +62,22 @@ void Engine::start()
 			}
 			}
 		}
+		#endif
+		/*
+		#if defined(__linux__)
+		event = xcb_wait_for_event(connection);
+		switch (event->response_type & ~0x80) {
+            case XCB_CLIENT_MESSAGE: {
+                cm = (xcb_client_message_event_t *)event;
 
+                if (window->isWmDeleteWin(cm->data.data32[0]))
+                	engineRunning = false;
+                break;
+            }
+		}
+		free(event);
+		#endif
+		*/
 		// Rendering and engine logic
 		renderer->updateUniformBuffer();
 		renderer->render();
@@ -64,6 +93,7 @@ void Engine::start()
 			fpsDisplay = 0.f;
 			frames = 0;
 		}
+
 	}
 
 	quit();
@@ -79,6 +109,9 @@ void Engine::createWindow()
 	WindowCreateInfo wci;
 #ifdef _WIN32
 	wci.win32InstanceHandle = win32InstanceHandle;
+#endif
+#ifdef __linux__
+	wci.connection = connection;
 #endif
 	wci.height = 720;
 	wci.width = 1280;

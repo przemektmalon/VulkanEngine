@@ -55,6 +55,7 @@ void Renderer::render()
 
 	if (result != VK_SUCCESS)
 	{
+		DBG_SEVERE("Could not acquire next image");
 		//cleanupVulkanSwapChain();
 		//recreateVulkanSwapChain();
 		return;
