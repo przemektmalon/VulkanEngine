@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.7.1)
+cmake_minimum_required(VERSION 3.5.1)
 
 ################################################################
 ################    SET THE DEFAULT BUILD TO DEBUG
@@ -97,8 +97,13 @@ include_directories(${INCLUDE_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR})
 ################################################################
 
 add_executable(VulkanEngine ${SOURCES} ${INCLUDES})
-target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY})
+if (UNIX)
+	target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY} ${LIB_XCB} ${LIB_XAU} ${LIB_XDMCP})
+endif(UNIX)
 
+if (WIN32)
+	target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY})
+endif (WIN32)
 
 
 ################################################################
