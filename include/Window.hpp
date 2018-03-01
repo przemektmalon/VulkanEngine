@@ -38,7 +38,8 @@ public:
 	// Returns true if all messages have been processed
 	bool processMessages();
 	bool isWmDeleteWin(xcb_atom_t message);
-	
+	Event constructKeyEvent(u8 keyCode, Event::Type eventType);
+
 	VkSurfaceKHR vkSurface;
 	u32 resX;
 	u32 resY;
