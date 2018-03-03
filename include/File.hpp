@@ -93,6 +93,8 @@ public:
 
 	void readStr(std::string& string, char delim = '\n', int size = -1);
 
+	void readFile(void* buffer);
+
 	char peekChar();
 
 	char pullChar();
