@@ -822,6 +822,9 @@ void Renderer::copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
 	vkFreeCommandBuffers(vkDevice, vkCommandPool, 1, &commandBuffer);
 }
 
+/*
+	@brief	Update transforms
+*/
 void Renderer::updateUniformBuffer()
 {
 	static auto startTime = std::chrono::high_resolution_clock::now();
