@@ -12,6 +12,9 @@ struct WindowCreateInfo
 #ifdef _WIN32
 	HINSTANCE win32InstanceHandle;
 #endif
+#ifdef __linux__
+	xcb_connection_t * connection;
+#endif
 	int width;
 	int height;
 	const char* title;
@@ -32,9 +35,10 @@ public:
 
 	void create(WindowCreateInfo* c);
 	void destroy();
-
 	// Returns true if all messages have been processed
 	bool processMessages();
+	bool isWmDeleteWin(xcb_atom_t message);
+	Event constructKeyEvent(u8 keyCode, Event::Type eventType);
 
 	VkSurfaceKHR vkSurface;
 	u32 resX;
@@ -45,5 +49,12 @@ public:
 	HINSTANCE win32InstanceHandle;	// Instance handle for this .exe
 	WNDCLASSEX win32WindowClass;	// Window class describing WndProc, icon, cursor, etc
 	HWND win32WindowHandle;			// Window handle
+#endif
+#ifdef __linux__
+	xcb_connection_t * connection;
+	xcb_window_t window;
+	xcb_screen_t * screen;
+	xcb_atom_t wmProtocols;
+	xcb_atom_t wmDeleteWin;
 #endif
 };
