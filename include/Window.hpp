@@ -37,7 +37,9 @@ public:
 	void destroy();
 	// Returns true if all messages have been processed
 	bool processMessages();
+#ifdef __linux__
 	bool isWmDeleteWin(xcb_atom_t message);
+#endif
 	Event constructKeyEvent(u8 keyCode, Event::Type eventType);
 
 	VkSurfaceKHR vkSurface;

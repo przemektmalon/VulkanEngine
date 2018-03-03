@@ -64,7 +64,7 @@
 			MessageBoxA(NULL, LPCSTR(ss.str().c_str()), "Severe Error!", MB_OK); \
 			__builtin_trap(); }
 	#endif
-	#define DBG_WARNING(msg) { 
+	#define DBG_WARNING(msg) { \
 		std::stringstream ss; \
 		ss << msg; \
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b01101111); \

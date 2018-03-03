@@ -274,10 +274,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 #endif
 
-
-bool Window::isWmDeleteWin(xcb_atom_t message){
 #ifdef __linux__
+bool Window::isWmDeleteWin(xcb_atom_t message){
 	return wmDeleteWin == message;
-#endif
-	return false;
 }
+#endif
