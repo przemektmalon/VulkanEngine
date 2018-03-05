@@ -110,7 +110,6 @@ public:
 	void initVulkanDescriptorSet();
 	void initVulkanCommandBuffers();
 	void initVulkanSemaphores();
-	VkShaderModule createShaderModule(const std::vector<char>& code);
 	void createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 

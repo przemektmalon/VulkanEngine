@@ -37,19 +37,39 @@ file(GLOB SOURCES ${SRC_DIR}/*.cpp)
 
 
 ################################################################
+################    SET VULKAN SDK PATH
+################################################################
+
+if(NOT VK_SDK_PATH)
+	message(WARNING "Vulkan SDK path not found")
+	set(VK_SDK_PATH "" CACHE PATH "Path to your Vulkan SDK folder")
+	set(ERROR "YES")
+endif()
+
+
+
+################################################################
 ################    SET VULKAN INCLUDES AND LIBRARY
 ################################################################
 
-if(NOT LIB_VK_LIBRARY)
-	message(WARNING "Vulkan library not found please specify it with -DLIB_VK_LIBRARY='Path to your vulkan lib' or use the cmake-gui to se set it")
-	set(LIB_VK_LIBRARY "" CACHE FILEPATH "Path to your Vulkan library file")
-	set(ERROR "YES")
+set(LIB_VK_INCLUDE_DIR "${VK_SDK_PATH}/include")
+if(WIN32)
+	set(LIB_VK_LIBRARY "${VK_SDK_PATH}/Lib/vulkan-1.lib")
 endif()
-if(NOT LIB_VK_INCLUDE_DIR)
-	message(WARNING "Vulkan include directory not found please specify it with -DLIB_VK_INCLUDE_DIR='Path to your vulkan include dirrectory' or use the cmake-gui to se set it")
-	set(LIB_VK_INCLUDE_DIR "" CACHE PATH "Path to your Vulkan include directory")
-	set(ERROR "YES")
+if(LINUX)
+	set(LIB_VK_LIBRARY "${VK_SDK_PATH}/Lib/vulkan-1.so")
 endif()
+
+
+
+################################################################
+################    SET SHADERC INCLUDE AND LIBRARY
+################################################################
+
+if(WIN32)
+	set(LIB_SHADERC_DEBUG "${VK_SDK_PATH}/shaderc/build/libshaderc/Debug/shaderc_combined.lib")
+	set(LIB_SHADERC_RELEASE "${VK_SDK_PATH}/shaderc/build/libshaderc/Release/shaderc_combined.lib")
+endif(WIN32)
 
 
 
@@ -104,6 +124,10 @@ endif(UNIX)
 if (WIN32)
 	target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY})
 endif (WIN32)
+
+target_link_libraries (VulkanEngine
+    debug ${LIB_SHADERC_DEBUG}
+    optimized ${LIB_SHADERC_RELEASE})
 
 
 ################################################################

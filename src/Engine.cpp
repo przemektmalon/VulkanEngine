@@ -17,7 +17,7 @@ void Engine::start()
 	int screenp = 0;
 	connection = xcb_connect(NULL, NULL);
 	if (xcb_connection_has_error(connection))
-		throw std::runtime_error("failed to connect to X server using XCB");
+		DBG_SEVERE("Failed to connect to X server using XCB");
 #endif
 
 	createVulkanInstance();
@@ -27,6 +27,7 @@ void Engine::start()
 	renderer = new Renderer();
 	renderer->initialise();
 	
+
 	Time initTime = clock.time() - engineStartTime;
 	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
 

@@ -2,6 +2,8 @@
 #include "Renderer.hpp"
 #include "Window.hpp"
 #include "VulkanWrappers.hpp"
+#include "File.hpp"
+#include "Shader.hpp"
 
 /*
 	@brief	Initialise renderer and Vulkan objects
@@ -347,24 +349,6 @@ void Renderer::initVulkanDescriptorSetLayout()
 	}
 }
 
-static std::vector<char> readFile(const std::string& filename) {
-	std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-	if (!file.is_open()) {
-		throw std::runtime_error("failed to open file!");
-	}
-
-	size_t fileSize = (size_t)file.tellg();
-	std::vector<char> buffer(fileSize);
-
-	file.seekg(0);
-	file.read(buffer.data(), fileSize);
-
-	file.close();
-
-	return buffer;
-}
-
 /*
 	@brief	Load shaders and create Vulkan graphics pipeline
 */
@@ -372,24 +356,26 @@ void Renderer::initVulkanGraphicsPipeline()
 {
 	DBG_INFO("Creating vulkan graphics pipeline");
 
-	// Read spir-v compiled shader code from file
-	auto vertShaderCode = readFile("shaders/vert.spv");
-	auto fragShaderCode = readFile("shaders/frag.spv");
+	// Compile GLSL code to SPIR-V
 
-	// Create our shader modules
-	VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-	VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+	ShaderModule sh(ShaderModule::Vertex, "shaders/square.glsl");
+	sh.compile();
+	sh.createVulkanModule();
+
+	ShaderModule sh2(ShaderModule::Fragment, "shaders/square.glsl");
+	sh2.compile();
+	sh2.createVulkanModule();
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = vertShaderModule;
+	vertShaderStageInfo.module = sh.getVkModule();
 	vertShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
 	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = fragShaderModule;
+	fragShaderStageInfo.module = sh2.getVkModule();
 	fragShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
@@ -501,8 +487,8 @@ void Renderer::initVulkanGraphicsPipeline()
 	}
 
 	// Pipeline saves the shader modules we can delete them
-	vkDestroyShaderModule(vkDevice, fragShaderModule, nullptr);
-	vkDestroyShaderModule(vkDevice, vertShaderModule, nullptr);
+	//vkDestroyShaderModule(vkDevice, fragShaderModule, nullptr);
+	//vkDestroyShaderModule(vkDevice, vertShaderModule, nullptr);
 }
 
 /*
@@ -734,24 +720,6 @@ void Renderer::initVulkanSemaphores()
 
 		DBG_SEVERE("Failed to create Vulkan semaphores");
 	}
-}
-
-/*
-	@brief	Create Vulkan shader module
-*/
-VkShaderModule Renderer::createShaderModule(const std::vector<char>& code)
-{
-	VkShaderModuleCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.codeSize = code.size();
-	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(vkDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create shader module");
-	}
-
-	return shaderModule;
 }
 
 /*
