@@ -12,12 +12,12 @@ public:
 
 	enum Mode
 	{
-		in = 0x01,
-		out = 0x02,
-		ate = 0x04,
-		app = 0x08,
-		trunc = 0x10,
-		binary = 0x20
+		in = std::ios_base::in,
+		out = std::ios_base::out,
+		ate = std::ios_base::ate,
+		app = std::ios_base::app,
+		trunc = std::ios_base::trunc,
+		binary = std::ios_base::binary
 	};
 
 	struct FileMeta

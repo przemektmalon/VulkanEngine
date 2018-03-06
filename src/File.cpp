@@ -1,6 +1,14 @@
 #include "PCH.hpp"
 #include "File.hpp"
 
+#ifdef WINDOWS
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
+
 bool File::create(std::string && pPath, Mode pFileMode)
 {
 	if (pPath.length() > 127)
@@ -18,7 +26,7 @@ bool File::create(Mode pFileMode)
 
 	meta.fileMode = pFileMode;
 
-	file.open(meta.path.c_str(), (int)meta.fileMode);
+	file.open(meta.path.c_str(), (std::_Ios_Openmode)meta.fileMode);
 }
 
 bool File::open(std::string && pPath, Mode pFileMode)
@@ -28,8 +36,10 @@ bool File::open(std::string && pPath, Mode pFileMode)
 
 bool File::open(std::string & pPath, Mode pFileMode)
 {
-	if (pPath.length() > 127)
+	if (pPath.length() > 127){
+		DBG_WARNING("Path too large");
 		return false;
+	}
 	meta.path = pPath;
 	meta.fileMode = pFileMode;
 
@@ -38,12 +48,19 @@ bool File::open(std::string & pPath, Mode pFileMode)
 
 bool File::open(Mode pFileMode)
 {
-	if (meta.path.length() == 0)
+	if (meta.path.length() == 0){
+		DBG_WARNING("No file");
 		return false;
+	}
 
+	char buff[FILENAME_MAX];
+  	GetCurrentDir( buff, FILENAME_MAX );
+  	std::string current_working_dir(buff);
+	meta.path = current_working_dir + meta.path;
+	DBG_INFO("Path: " + meta.path);
 	meta.fileMode = pFileMode;
 
-	file.open(meta.path.c_str(), (int)meta.fileMode);
+	file.open(meta.path.c_str(), (std::ios_base::openmode)meta.fileMode);
 	if (file.good() && file.is_open() && !file.bad())
 	{
 		file.seekg(0, std::ios_base::end);
@@ -51,8 +68,14 @@ bool File::open(Mode pFileMode)
 		file.seekg(0);
 		return true;
 	}
-	else
+	else{
+		DBG_WARNING("File good: " << file.good());
+		DBG_WARNING("File eof: " << file.eof());
+		DBG_WARNING("File fail: " << file.fail());
+		DBG_WARNING("File bad: " << file.bad());
 		return false;
+	}
+		
 }
 
 void File::write(void * data, u32 size)
