@@ -835,10 +835,10 @@ void Renderer::cleanupVulkanSwapChain()
 
 /*
 	@brief	Recreate Vulkan swap chain
-	@note	Call swapchain cleanup function before doing this
 */
 void Renderer::recreateVulkanSwapChain()
 {
+	cleanupVulkanSwapChain();
 	vkDeviceWaitIdle(vkDevice);
 
 	initVulkanSwapChain();

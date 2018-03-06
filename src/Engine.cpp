@@ -14,7 +14,6 @@ void Engine::start()
 	win32InstanceHandle = GetModuleHandle(NULL);
 #endif
 #ifdef __linux__
-	int screenp = 0;
 	connection = xcb_connect(NULL, NULL);
 	if (xcb_connection_has_error(connection))
 		DBG_SEVERE("Failed to connect to X server using XCB");
