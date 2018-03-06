@@ -56,8 +56,8 @@ set(LIB_VK_INCLUDE_DIR "${VK_SDK_PATH}/include")
 if(WIN32)
 	set(LIB_VK_LIBRARY "${VK_SDK_PATH}/Lib/vulkan-1.lib")
 endif()
-if(LINUX)
-	set(LIB_VK_LIBRARY "${VK_SDK_PATH}/Lib/vulkan-1.so")
+if(UNIX)
+	set(LIB_VK_LIBRARY "${VK_SDK_PATH}/lib/libvulkan.so")
 endif()
 
 
@@ -69,9 +69,11 @@ endif()
 if(WIN32)
 	set(LIB_SHADERC_DEBUG "${VK_SDK_PATH}/shaderc/build/libshaderc/Debug/shaderc_combined.lib")
 	set(LIB_SHADERC_RELEASE "${VK_SDK_PATH}/shaderc/build/libshaderc/Release/shaderc_combined.lib")
-endif(WIN32)
-
-
+endif()
+if(UNIX)
+	set(LIB_SHADERC_DEBUG "${VK_SDK_PATH}/shaderc/Debug/libshaderc_shared.so")
+	set(LIB_SHADERC_RELEASE "${VK_SDK_PATH}/shaderc/Release/libshaderc_shared.so")
+endif()
 
 ################################################################
 ################    SET GLM INCLUDES
