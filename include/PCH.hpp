@@ -7,7 +7,7 @@
 #include "windows.h"
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <direct.h>
-#define GetCurrentDir _wgetcwd
+#define GetCurrentDir _getcwd
 #endif
 #ifdef __linux__
 #define VK_USE_PLATFORM_XCB_KHR
