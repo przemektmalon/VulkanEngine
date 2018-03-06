@@ -6,10 +6,14 @@
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
 #define VK_USE_PLATFORM_WIN32_KHR
+#include <direct.h>
+#define GetCurrentDir _wgetcwd
 #endif
 #ifdef __linux__
 #define VK_USE_PLATFORM_XCB_KHR
 #include "xcb/xcb.h"
+#include <unistd.h>
+#define GetCurrentDir getcwd
 #endif
 
 #include "vulkan/vulkan.h"

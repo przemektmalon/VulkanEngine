@@ -1,13 +1,6 @@
 #include "PCH.hpp"
 #include "File.hpp"
 
-#ifdef WINDOWS
-#include <direct.h>
-#define GetCurrentDir _getcwd
-#else
-#include <unistd.h>
-#define GetCurrentDir getcwd
-#endif
 
 bool File::create(std::string && pPath, Mode pFileMode)
 {
@@ -26,7 +19,7 @@ bool File::create(Mode pFileMode)
 
 	meta.fileMode = pFileMode;
 
-	file.open(meta.path.c_str(), (std::_Ios_Openmode)meta.fileMode);
+	file.open(meta.path.c_str(), (std::ios_base::openmode)meta.fileMode);
 }
 
 bool File::open(std::string && pPath, Mode pFileMode)
