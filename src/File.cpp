@@ -18,7 +18,7 @@ bool File::create(Mode pFileMode)
 
 	meta.fileMode = pFileMode;
 
-	file.open(meta.path.c_str(), (int)meta.fileMode);
+	file.open(meta.path.c_str(), (std::ios_base::openmode)meta.fileMode);
 }
 
 bool File::open(std::string && pPath, Mode pFileMode)
@@ -43,7 +43,7 @@ bool File::open(Mode pFileMode)
 
 	meta.fileMode = pFileMode;
 
-	file.open(meta.path.c_str(), (int)meta.fileMode);
+	file.open(meta.path.c_str(), (std::ios_base::openmode)meta.fileMode);
 	if (file.good() && file.is_open() && !file.bad())
 	{
 		file.seekg(0, std::ios_base::end);
