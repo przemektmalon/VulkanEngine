@@ -30,10 +30,6 @@ void Engine::start()
 	Time initTime = clock.time() - engineStartTime;
 	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
 
-	Image img;
-	img.load("res/textures/sandstonecliff-albedo.png");
-	img.save("image.png");
-
 	Time frameTime;
 	double fpsDisplay = 0.f;
 	int frames = 0;

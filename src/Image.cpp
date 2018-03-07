@@ -7,7 +7,13 @@
 
 void Image::load(std::string path)
 {
+	char buff[FILENAME_MAX];
+  	GetCurrentDir( buff, FILENAME_MAX );
+  	std::string current_working_dir(buff);
+	path = current_working_dir + "/" + path;
+
 	int bpp;
+	DBG_INFO("Attempting to load image: " << path);
 	unsigned char* loadedData = stbi_load(path.c_str(), &width, &height, &bpp, 4);
 	if (!loadedData) {
 		DBG_WARNING("Failed to load image: " << path);
