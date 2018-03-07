@@ -2,6 +2,7 @@
 #include "Engine.hpp"
 #include "Window.hpp"
 #include "Renderer.hpp"
+#include "Image.hpp"
 
 /*
 	@brief	Initialise enigne and sub-systems
@@ -25,11 +26,13 @@ void Engine::start()
 
 	renderer = new Renderer();
 	renderer->initialise();
-	
 
 	Time initTime = clock.time() - engineStartTime;
 	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
 
+	Image img;
+	img.load("res/textures/sandstonecliff-albedo.png");
+	img.save("image.png");
 
 	Time frameTime;
 	double fpsDisplay = 0.f;

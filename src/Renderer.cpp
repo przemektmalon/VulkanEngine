@@ -358,11 +358,11 @@ void Renderer::initVulkanGraphicsPipeline()
 
 	// Compile GLSL code to SPIR-V
 
-	ShaderModule sh(ShaderModule::Vertex, "/shaders/square.glsl");
+	ShaderModule sh(ShaderModule::Vertex, "/res/shaders/square.glsl");
 	sh.compile();
 	sh.createVulkanModule();
 
-	ShaderModule sh2(ShaderModule::Fragment, "/shaders/square.glsl");
+	ShaderModule sh2(ShaderModule::Fragment, "/res/shaders/square.glsl");
 	sh2.compile();
 	sh2.createVulkanModule();
 
