@@ -86,6 +86,11 @@ public:
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
 
+	VkImage textureImage;
+	VkDeviceMemory textureImageMemory;
+	VkImageView textureImageView;
+	VkSampler textureSampler;	
+
 	const std::vector<Vertex> vertices = {
 		{ { -0.5f, -0.5f, 0.0f },{ 1.0f, 0.0f, 0.0f } },
 	{ { 0.5f, -0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f } },
@@ -114,6 +119,15 @@ public:
 	void initVulkanGraphicsPipeline();
 	void initVulkanFramebuffers();
 	void initVulkanCommandPool();
+
+	void createTextureImage();
+	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout);
+	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+	void createTextureImageView();
+	VkImageView createImageView(VkImage image, VkFormat format);
+	void createTextureSampler();
+
 	void initVulkanDepthResources();
 	void initVulkanVertexBuffer();
 	void initVulkanIndexBuffer();
@@ -122,9 +136,11 @@ public:
 	void initVulkanDescriptorSet();
 	void initVulkanCommandBuffers();
 	void initVulkanSemaphores();
+
 	void createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
-
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void updateUniformBuffer();
 
 	void cleanupVulkanSwapChain();
