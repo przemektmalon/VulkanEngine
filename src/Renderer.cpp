@@ -545,7 +545,7 @@ void Renderer::initVulkanCommandPool()
 void Renderer::createTextureImage()
 {
 	Image texture;
-	texture.load("res/textures/sandstonecliff-albedo.png");
+	texture.load("res/textures/grass.png");
 	texture.save("saved.png");
 	VkDeviceSize textureSize = texture.data.size() * sizeof(Pixel);
 
@@ -555,7 +555,7 @@ void Renderer::createTextureImage()
 
 	void* data;
 	vkMapMemory(vkDevice, stagingBufferMemory, 0, textureSize, 0, &data);
-		memcpy(data, &texture.data[0], static_cast<size_t>(textureSize));
+		memcpy(data, &(texture.data[0]), static_cast<size_t>(textureSize));
 	vkUnmapMemory(vkDevice, stagingBufferMemory);
 	createImage(texture.width, texture.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
 	
