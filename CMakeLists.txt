@@ -75,6 +75,8 @@ if(UNIX)
 	set(LIB_SHADERC_RELEASE "${VK_SDK_PATH}/shaderc/Release/libshaderc_shared.so")
 endif()
 
+
+
 ################################################################
 ################    SET GLM INCLUDES
 ################################################################
@@ -82,6 +84,40 @@ endif()
 if(NOT LIB_GLM_INCLUDE_DIR)
 	message(WARNING "GLM library not found please specify it with -DLIB_GLM_INCLUDE_DIR='Path to your glm include dir' or use the cmake-gui to set it")
 	set(LIB_GLM_INCLUDE_DIR "" CACHE PATH "Path to your GLM include folder, should be 'glm'")
+endif()
+
+
+
+################################################################
+################    SET ASSIMP & ZLIB INCLUDE AND LIBRARY
+################################################################
+
+if(NOT LIB_ASSIMP_LIBRARY_DEBUG)
+	message(WARNING "ASSIMP debug library not found")
+	set(LIB_ASSIMP_LIBRARY_DEBUG "" CACHE FILEPATH "Path to your debug ASSIMP lib")
+	set(ERROR "YES")
+endif()
+if(NOT LIB_ASSIMP_LIBRARY_RELEASE)
+	message(WARNING "ASSIMP release library not found")
+	set(LIB_ASSIMP_LIBRARY_RELEASE "" CACHE FILEPATH "Path to your release ASSIMP lib")
+	set(ERROR "YES")
+endif()
+if(NOT LIB_ASSIMP_INCLUDE_DIR)
+	message(WARNING "ASSIMP include directory not found")
+	set(LIB_ASSIMP_INCLUDE_DIR "" CACHE PATH "Path to your ASSIMP include folder")
+	set(ERROR "YES")
+endif()
+if(WIN32)
+	if(NOT LIB_ZLIB_LIBRARY_DEBUG)
+		message(WARNING "ZLIB debug library not found")
+		set(LIB_ZLIB_LIBRARY_DEBUG "" CACHE FILEPATH "Path to your ZLIB debug library")
+		set(ERROR "YES")
+	endif()
+	if(NOT LIB_ZLIB_LIBRARY_RELEASE)
+		message(WARNING "ZLIB release library not found")
+		set(LIB_ZLIB_LIBRARY_RELEASE "" CACHE FILEPATH "Path to your ZLIB release library")
+		set(ERROR "YES")
+	endif()
 endif()
 
 
@@ -105,14 +141,14 @@ endif()
 
 
 
+
+
 ################################################################
 ################    SPECIFY INCLUDE DIRECTORIES
 ################################################################
 
-include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR})
-if (UNIX)
-	include_directories(${LIB_ASSIMP_INCLUDE_DIR})
-endif()
+include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR} ${LIB_ASSIMP_INCLUDE_DIR})
+
 
 
 ################################################################
@@ -126,6 +162,12 @@ endif(UNIX)
 
 if (WIN32)
 	target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY})
+	target_link_libraries (VulkanEngine
+    	debug ${LIB_ASSIMP_LIBRARY_DEBUG}
+    	optimized ${LIB_ASSIMP_LIBRARY_RELEASE})
+	target_link_libraries (VulkanEngine
+    	debug ${LIB_ZLIB_LIBRARY_DEBUG}
+    	optimized ${LIB_ZLIB_LIBRARY_RELEASE})
 endif (WIN32)
 
 target_link_libraries (VulkanEngine
