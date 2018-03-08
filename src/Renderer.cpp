@@ -27,6 +27,7 @@ void Renderer::initialise()
 	createTextureImageView();
 	createTextureSampler();
 
+	loadModel();
 	initVulkanIndexBuffer();
 	initVulkanVertexBuffer();
 	initVulkanUniformBuffer();
@@ -624,7 +625,7 @@ bool Renderer::hasStencilComponent(VkFormat format) {
 void Renderer::createTextureImage()
 {
 	Image texture;
-	texture.load("res/textures/texture.png");
+	texture.load("/res/textures/chalet.jpg");
 	VkDeviceSize textureSize = texture.data.size() * sizeof(Pixel);
 
 	VkBuffer stagingBuffer;
@@ -640,7 +641,7 @@ void Renderer::createTextureImage()
 	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 12);
 		copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texture.width), static_cast<uint32_t>(texture.height), 0);
 		Image mip[12];
-		mip[0].load("res/textures/texture.png");
+		mip[0].load("/res/textures/chalet.jpg");
 		for (int i = 1; i < 12; ++i)
 		{
 			mip[i - 1].generateMipMap(mip[i]);
@@ -843,6 +844,53 @@ void Renderer::createTextureSampler()
         throw std::runtime_error("failed to create texture sampler!");
     }
 }
+
+void Renderer::loadModel()
+{
+	Assimp::Importer importer;
+	char buff[FILENAME_MAX];
+  	GetCurrentDir( buff, FILENAME_MAX );
+  	std::string current_working_dir(buff);
+	const aiScene *scene = importer.ReadFile(current_working_dir+ "/res/models/chalet.obj",0);
+	
+	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+	{
+		DBG_SEVERE("ERROR::ASSIMP::" << importer.GetErrorString());
+		return;
+	}
+
+	aiMesh *mesh = scene->mMeshes[0];
+
+	for (u32 i = 0; i < mesh->mNumFaces; ++i)
+	{
+		aiFace f = mesh->mFaces[i]; //Face
+
+		for (u32 j = 0; j < f.mNumIndices; ++j)
+		{
+			u32 vi = f.mIndices[j]; //Vertex Index
+			Vertex v;
+
+			aiVector3D* pos = mesh->mVertices;
+			aiVector3D* uv = mesh->mTextureCoords[0];
+			v.pos = {pos[vi].x, pos[vi].y, pos[vi].z};
+			v.col = {0.f,0.f,0.f};
+
+			if (!uv)
+			{
+				v.texCoord = {0.f, 0.f};
+			}
+			else
+			{
+				v.texCoord = {uv[vi].x, 1.0f-uv[vi].y};
+			}
+			vertices.push_back(v);
+			indices.push_back(vi);
+		}
+	}
+
+	DBG_INFO("Model loaded");
+
+}
 /*
 	@brief	Create Vulkan vertex buffer
 */
@@ -1016,7 +1064,7 @@ void Renderer::initVulkanCommandBuffers()
 		VkBuffer vertexBuffers[] = { vkVertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(vkCommandBuffers[i], vkIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindIndexBuffer(vkCommandBuffers[i], vkIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 		//vkCmdDraw(vkCommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);

@@ -80,7 +80,7 @@ endif()
 ################################################################
 
 if(NOT LIB_GLM_INCLUDE_DIR)
-	message(WARNING "GLM library not found please specify it with -DLIB_GLM_INCLUDE_DIR='Path to your glm include dir' or use the cmake-gui to se set it")
+	message(WARNING "GLM library not found please specify it with -DLIB_GLM_INCLUDE_DIR='Path to your glm include dir' or use the cmake-gui to set it")
 	set(LIB_GLM_INCLUDE_DIR "" CACHE PATH "Path to your GLM include folder, should be 'glm'")
 endif()
 
@@ -110,7 +110,9 @@ endif()
 ################################################################
 
 include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR})
-
+if (UNIX)
+	include_directories(${LIB_ASSIMP_INCLUDE_DIR})
+endif()
 
 
 ################################################################
@@ -119,7 +121,7 @@ include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_I
 
 add_executable(VulkanEngine ${SOURCES} ${INCLUDES})
 if (UNIX)
-	target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY} ${LIB_XCB} ${LIB_XAU} ${LIB_XDMCP})
+	target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY} ${LIB_XCB} ${LIB_XAU} ${LIB_XDMCP} ${LIB_ASSIMP_LIBRARY})
 endif(UNIX)
 
 if (WIN32)
