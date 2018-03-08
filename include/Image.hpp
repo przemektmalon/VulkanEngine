@@ -11,7 +11,11 @@ class Image
 public:
 	std::vector<Pixel> data;
 	int width, height;
+	
+	void setSize(int pWidth, int pHeight);
 
 	void load(std::string path);
 	void save(std::string path);
+
+	void generateMipMap(Image& mipmapped);
 };

@@ -2,7 +2,12 @@
 #include "Engine.hpp"
 #include "Window.hpp"
 #include "Renderer.hpp"
+
 #include "Image.hpp"
+
+#include "cro_mipmap.h"
+
+#include "Profiler.hpp"
 
 /*
 	@brief	Initialise enigne and sub-systems

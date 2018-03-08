@@ -4,6 +4,13 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "stb_image_write.h"
+#include "cro_mipmap.h"
+
+void Image::setSize(int pWidth, int pHeight)
+{
+	width = pWidth; height = pHeight;
+	data.resize(width * height);
+}
 
 void Image::load(std::string path)
 {
@@ -27,4 +34,9 @@ void Image::load(std::string path)
 void Image::save(std::string path)
 {
 	int result = stbi_write_png(path.c_str(), width, height, 4, &data[0], 0);
+}
+
+void Image::generateMipMap(Image & mipmapped)
+{
+	cro_GenMipMapAvgI((int*)&mipmapped.data[0], width, height, (int*)&data[0]);
 }
