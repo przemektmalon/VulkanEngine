@@ -38,5 +38,7 @@ void Image::save(std::string path)
 
 void Image::generateMipMap(Image & mipmapped)
 {
-	cro_GenMipMapAvgI((int*)&mipmapped.data[0], width, height, (int*)&data[0]);
+	mipmapped.data.clear();
+	mipmapped.setSize(width >> 1, height >> 1);
+	cro_GenMipMapAvgI((int*)&data[0], width, height, (int*)&mipmapped.data[0]);
 }

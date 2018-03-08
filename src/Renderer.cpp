@@ -638,7 +638,29 @@ void Renderer::createTextureImage()
 	createImage(texture.width, texture.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory, 12); /// TODO: Calculate mip levels
 	
 	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 12);
-		copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texture.width), static_cast<uint32_t>(texture.height));
+		copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texture.width), static_cast<uint32_t>(texture.height), 0);
+		Image mip[12];
+		mip[0].load("res/textures/texture.png");
+		for (int i = 1; i < 12; ++i)
+		{
+			mip[i - 1].generateMipMap(mip[i]);
+
+			int textureSize = mip[i].data.size() * sizeof(Pixel);
+
+			VkBuffer stagingBuffer;
+			VkDeviceMemory stagingBufferMemory;
+			createVulkanBuffer(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+			void* data;
+			vkMapMemory(vkDevice, stagingBufferMemory, 0, textureSize, 0, &data);
+			memcpy(data, &(mip[i].data[0]), static_cast<size_t>(textureSize));
+			vkUnmapMemory(vkDevice, stagingBufferMemory);
+
+			copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(mip[i].width), static_cast<uint32_t>(mip[i].height), i);
+
+			vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
+			vkFreeMemory(vkDevice, stagingBufferMemory, nullptr);
+		}
 	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 12);
 
 	vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
@@ -660,7 +682,7 @@ void Renderer::createImage(uint32_t width, uint32_t height, VkFormat format, VkI
 	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	imageInfo.usage = usage;
 	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	if (vkCreateImage(vkDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create image!");
@@ -683,7 +705,6 @@ void Renderer::createImage(uint32_t width, uint32_t height, VkFormat format, VkI
 
 void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels) 
 {
-	
 	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
 	VkImageMemoryBarrier barrier = {};
@@ -749,7 +770,7 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 	endSingleTimeCommands(commandBuffer);
 }
 
-void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) 
+void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel)
 {
 	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -758,7 +779,7 @@ void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.mipLevel = mipLevel;
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;
 	region.imageOffset = {0, 0, 0};
@@ -770,28 +791,6 @@ void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
 
 	vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-	for (int i = 1; i < 12; ++i)
-	{	
-		const std::int32_t mipWidth = width >> i;
-		const std::int32_t mipHeight = height >> i;
-
-		VkImageBlit imageBlit = {};
-		imageBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		imageBlit.srcSubresource.baseArrayLayer = 0;
-		imageBlit.srcSubresource.layerCount = 1;
-		imageBlit.srcSubresource.mipLevel = 0;
-		imageBlit.srcOffsets[0] = { 0, 0, 0 };
-		imageBlit.srcOffsets[1] = { int32_t(width), int32_t(height), 1 };
-
-		imageBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		imageBlit.dstSubresource.baseArrayLayer = 0;
-		imageBlit.dstSubresource.layerCount = 1;
-		imageBlit.dstSubresource.mipLevel = i;
-		imageBlit.dstOffsets[0] = { 0, 0, 0 };
-		imageBlit.dstOffsets[1] = { mipWidth, mipHeight, 1 };
-
-		vkCmdBlitImage(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR);
-	}
 	endSingleTimeCommands(commandBuffer);
 }
 
@@ -1135,8 +1134,10 @@ void Renderer::updateUniformBuffer()
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::vec3(1.5f, 1.5f, 1.5f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	float distance = (std::sin(Engine::clock.time().getSeconds()) + 1.f) * 3.5f + 0.3f;
+
+	ubo.model = glm::rotate(glm::fmat4(1.0f), time * glm::radians(90.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::fvec3(distance), glm::fvec3(0.0f, 0.0f, 0.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
 	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 20.0f);
 	ubo.proj[1][1] *= -1;
 

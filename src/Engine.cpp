@@ -96,8 +96,8 @@ void Engine::createWindow()
 #ifdef __linux__
 	wci.connection = connection;
 #endif
-	wci.height = 720;
-	wci.width = 1280;
+	wci.width = 1600;
+	wci.height = 900;
 	wci.posX = 100;
 	wci.posY = 100;
 	wci.title = "Vulkan Engine";
