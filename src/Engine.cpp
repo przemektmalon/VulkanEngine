@@ -44,6 +44,10 @@ void Engine::start()
 
 		while (window->processMessages()) { /* Invoke timer ? */ }
 		
+#ifdef _WIN32
+		GetKeyboardState(Keyboard::keyState);
+#endif
+
 		Event ev;
 		while (window->eventQ.pollEvent(ev)) {
 			switch (ev.type) {
@@ -51,6 +55,9 @@ void Engine::start()
 				if (ev.eventUnion.keyEvent.key.code == Key::KC_ESCAPE)
 					engineRunning = false;
 				std::cout << "Key down: " << char(ev.eventUnion.keyEvent.key.code) << std::endl;
+
+				if (ev.eventUnion.keyEvent.shift && ev.eventUnion.keyEvent.key.code == Key::KC_W)
+					std::cout << "SHIFT+W" << std::endl;
 				break;
 			}
 			case Event::KeyUp: {

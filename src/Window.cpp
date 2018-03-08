@@ -138,10 +138,11 @@ bool Window::processMessages()
 
 }
 
-Event Window::constructKeyEvent(u8 keyCode, Event::Type eventType){
+Event Window::constructKeyEvent(u8 keyCode, Event::Type eventType)
+{
 	auto check = [](u8 pKey) -> bool { return Keyboard::isKeyPressed(pKey); };
-	Event newEvent(eventType); 
-	newEvent.constructKey(keyCode, 
+	Event newEvent(eventType);
+	newEvent.constructKey(keyCode,
 		check(Key::KC_RIGHT_SHIFT) || check(Key::KC_LEFT_SHIFT), 
 		check(Key::KC_LEFT_ALT) || check(Key::KC_RIGHT_ALT), 
 		check(Key::KC_RIGHT_SUPER) || check(Key::KC_LEFT_SUPER), 
@@ -210,8 +211,9 @@ void processEvent(xcb_generic_event_t *event){
 			
 			//Key pressed in window
 			xcb_key_press_event_t *kp = (xcb_key_press_event_t *)event;
-			Keyboard::keyState[kp->detail] = 1;
-			Event keyEvent = Engine::window->constructKeyEvent(kp->detail, Event::KeyDown);
+			int internalKeyCode = Key::linuxScanCodeToInternal(kp->detail);
+			Keyboard::keyState[internalKeyCode] = 1;
+			Event keyEvent = Engine::window->constructKeyEvent(internalKeyCode, Event::KeyDown);
 			Engine::window->eventQ.pushEvent(keyEvent);
 
 			break;
@@ -220,8 +222,9 @@ void processEvent(xcb_generic_event_t *event){
 			DBG_INFO("Key released");
 			//Key released in window
 			xcb_key_release_event_t *kr = (xcb_key_release_event_t *)event;
-			Keyboard::keyState[kr->detail] = 0;
-			Event keyEvent = Engine::window->constructKeyEvent(kr->detail, Event::KeyUp);
+			int internalKeyCode = Key::linuxScanCodeToInternal(kp->detail);
+			Keyboard::keyState[internalKeyCode] = 0;
+			Event keyEvent = Engine::window->constructKeyEvent(internalKeyCode, Event::KeyUp);
 			Engine::window->eventQ.pushEvent(keyEvent);
 			break;
 		}
@@ -242,14 +245,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_KEYDOWN:
 	{
-		Keyboard::keyState[wParam] = 1;
 		Event keyEvent = Engine::window->constructKeyEvent(wParam, Event::KeyDown);
 		Engine::window->eventQ.pushEvent(keyEvent);
 		break;
 	}
 	case WM_KEYUP:
 	{
-		Keyboard::keyState[wParam] = 0;
 		Event keyEvent = Engine::window->constructKeyEvent(wParam, Event::KeyUp);
 		Engine::window->eventQ.pushEvent(keyEvent);
 		break;
