@@ -533,8 +533,8 @@ void Renderer::initVulkanGraphicsPipeline()
 	}
 
 	// Pipeline saves the shader modules we can delete them
-	//vkDestroyShaderModule(vkDevice, fragShaderModule, nullptr);
-	//vkDestroyShaderModule(vkDevice, vertShaderModule, nullptr);
+	sh.destroyVulkanModule();
+	sh2.destroyVulkanModule();
 }
 
 /*
@@ -835,7 +835,7 @@ void Renderer::createTextureSampler()
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	samplerInfo.mipLodBias = 0.0f;
+	samplerInfo.mipLodBias = -1.0f;
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 11.0f;
 
@@ -1002,7 +1002,7 @@ void Renderer::initVulkanCommandBuffers()
 		renderPassInfo.renderArea.extent = swapChainExtent;
 
 		std::array<VkClearValue, 2> clearValues = {};
-		clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+		clearValues[0].color = {0.1f, 0.1f, 0.1f, 1.0f};
 		clearValues[1].depthStencil = {1.0f, 0};
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
@@ -1134,10 +1134,10 @@ void Renderer::updateUniformBuffer()
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-	float distance = (std::sin(Engine::clock.time().getSeconds()) + 1.f) * 3.5f + 0.3f;
+	float distance = (std::sin(Engine::clock.time().getSeconds()) + 1.f) * 3.5f;
 
 	ubo.model = glm::rotate(glm::fmat4(1.0f), time * glm::radians(90.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::fvec3(distance), glm::fvec3(0.0f, 0.0f, 0.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::fvec3(distance, distance, distance+1), glm::fvec3(0.0f, 0.0f, 0.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
 	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 20.0f);
 	ubo.proj[1][1] *= -1;
 

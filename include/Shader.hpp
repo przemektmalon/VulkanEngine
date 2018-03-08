@@ -32,6 +32,7 @@ public:
 	void load(std::string path);
 	void compile();
 	void createVulkanModule();
+	void destroyVulkanModule();
 
 private:
 	void setIntStage();

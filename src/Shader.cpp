@@ -61,6 +61,11 @@ void ShaderModule::createVulkanModule()
 	}
 }
 
+void ShaderModule::destroyVulkanModule()
+{
+	vkDestroyShaderModule(Engine::renderer->vkDevice, vkModule, 0);
+}
+
 void ShaderModule::setIntStage()
 {
 	switch (stage)
