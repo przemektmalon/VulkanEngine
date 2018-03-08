@@ -9,7 +9,7 @@ class Time
 public:
 	Time() : seconds(0), milliSeconds(0), microSeconds(0) {};
 	Time(double pSeconds) { setSeconds(pSeconds); }
-	Time(Time& pTime) { setMicroSeconds(pTime.getMicroSeconds()); }
+	Time(const Time& pTime) { setMicroSeconds(pTime.getMicroSeconds()); }
 	Time(Time&& pTime) { setMicroSeconds(pTime.getMicroSeconds()); }
 	~Time() {};
 
@@ -17,11 +17,11 @@ public:
 	Time& setMilliSeconds(double ms) { milliSeconds = ms; microSeconds = ms * 1000; seconds = ms * 0.001; return *this; }
 	Time& setSeconds(double s) { seconds = s; microSeconds = s * 1000000; milliSeconds = s * 1000; return *this; }
 
-	s64 getMicroSeconds() { return microSeconds; }
-	double getMilliSeconds() { return milliSeconds; }
-	float getMilliSecondsf() { return float(milliSeconds); }
-	double getSeconds() { return seconds; }
-	float getSecondsf() { return float(seconds); }
+	s64 getMicroSeconds() const { return microSeconds; }
+	double getMilliSeconds() const { return milliSeconds; }
+	float getMilliSecondsf() const { return float(milliSeconds); }
+	double getSeconds() const { return seconds; }
+	float getSecondsf() const { return float(seconds); }
 
 	s64 removeMicroSeconds(s64 ms) { setMicroSeconds(microSeconds - ms); return microSeconds; }
 	double removeMilliSeconds(double ms) { setMilliSeconds(milliSeconds - ms); return milliSeconds; }

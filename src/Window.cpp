@@ -222,7 +222,7 @@ void processEvent(xcb_generic_event_t *event){
 			DBG_INFO("Key released");
 			//Key released in window
 			xcb_key_release_event_t *kr = (xcb_key_release_event_t *)event;
-			int internalKeyCode = Key::linuxScanCodeToInternal(kp->detail);
+			int internalKeyCode = Key::linuxScanCodeToInternal(kr->detail);
 			Keyboard::keyState[internalKeyCode] = 0;
 			Event keyEvent = Engine::window->constructKeyEvent(internalKeyCode, Event::KeyUp);
 			Engine::window->eventQ.pushEvent(keyEvent);
