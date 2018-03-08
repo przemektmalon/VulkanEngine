@@ -18,7 +18,7 @@ endif()
 ################    SET SOME DIRECTORY CONSTANTS
 ################################################################
 
-set(LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs")
+set(LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
 set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
@@ -84,16 +84,6 @@ if(NOT LIB_GLM_INCLUDE_DIR)
 	set(LIB_GLM_INCLUDE_DIR "" CACHE PATH "Path to your GLM include folder, should be 'glm'")
 endif()
 
-################################################################
-################    SET STB INCLUDES
-################################################################
-
-if(NOT STB_INCLUDE_DIR)
-	message(WARNING "STB library not found please specify it with -DSTB_INCLUDE_DIR='Path to your STB include dir' or use the cmake-gui to se set it")
-	set(STB_INCLUDE_DIR "" CACHE PATH "Path to your STB include folder")
-endif()
-
-
 
 ################################################################
 ################    SET SOME CMAKE VARIABLES
@@ -119,7 +109,7 @@ endif()
 ################    SPECIFY INCLUDE DIRECTORIES
 ################################################################
 
-include_directories(${INCLUDE_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR})
+include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR})
 
 
 
