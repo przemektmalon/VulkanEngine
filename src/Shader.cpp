@@ -41,6 +41,10 @@ void ShaderModule::compile()
 		o.SetAutoBindUniforms(true);
 		o.AddMacroDefinition(stageMacro);
 		auto res = c.CompileGlslToSpv(glslSource, intStage, path.c_str(), o);
+		if (res.GetCompilationStatus() != shaderc_compilation_status_success)
+		{
+			DBG_SEVERE("\n" << res.GetErrorMessage() << "\n");
+		}
 		spirvSource.assign(res.begin(), res.end());
 	}
 }

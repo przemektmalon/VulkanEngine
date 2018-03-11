@@ -121,6 +121,7 @@ if(WIN32)
 endif()
 
 
+
 ################################################################
 ################    SET SOME CMAKE VARIABLES
 ################################################################
@@ -138,8 +139,6 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 if(ERROR)
 	message(FATAL_ERROR "Error(s) occured check output")
 endif()
-
-
 
 
 

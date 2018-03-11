@@ -1,47 +1,7 @@
 #pragma once
 #include "PCH.hpp"
 #include "Engine.hpp"
-#include "assimp/Importer.hpp"
-#include "assimp/scene.h"
-#include "assimp/postprocess.h"
-
-
-struct Vertex
-{
-	glm::vec3 pos;
-	glm::vec3 col;
-	glm::vec2 texCoord;
-
-	static VkVertexInputBindingDescription getBindingDescription()
-	{
-		VkVertexInputBindingDescription bd = {};
-		bd.binding = 0;
-		bd.stride = sizeof(Vertex);
-		bd.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		return bd;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
-	{
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, col);
-
-		attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-		
-		return attributeDescriptions;
-	}
-};
+#include "Model.hpp"
 
 struct UniformBufferObject {
 	glm::mat4 model;
@@ -86,11 +46,7 @@ public:
 	VkBuffer vkStagingBuffer;
 	VkDeviceMemory vkStagingBufferMemory;
 
-	VkBuffer vkVertexBuffer;
-	VkDeviceMemory vkVertexBufferMemory;
-
-	VkBuffer vkIndexBuffer;
-	VkDeviceMemory vkIndexBufferMemory;
+	Model chalet;
 
 	VkBuffer vkUniformBuffer;
 	VkDeviceMemory vkUniformBufferMemory;
@@ -103,10 +59,6 @@ public:
 	VkImageView textureImageView;
 	VkSampler textureSampler;
 
-	std::vector<Vertex> vertices;
-
-	std::vector<u32> indices;
-	
 	UniformBufferObject ubo;
 
 	void initVulkanLogicalDevice();
@@ -130,10 +82,7 @@ public:
 	void createTextureImageView();
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels);
 	void createTextureSampler();
-	
-	void loadModel();
-	void initVulkanVertexBuffer();
-	void initVulkanIndexBuffer();
+
 	void initVulkanUniformBuffer();
 	void initVulkanDescriptorPool();
 	void initVulkanDescriptorSet();

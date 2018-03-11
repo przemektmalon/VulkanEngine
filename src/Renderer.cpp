@@ -20,16 +20,12 @@ void Renderer::initialise()
 	initVulkanCommandPool();
 	initVulkanDepthResources();
 	initVulkanFramebuffers();
-	
-	
 
+	chalet.load("/res/models/chalet.obj");
 	createTextureImage();
 	createTextureImageView();
 	createTextureSampler();
 
-	loadModel();
-	initVulkanIndexBuffer();
-	initVulkanVertexBuffer();
 	initVulkanUniformBuffer();
 	initVulkanDescriptorPool();
 	initVulkanDescriptorSet();
@@ -53,10 +49,6 @@ void Renderer::cleanup()
 	vkDestroyDescriptorSetLayout(vkDevice, vkDescriptorSetLayout, nullptr);
 	vkDestroyBuffer(vkDevice, vkUniformBuffer, nullptr);
 	vkFreeMemory(vkDevice, vkUniformBufferMemory, nullptr);
-	vkDestroyBuffer(vkDevice, vkIndexBuffer, nullptr);
-	vkFreeMemory(vkDevice, vkIndexBufferMemory, nullptr);
-	vkDestroyBuffer(vkDevice, vkVertexBuffer, nullptr);
-	vkFreeMemory(vkDevice, vkVertexBufferMemory, nullptr);
 	vkDestroySemaphore(vkDevice, renderFinishedSemaphore, 0);
 	vkDestroySemaphore(vkDevice, imageAvailableSemaphore, 0);
 	vkDestroyCommandPool(vkDevice, vkCommandPool, 0);
@@ -845,98 +837,6 @@ void Renderer::createTextureSampler()
     }
 }
 
-void Renderer::loadModel()
-{
-	Assimp::Importer importer;
-	char buff[FILENAME_MAX];
-  	GetCurrentDir( buff, FILENAME_MAX );
-  	std::string current_working_dir(buff);
-	const aiScene *scene = importer.ReadFile(current_working_dir+ "/res/models/chalet.obj",0);
-	
-	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-	{
-		DBG_SEVERE("ERROR::ASSIMP::" << importer.GetErrorString());
-		return;
-	}
-
-	aiMesh *mesh = scene->mMeshes[0];
-
-	for (u32 i = 0; i < mesh->mNumFaces; ++i)
-	{
-		aiFace f = mesh->mFaces[i]; //Face
-
-		for (u32 j = 0; j < f.mNumIndices; ++j)
-		{
-			u32 vi = f.mIndices[j]; //Vertex Index
-			Vertex v;
-
-			aiVector3D* pos = mesh->mVertices;
-			aiVector3D* uv = mesh->mTextureCoords[0];
-			v.pos = {pos[vi].x, pos[vi].y, pos[vi].z};
-			v.col = {0.f,0.f,0.f};
-
-			if (!uv)
-			{
-				v.texCoord = {0.f, 0.f};
-			}
-			else
-			{
-				v.texCoord = {uv[vi].x, 1.0f-uv[vi].y};
-			}
-			vertices.push_back(v);
-			indices.push_back(vi);
-		}
-	}
-
-	DBG_INFO("Model loaded");
-
-}
-/*
-	@brief	Create Vulkan vertex buffer
-*/
-void Renderer::initVulkanVertexBuffer()
-{
-	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkStagingBuffer, vkStagingBufferMemory);
-
-	void* data;
-	vkMapMemory(vkDevice, vkStagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, vertices.data(), (size_t)bufferSize);
-	vkUnmapMemory(vkDevice, vkStagingBufferMemory);
-
-	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkVertexBuffer, vkVertexBufferMemory);
-
-	copyVulkanBuffer(vkStagingBuffer, vkVertexBuffer, bufferSize);
-
-	vkDestroyBuffer(vkDevice, vkStagingBuffer, 0);
-	vkFreeMemory(vkDevice, vkStagingBufferMemory, 0);
-}
-
-/*
-	@brief	Create Vulkan index buffer
-*/
-void Renderer::initVulkanIndexBuffer()
-{
-	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-	void* data;
-	vkMapMemory(vkDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, indices.data(), (size_t)bufferSize);
-	vkUnmapMemory(vkDevice, stagingBufferMemory);
-
-	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkIndexBuffer, vkIndexBufferMemory);
-
-	copyVulkanBuffer(stagingBuffer, vkIndexBuffer, bufferSize);
-
-	vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
-	vkFreeMemory(vkDevice, stagingBufferMemory, nullptr);
-}
-
 /*
 	@brief	Create vulkan uniform buffer for MVP matrices
 */
@@ -1061,18 +961,19 @@ void Renderer::initVulkanCommandBuffers()
 
 		vkCmdBindDescriptorSets(vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineLayout, 0, 1, &vkDescriptorSet, 0, nullptr);
 
-		VkBuffer vertexBuffers[] = { vkVertexBuffer };
+		VkBuffer vertexBuffers[] = { chalet.triLists[0][0].vkVertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(vkCommandBuffers[i], vkIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(vkCommandBuffers[i], chalet.triLists[0][0].vkIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(chalet.triLists[0][0].indexDataLength), 1, 0, 0, 0);
 		//vkCmdDraw(vkCommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 		vkCmdEndRenderPass(vkCommandBuffers[i]);
 
-		if (vkEndCommandBuffer(vkCommandBuffers[i]) != VK_SUCCESS) {
-			DBG_SEVERE("Failed to record Vulkan command buffer");
+		auto result = vkEndCommandBuffer(vkCommandBuffers[i]);
+		if (result != VK_SUCCESS) {
+			DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
 		}
 	}
 }
