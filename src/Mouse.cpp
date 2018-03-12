@@ -20,5 +20,6 @@ glm::ivec2 Mouse::getWindowPosition(const Window* pWnd)
 #endif
 }
 
+glm::ivec2 Mouse::windowPosition;
 MouseCode Mouse::state;
 glm::ivec2 Mouse::wheelDelta;

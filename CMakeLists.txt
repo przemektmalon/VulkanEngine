@@ -156,19 +156,19 @@ include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_I
 
 add_executable(VulkanEngine ${SOURCES} ${INCLUDES})
 if (UNIX)
-	target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY} ${LIB_XCB} ${LIB_XAU} ${LIB_XDMCP} ${LIB_ASSIMP_LIBRARY})
+	target_link_libraries(VulkanEngine ${LIB_XCB} ${LIB_XAU} ${LIB_XDMCP})
 endif(UNIX)
 
 if (WIN32)
-	target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY})
-	target_link_libraries (VulkanEngine
-    	debug ${LIB_ASSIMP_LIBRARY_DEBUG}
-    	optimized ${LIB_ASSIMP_LIBRARY_RELEASE})
 	target_link_libraries (VulkanEngine
     	debug ${LIB_ZLIB_LIBRARY_DEBUG}
     	optimized ${LIB_ZLIB_LIBRARY_RELEASE})
 endif (WIN32)
 
+target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY})
+target_link_libraries (VulkanEngine
+	debug ${LIB_ASSIMP_LIBRARY_DEBUG}
+	optimized ${LIB_ASSIMP_LIBRARY_RELEASE})
 target_link_libraries (VulkanEngine
     debug ${LIB_SHADERC_DEBUG}
     optimized ${LIB_SHADERC_RELEASE})

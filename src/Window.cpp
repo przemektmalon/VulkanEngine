@@ -185,33 +185,72 @@ void processEvent(xcb_generic_event_t *event){
 		}
 		
 		case XCB_BUTTON_PRESS: {
-			DBG_INFO("Button pressed");
 			xcb_button_press_event_t *bp = (xcb_button_press_event_t *)event;
-
 			switch (bp->detail) {
+			case 1:
+				Mouse::state |= Mouse::M_LEFT;
+				break;
+			case 2:
+				Mouse::state |= Mouse::M_MIDDLE;
+				break;
+			case 3:
+				Mouse::state |= Mouse::M_RIGHT;
+				break;
 			case 4:
-				//Wheel Button up in window
+				//DBG_INFO("D Scroll Up");
 				break;
 			case 5:
-				//Wheel Button down in window
+				//DBG_INFO("D Scroll Down");
 				break;
 			default:
 				//Button pressed in window
 				break;
 			}
+			Event mouseEvent(Event::MouseDown);
+			glm::ivec2 mPos(bp->event_x, bp->event_y);
+			mouseEvent.constructMouse(Mouse::state, mPos, glm::ivec2(0), 0);
+			Engine::window->eventQ.pushEvent(mouseEvent);
 			break;
 		}
 		case XCB_BUTTON_RELEASE: {
-			DBG_INFO("Button released");
 			//Button released in window
 			xcb_button_release_event_t *br = (xcb_button_release_event_t *)event;
-
+			switch (br->detail) {
+			case 1:
+				Mouse::state &= ~Mouse::M_LEFT;
+				break;
+			case 2:
+				Mouse::state &= ~Mouse::M_MIDDLE;
+				break;
+			case 3:
+				Mouse::state &= ~Mouse::M_RIGHT;
+				break;
+			case 4:
+				//DBG_INFO("U Scroll Up");
+				break;
+			case 5:
+				//DBG_INFO("U Scroll Down");
+				break;
+			default:
+				//Button pressed in window
+				break;
+			}
+			Event mouseEvent(Event::MouseUp);
+			glm::ivec2 mPos(br->event_x, br->event_y);
+			mouseEvent.constructMouse(Mouse::state, mPos, glm::ivec2(0), 0);
+			Engine::window->eventQ.pushEvent(mouseEvent);
 			break;
 		}
 		case XCB_MOTION_NOTIFY: {
 			//Mouse moved in window
 			xcb_motion_notify_event_t *motion = (xcb_motion_notify_event_t *)event;
-
+			glm::ivec2 mPos(motion->event_x, motion->event_y);
+			glm::ivec2 move = mPos-Mouse::getWindowPosition();
+			
+			Event mouseEvent(Event::MouseMove);
+			mouseEvent.constructMouse(Mouse::state, mPos, move, 0);
+			Engine::window->eventQ.pushEvent(mouseEvent);
+			Mouse::setWindowPosition(mPos);
 			break;
 		}
 		case XCB_ENTER_NOTIFY: {
