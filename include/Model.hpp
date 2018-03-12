@@ -42,7 +42,7 @@ class Model
 {
 public:
 
-	struct TriangleList
+	struct TriangleMesh
 	{
 		Vertex* vertexData;
 		u32 vertexDataLength;
@@ -57,7 +57,7 @@ public:
 		VkDeviceMemory vkIndexBufferMemory;
 	};
 
-	std::vector<std::vector<TriangleList>> triLists;
+	std::vector<std::vector<TriangleMesh>> triMeshes;
 
 	void load(std::string path);
 };

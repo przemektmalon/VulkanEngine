@@ -21,9 +21,9 @@ void Model::load(std::string path)
 
 	aiMesh *mesh = scene->mMeshes[0];
 
-	triLists.push_back(std::vector<TriangleList>()); triLists[0].push_back(TriangleList());
+	triMeshes.push_back(std::vector<TriangleMesh>()); triMeshes[0].push_back(TriangleMesh());
 
-	TriangleList& triList = triLists[0][0];
+	TriangleMesh& triList = triMeshes[0][0];
 	triList.vertexDataLength = mesh->mNumVertices;
 	triList.vertexData = new Vertex[triList.vertexDataLength];
 	triList.indexDataLength = mesh->mNumFaces * 3;

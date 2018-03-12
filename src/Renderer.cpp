@@ -21,7 +21,7 @@ void Renderer::initialise()
 	initVulkanDepthResources();
 	initVulkanFramebuffers();
 
-	chalet.load("/res/models/chalet.obj");
+	chalet.load("/res/models/hollowbox.obj");
 	createTextureImage();
 	createTextureImageView();
 	createTextureSampler();
@@ -961,12 +961,12 @@ void Renderer::initVulkanCommandBuffers()
 
 		vkCmdBindDescriptorSets(vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineLayout, 0, 1, &vkDescriptorSet, 0, nullptr);
 
-		VkBuffer vertexBuffers[] = { chalet.triLists[0][0].vkVertexBuffer };
+		VkBuffer vertexBuffers[] = { chalet.triMeshes[0][0].vkVertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(vkCommandBuffers[i], chalet.triLists[0][0].vkIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(vkCommandBuffers[i], chalet.triMeshes[0][0].vkIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(chalet.triLists[0][0].indexDataLength), 1, 0, 0, 0);
+		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(chalet.triMeshes[0][0].indexDataLength), 1, 0, 0, 0);
 		//vkCmdDraw(vkCommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 		vkCmdEndRenderPass(vkCommandBuffers[i]);
@@ -1086,8 +1086,8 @@ void Renderer::updateUniformBuffer()
 	float distance = (std::sin(Engine::clock.time().getSeconds()) + 1.f) * 3.5f;
 
 	ubo.model = glm::rotate(glm::fmat4(1.0f), time * glm::radians(90.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::fvec3(distance, distance, distance+1), glm::fvec3(0.0f, 0.0f, 0.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 20.0f);
+	ubo.view = Engine::camera.getView(); // glm::lookAt(glm::fvec3(distance, distance, distance + 1), glm::fvec3(0.0f, 0.0f, 0.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
+	ubo.proj = Engine::camera.getProj(); // glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 20.0f);
 	ubo.proj[1][1] *= -1;
 
 	void* data;
