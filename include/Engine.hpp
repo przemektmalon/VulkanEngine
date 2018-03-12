@@ -3,6 +3,7 @@
 #include "VulkanWrappers.hpp"
 #include "Clock.hpp"
 #include "Time.hpp"
+#include "Camera.hpp"
 
 class Window;
 class Renderer;
@@ -40,6 +41,7 @@ public:
 	static Clock clock;
 	static Window* window;
 	static Renderer* renderer;
+	static Camera camera;
 
 	static VkInstance vkInstance;
 	static VkPhysicalDevice vkPhysicalDevice;

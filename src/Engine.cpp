@@ -29,6 +29,7 @@ void Engine::start()
 	createWindow();
 	queryVulkanPhysicalDeviceDetails();
 
+	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 3.f, 0.1, 50.f);
 	renderer = new Renderer();
 	renderer->initialise();
 
@@ -51,6 +52,15 @@ void Engine::start()
 		Event ev;
 		while (window->eventQ.pollEvent(ev)) {
 			switch (ev.type) {
+			case(Event::MouseMove):
+			{
+				if (ev.eventUnion.mouseEvent.code & Mouse::M_RIGHT)
+				{
+					camera.rotate(0, 0.0035 * ev.eventUnion.mouseEvent.move.y, 0.0035 * ev.eventUnion.mouseEvent.move.x);
+					/// TODO: set mouse position to be locked to middle of window
+				}
+				break;
+			}
 			case Event::KeyDown: {
 				if (ev.eventUnion.keyEvent.key.code == Key::KC_ESCAPE)
 					engineRunning = false;
@@ -73,6 +83,25 @@ void Engine::start()
 		renderer->render();
 
 		frameTime = clock.time() - frameTime;
+
+		float camSpeed = 5.f;
+
+		auto move = glm::fvec3(glm::fvec4(0, 0, camSpeed * frameTime.getSeconds(), 1) * camera.getMatYaw());
+		camera.move(-move * float(Keyboard::isKeyPressed('W')));
+
+		move = glm::cross(glm::fvec3(glm::fvec4(0, 0, camSpeed * frameTime.getSeconds(), 1) * camera.getMatYaw()), glm::fvec3(0, 1, 0));
+		camera.move(move * float(Keyboard::isKeyPressed('A')));
+
+		move = glm::fvec3(glm::fvec4(0, 0, camSpeed * frameTime.getSeconds(), 1) * camera.getMatYaw());
+		camera.move(move * float(Keyboard::isKeyPressed('S')));
+
+		move = glm::cross(glm::fvec3(glm::fvec4(0, 0, camSpeed * frameTime.getSeconds(), 1) * camera.getMatYaw()), glm::fvec3(0, 1, 0));
+		camera.move(-move * float(Keyboard::isKeyPressed('D')));
+
+		camera.move(glm::fvec3(0,  camSpeed * frameTime.getSeconds() * float(Keyboard::isKeyPressed('R')),0));
+		camera.move(glm::fvec3(0, -camSpeed * frameTime.getSeconds() * float(Keyboard::isKeyPressed('F')), 0));
+
+		camera.update(frameTime);
 
 		// FPS display
 		++frames;
@@ -266,3 +295,4 @@ std::vector<PhysicalDeviceDetails> Engine::physicalDevicesDetails;
 int Engine::physicalDeviceIndex;
 bool Engine::engineRunning = true;
 Time Engine::engineStartTime;
+Camera Engine::camera;
