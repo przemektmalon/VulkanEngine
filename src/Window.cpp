@@ -30,6 +30,9 @@ void Window::create(WindowCreateInfo * c)
 	win32WindowClass.cbClsExtra = 0;
 	win32WindowClass.cbWndExtra = 0;
 
+	resX = c->width;
+	resY = c->height;
+
 	if (!RegisterClassEx(&win32WindowClass))
 		DBG_SEVERE("Could not register win32 window class");
 
@@ -57,6 +60,8 @@ void Window::create(WindowCreateInfo * c)
 	sci.hwnd = win32WindowHandle;
 
 	vkCreateWin32SurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface);
+
+	registerRawMouseDevice();
 #endif
 #ifdef __linux__
 	connection = c->connection;
@@ -152,6 +157,21 @@ Event Window::constructKeyEvent(u8 keyCode, Event::Type eventType)
 	return newEvent;
 }
 
+#ifdef _WIN32
+void Window::registerRawMouseDevice()
+{
+	RAWINPUTDEVICE Rid[1];
+
+	Rid[0].usUsagePage = 0x01;
+	Rid[0].usUsage = 0x02;
+	Rid[0].dwFlags = 0;
+	Rid[0].hwndTarget = 0;
+
+	if (!RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]))) {
+		DBG_SEVERE("Could not register raw/hardware mouse");
+	}
+}
+#endif
 
 #ifdef __linux__
 void processEvent(xcb_generic_event_t *event){
@@ -253,6 +273,92 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		Event keyEvent = Engine::window->constructKeyEvent(wParam, Event::KeyUp);
 		Engine::window->eventQ.pushEvent(keyEvent);
+		break;
+	}
+	case WM_INPUT:
+	{
+		UINT dwSize;
+
+		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+
+		LPBYTE lpb = new BYTE[dwSize];
+
+		if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
+			OutputDebugString(TEXT("GetRawInputData does not return correct size !\n"));
+
+		RAWINPUT* raw = (RAWINPUT*)lpb;
+
+		if (raw->header.dwType == RIM_TYPEMOUSE)
+		{
+			const auto buttonFlag = raw->data.mouse.usButtonFlags;
+
+			const auto anyMouseClick = (RI_MOUSE_LEFT_BUTTON_DOWN | RI_MOUSE_RIGHT_BUTTON_DOWN | RI_MOUSE_MIDDLE_BUTTON_DOWN) & buttonFlag;
+			const auto lMouseClick = RI_MOUSE_LEFT_BUTTON_DOWN & buttonFlag;
+			const auto rMouseClick = RI_MOUSE_RIGHT_BUTTON_DOWN & buttonFlag;
+			const auto mMouseClick = RI_MOUSE_MIDDLE_BUTTON_DOWN & buttonFlag;
+
+			const auto anyMouseRelease = (RI_MOUSE_LEFT_BUTTON_UP | RI_MOUSE_RIGHT_BUTTON_UP | RI_MOUSE_MIDDLE_BUTTON_UP) & buttonFlag;
+			const auto lMouseRelease = RI_MOUSE_LEFT_BUTTON_UP & buttonFlag;
+			const auto rMouseRelease = RI_MOUSE_RIGHT_BUTTON_UP & buttonFlag;
+			const auto mMouseRelease = RI_MOUSE_MIDDLE_BUTTON_UP & buttonFlag;
+
+			if (true) /// TODO: Window has focus ?
+			{
+				glm::ivec2 mPos; mPos = Mouse::getWindowPosition(Engine::window);
+
+				if (lMouseClick)
+					Mouse::state |= Mouse::M_LEFT;
+				else if (lMouseRelease)
+					Mouse::state &= ~Mouse::M_LEFT;
+
+				if (rMouseClick)
+					Mouse::state |= Mouse::M_RIGHT;
+				else if (rMouseRelease)
+					Mouse::state &= ~Mouse::M_RIGHT;
+
+				if (mMouseClick)
+					Mouse::state |= Mouse::M_MIDDLE;
+				else if (mMouseRelease)
+					Mouse::state &= ~Mouse::M_MIDDLE;
+
+				MouseCode mouseCode = Mouse::state;
+
+				Event::Type eventType;
+
+				if (anyMouseClick)
+				{
+					eventType = Event::MouseDown;
+					Event mouseEvent(eventType);
+					mouseEvent.constructMouse(mouseCode, mPos, glm::ivec2(0), 0);
+					Engine::window->eventQ.pushEvent(mouseEvent);		// Send mouse down event
+				}
+				else if (anyMouseRelease)
+				{
+					eventType = Event::MouseUp;
+					Event mouseEvent(eventType);
+					mouseEvent.constructMouse(mouseCode, mPos, glm::ivec2(0), 0);
+					Engine::window->eventQ.pushEvent(mouseEvent);		// Send mouse up event
+				}
+
+				glm::ivec2 mouseMove;
+				mouseMove.x = raw->data.mouse.lLastX;
+				mouseMove.y = raw->data.mouse.lLastY;
+
+				if (mouseMove != glm::ivec2(0, 0))
+				{
+					Event moveEvent(Event::MouseMove);
+					moveEvent.constructMouse(mouseCode, mPos, mouseMove, 0);
+					Engine::window->eventQ.pushEvent(moveEvent);		// Send mouse move event
+				}
+			}
+			else
+			{
+				//if (anyMouseClick || engineWindow->isMouseInClientArea())
+				//	engineWindow->captureMouseFocus();
+			}
+		}
+
+		delete[] lpb;
 		break;
 	}
 	case WM_CLOSE:

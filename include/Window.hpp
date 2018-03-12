@@ -42,6 +42,10 @@ public:
 #endif
 	Event constructKeyEvent(u8 keyCode, Event::Type eventType);
 
+#ifdef _WIN32
+	void registerRawMouseDevice();
+#endif
+
 	VkSurfaceKHR vkSurface;
 	u32 resX;
 	u32 resY;
