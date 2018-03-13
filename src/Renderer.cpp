@@ -27,7 +27,7 @@ void Renderer::initialise()
 	createVulkanVertexIndexBuffers();
 
 	models.push_back(Model("/res/models/pbrsphere.dae"));
-	models.push_back(Model("/res/models/object.obj"));
+	models.push_back(Model("/res/models/object.dae"));
 
 	pushModelDataToGPU(models[0]);
 	pushModelDataToGPU(models[1]);

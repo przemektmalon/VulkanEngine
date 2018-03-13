@@ -11,7 +11,7 @@ void Model::load(std::string path)
 	char buff[FILENAME_MAX];
 	GetCurrentDir(buff, FILENAME_MAX);
 	std::string current_working_dir(buff);
-	const aiScene *scene = importer.ReadFile(current_working_dir + path, 0);
+	const aiScene *scene = importer.ReadFile(current_working_dir + path, aiProcessPreset_TargetRealtime_MaxQuality);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
