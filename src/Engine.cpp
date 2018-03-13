@@ -29,7 +29,7 @@ void Engine::start()
 	createWindow();
 	queryVulkanPhysicalDeviceDetails();
 
-	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 3.f, 0.1, 50.f);
+	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 3.5f, 0.1, 50.f);
 	renderer = new Renderer();
 	renderer->initialise();
 
@@ -65,9 +65,6 @@ void Engine::start()
 				if (ev.eventUnion.keyEvent.key.code == Key::KC_ESCAPE)
 					engineRunning = false;
 				std::cout << "Key down: " << char(ev.eventUnion.keyEvent.key.code) << std::endl;
-
-				if (ev.eventUnion.keyEvent.shift && ev.eventUnion.keyEvent.key.code == Key::KC_W)
-					std::cout << "SHIFT+W" << std::endl;
 				break;
 			}
 			case Event::KeyUp: {

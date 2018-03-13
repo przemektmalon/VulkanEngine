@@ -9,6 +9,10 @@ struct UniformBufferObject {
 	glm::mat4 proj;
 };
 
+#define VERTEX_BUFFER_SIZE 64 * 1024 * 1024 // 64 MB
+#define INDEX_BUFFER_BASE VERTEX_BUFFER_SIZE
+#define INDEX_BUFFER_SIZE 8 * 1024 * 1024 // 8 MB
+
 /*
 	@brief	Collates Vulkan objects and controls rendering pipeline
 */
@@ -46,7 +50,21 @@ public:
 	VkBuffer vkStagingBuffer;
 	VkDeviceMemory vkStagingBufferMemory;
 
-	Model chalet;
+	// GPU Memory management
+	// Joint vertex/index buffer
+	/// TODO: We need a better allocator/deallocator
+	// It should keep track of free memory which may be "holes" (after removing memory from middle of buffer) and allocate if new additions fit
+	// If we want to compact data (not sure if this will be worth the effort) we'd have to keep track of which memory regions are used by which models
+
+	std::vector<Model> models;
+	VkBuffer vkVertexIndexBuffer;
+	VkDeviceMemory vkVertexIndexBufferMemory;
+	s32 vertexInputOffset;
+	s32 indexInputOffset;
+	void createVulkanVertexIndexBuffers();
+	void pushModelDataToGPU(Model& model);
+
+	// End GPU mem management
 
 	VkBuffer vkUniformBuffer;
 	VkDeviceMemory vkUniformBufferMemory;
@@ -90,7 +108,7 @@ public:
 	void initVulkanSemaphores();
 
 	void createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-	void copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+	void copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkDeviceSize dstOffset = 0, VkDeviceSize srcOffset = 0);
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void updateUniformBuffer();

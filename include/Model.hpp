@@ -41,6 +41,7 @@ struct Vertex
 class Model
 {
 public:
+	Model(std::string path) { load(path); }
 
 	struct TriangleMesh
 	{
@@ -50,11 +51,14 @@ public:
 		u32* indexData;
 		u32 indexDataLength;
 
-		VkBuffer vkVertexBuffer;
-		VkDeviceMemory vkVertexBufferMemory;
+		s32 vertexOffset; // In GPU buffer
+		s32 indexOffset; // In GPU buffer
 
-		VkBuffer vkIndexBuffer;
-		VkDeviceMemory vkIndexBufferMemory;
+		//VkBuffer vkVertexBuffer;
+		//VkDeviceMemory vkVertexBufferMemory;
+
+		//VkBuffer vkIndexBuffer;
+		//VkDeviceMemory vkIndexBufferMemory;
 	};
 
 	std::vector<std::vector<TriangleMesh>> triMeshes;

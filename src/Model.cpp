@@ -60,38 +60,4 @@ void Model::load(std::string path)
 	}
 
 	DBG_INFO("Model loaded: " << path);
-
-
-
-	VkDeviceSize bufferSize = triList.vertexDataLength * sizeof(Vertex);
-
-	Engine::renderer->createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Engine::renderer->vkStagingBuffer, Engine::renderer->vkStagingBufferMemory);
-
-	void* data;
-	vkMapMemory(Engine::renderer->vkDevice, Engine::renderer->vkStagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, triList.vertexData, (size_t)bufferSize);
-	vkUnmapMemory(Engine::renderer->vkDevice, Engine::renderer->vkStagingBufferMemory);
-
-	Engine::renderer->createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, triList.vkVertexBuffer, triList.vkVertexBufferMemory);
-
-	Engine::renderer->copyVulkanBuffer(Engine::renderer->vkStagingBuffer, triList.vkVertexBuffer, bufferSize);
-
-	vkDestroyBuffer(Engine::renderer->vkDevice, Engine::renderer->vkStagingBuffer, 0);
-	vkFreeMemory(Engine::renderer->vkDevice, Engine::renderer->vkStagingBufferMemory, 0);
-
-
-	bufferSize = triList.indexDataLength * sizeof(int);
-
-	Engine::renderer->createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Engine::renderer->vkStagingBuffer, Engine::renderer->vkStagingBufferMemory);
-
-	vkMapMemory(Engine::renderer->vkDevice, Engine::renderer->vkStagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, triList.indexData, (size_t)bufferSize);
-	vkUnmapMemory(Engine::renderer->vkDevice, Engine::renderer->vkStagingBufferMemory);
-
-	Engine::renderer->createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, triList.vkIndexBuffer, triList.vkIndexBufferMemory);
-
-	Engine::renderer->copyVulkanBuffer(Engine::renderer->vkStagingBuffer, triList.vkIndexBuffer, bufferSize);
-
-	vkDestroyBuffer(Engine::renderer->vkDevice, Engine::renderer->vkStagingBuffer, 0);
-	vkFreeMemory(Engine::renderer->vkDevice, Engine::renderer->vkStagingBufferMemory, 0);
 }

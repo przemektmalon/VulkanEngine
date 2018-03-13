@@ -21,7 +21,17 @@ void Renderer::initialise()
 	initVulkanDepthResources();
 	initVulkanFramebuffers();
 
-	chalet.load("/res/models/hollowbox.obj");
+	vertexInputOffset = 0;
+	indexInputOffset = 0;
+
+	createVulkanVertexIndexBuffers();
+
+	models.push_back(Model("/res/models/hollowbox.obj"));
+	models.push_back(Model("/res/models/chalet.obj"));
+
+	pushModelDataToGPU(models[0]);
+	pushModelDataToGPU(models[1]);
+
 	createTextureImage();
 	createTextureImageView();
 	createTextureSampler();
@@ -87,8 +97,10 @@ void Renderer::render()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	if (vkQueueSubmit(vkGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to submit Vulkan draw command buffer");
+	auto submitResult = vkQueueSubmit(vkGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+
+	if (submitResult != VK_SUCCESS) {
+		DBG_SEVERE("Failed to submit Vulkan draw command buffer. Error: " << submitResult);
 	}
 
 	VkPresentInfoKHR presentInfo = {};
@@ -106,6 +118,57 @@ void Renderer::render()
 	vkQueuePresentKHR(vkPresentQueue, &presentInfo);
 
 	vkQueueWaitIdle(vkPresentQueue);
+}
+
+void Renderer::createVulkanVertexIndexBuffers()
+{
+	VkDeviceSize bufferSize = VERTEX_BUFFER_SIZE + INDEX_BUFFER_SIZE;
+
+	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkVertexIndexBuffer, vkVertexIndexBufferMemory);
+}
+
+void Renderer::pushModelDataToGPU(Model & model)
+{
+	for (auto triMesh = model.triMeshes.begin(); triMesh != model.triMeshes.end(); ++triMesh)
+	{
+		for (auto lodLevel = triMesh->begin(); lodLevel != triMesh->end(); ++lodLevel)
+		{
+			VkDeviceSize bufferSize = lodLevel->vertexDataLength * sizeof(Vertex);
+
+			createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkStagingBuffer, vkStagingBufferMemory);
+
+			void* data;
+			vkMapMemory(vkDevice, vkStagingBufferMemory, 0, bufferSize, 0, &data);
+			memcpy(data, lodLevel->vertexData, (size_t)bufferSize);
+			vkUnmapMemory(vkDevice, vkStagingBufferMemory);
+
+			copyVulkanBuffer(vkStagingBuffer, vkVertexIndexBuffer, bufferSize, vertexInputOffset); /// PERF: Could use multi region copy instead of the function
+
+			lodLevel->vertexOffset = vertexInputOffset;
+			vertexInputOffset += bufferSize;
+
+			vkDestroyBuffer(vkDevice, vkStagingBuffer, 0);
+			vkFreeMemory(vkDevice, vkStagingBufferMemory, 0);
+
+			bufferSize = lodLevel->indexDataLength * sizeof(s32);
+			
+
+			createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkStagingBuffer, vkStagingBufferMemory);
+
+			data = nullptr;
+			vkMapMemory(vkDevice, vkStagingBufferMemory, 0, bufferSize, 0, &data);
+			memcpy(data, lodLevel->indexData, (size_t)bufferSize);
+			vkUnmapMemory(vkDevice, vkStagingBufferMemory);
+
+			copyVulkanBuffer(vkStagingBuffer, vkVertexIndexBuffer, bufferSize, INDEX_BUFFER_BASE + indexInputOffset); /// PERF: Could use multi region copy instead of the function
+
+			lodLevel->indexOffset = indexInputOffset;
+			indexInputOffset += bufferSize;
+
+			vkDestroyBuffer(vkDevice, vkStagingBuffer, 0);
+			vkFreeMemory(vkDevice, vkStagingBufferMemory, 0);
+		}
+	}
 }
 
 /*
@@ -961,13 +1024,16 @@ void Renderer::initVulkanCommandBuffers()
 
 		vkCmdBindDescriptorSets(vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipelineLayout, 0, 1, &vkDescriptorSet, 0, nullptr);
 
-		VkBuffer vertexBuffers[] = { chalet.triMeshes[0][0].vkVertexBuffer };
+		VkBuffer vertexBuffers[] = { vkVertexIndexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(vkCommandBuffers[i], chalet.triMeshes[0][0].vkIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(vkCommandBuffers[i], vkVertexIndexBuffer, INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
 
-		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(chalet.triMeshes[0][0].indexDataLength), 1, 0, 0, 0);
-		//vkCmdDraw(vkCommandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+		
+		auto& mesh = models[0].triMeshes[0][0];
+		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(mesh.indexDataLength), 1, 0, mesh.vertexOffset, 0);
+		auto& mesh2 = models[1].triMeshes[0][0];
+		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(mesh2.indexDataLength), 1, 0, mesh2.vertexOffset, 1);
 
 		vkCmdEndRenderPass(vkCommandBuffers[i]);
 
@@ -1060,13 +1126,13 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 /*
 	@brief	Copy a vulkan buffer
 */
-void Renderer::copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
+void Renderer::copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkDeviceSize dstOffset, VkDeviceSize srcOffset)
 {
 	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
 	VkBufferCopy copyRegion = {};
-	copyRegion.srcOffset = 0; // Optional
-	copyRegion.dstOffset = 0; // Optional
+	copyRegion.srcOffset = srcOffset;
+	copyRegion.dstOffset = dstOffset;
 	copyRegion.size = size;
 	vkCmdCopyBuffer(commandBuffer, src, dst, 1, &copyRegion);
 
