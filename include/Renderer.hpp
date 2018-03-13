@@ -4,7 +4,6 @@
 #include "Model.hpp"
 
 struct UniformBufferObject {
-	glm::mat4 model;
 	glm::mat4 view;
 	glm::mat4 proj;
 };
@@ -68,6 +67,9 @@ public:
 
 	VkBuffer vkUniformBuffer;
 	VkDeviceMemory vkUniformBufferMemory;
+
+	VkBuffer vkTransformBuffer;
+	VkDeviceMemory vkTransformBufferMemory;
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
