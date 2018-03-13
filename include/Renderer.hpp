@@ -58,8 +58,8 @@ public:
 	std::vector<Model> models;
 	VkBuffer vkVertexIndexBuffer;
 	VkDeviceMemory vkVertexIndexBufferMemory;
-	u64 vertexByteInputOffset;
-	u64 indexByteInputOffset;
+	u64 vertexInputByteOffset;
+	u64 indexInputByteOffset;
 	void createVulkanVertexIndexBuffers();
 	void pushModelDataToGPU(Model& model);
 
@@ -75,8 +75,8 @@ public:
 	VkSemaphore renderFinishedSemaphore;
 
 	VkImage textureImage;
-	VkDeviceMemory textureImageMemory;
 	VkImageView textureImageView;
+	VkDeviceMemory textureImageMemory;
 	VkSampler textureSampler;
 
 	UniformBufferObject ubo;
@@ -108,6 +108,15 @@ public:
 	void initVulkanDescriptorSet();
 	void initVulkanCommandBuffers();
 	void initVulkanSemaphores();
+
+	// Copies to optimal (efficient) device local buffer
+	void copyToDeviceLocalBuffer(void* srcData, VkDeviceSize size, VkBuffer dstBuffer, VkDeviceSize dstOffset = 0);
+	// Copies to staging buffer
+	void copyToStagingBuffer(void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
+	// Creates staging buffer with requested size
+	void createStagingBuffer(VkDeviceSize size);
+	// Destroys staging buffer
+	void destroyStagingBuffer();
 
 	void createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkDeviceSize dstOffset = 0, VkDeviceSize srcOffset = 0);

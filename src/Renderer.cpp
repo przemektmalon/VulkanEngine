@@ -21,8 +21,8 @@ void Renderer::initialise()
 	initVulkanDepthResources();
 	initVulkanFramebuffers();
 
-	vertexByteInputOffset = 0;
-	indexByteInputOffset = 0;
+	vertexInputByteOffset = 0;
+	indexInputByteOffset = 0;
 
 	createVulkanVertexIndexBuffers();
 
@@ -133,40 +133,15 @@ void Renderer::pushModelDataToGPU(Model & model)
 	{
 		for (auto lodLevel = triMesh->begin(); lodLevel != triMesh->end(); ++lodLevel)
 		{
-			VkDeviceSize bufferSize = lodLevel->vertexDataLength * sizeof(Vertex);
+			copyToDeviceLocalBuffer(lodLevel->vertexData, lodLevel->vertexDataLength * sizeof(Vertex), vkVertexIndexBuffer, vertexInputByteOffset);
 
-			createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkStagingBuffer, vkStagingBufferMemory);
+			lodLevel->firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
+			vertexInputByteOffset += lodLevel->vertexDataLength * sizeof(Vertex);
 
-			void* data;
-			vkMapMemory(vkDevice, vkStagingBufferMemory, 0, bufferSize, 0, &data);
-			memcpy(data, lodLevel->vertexData, (size_t)bufferSize);
-			vkUnmapMemory(vkDevice, vkStagingBufferMemory);
+			copyToDeviceLocalBuffer(lodLevel->indexData, lodLevel->indexDataLength * sizeof(u32), vkVertexIndexBuffer, INDEX_BUFFER_BASE + indexInputByteOffset);
 
-			copyVulkanBuffer(vkStagingBuffer, vkVertexIndexBuffer, bufferSize, vertexByteInputOffset); /// PERF: Could use multi region copy instead of the function
-
-			lodLevel->firstVertex = (s32)vertexByteInputOffset / sizeof(Vertex);
-			vertexByteInputOffset += bufferSize;
-
-			vkDestroyBuffer(vkDevice, vkStagingBuffer, 0);
-			vkFreeMemory(vkDevice, vkStagingBufferMemory, 0);
-
-			
-			bufferSize = lodLevel->indexDataLength * sizeof(u32);
-			
-			createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkStagingBuffer, vkStagingBufferMemory);
-
-			data = nullptr;
-			vkMapMemory(vkDevice, vkStagingBufferMemory, 0, bufferSize, 0, &data);
-			memcpy(data, lodLevel->indexData, (size_t)bufferSize);
-			vkUnmapMemory(vkDevice, vkStagingBufferMemory);
-
-			copyVulkanBuffer(vkStagingBuffer, vkVertexIndexBuffer, bufferSize, INDEX_BUFFER_BASE + indexByteInputOffset); /// PERF: Could use multi region copy instead of the function
-
-			lodLevel->firstIndex = (u32)indexByteInputOffset / sizeof(u32);
-			indexByteInputOffset += bufferSize;
-
-			vkDestroyBuffer(vkDevice, vkStagingBuffer, 0);
-			vkFreeMemory(vkDevice, vkStagingBufferMemory, 0);
+			lodLevel->firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
+			indexInputByteOffset += lodLevel->indexDataLength * sizeof(u32);
 		}
 	}
 }
@@ -689,44 +664,30 @@ void Renderer::createTextureImage()
 	texture.load("/res/textures/chalet.jpg");
 	VkDeviceSize textureSize = texture.data.size() * sizeof(Pixel);
 
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	createVulkanBuffer(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+	createStagingBuffer(textureSize);
+	copyToStagingBuffer(&(texture.data[0]), (size_t)textureSize);
 
-	void* data;
-	vkMapMemory(vkDevice, stagingBufferMemory, 0, textureSize, 0, &data);
-		memcpy(data, &(texture.data[0]), static_cast<size_t>(textureSize));
-	vkUnmapMemory(vkDevice, stagingBufferMemory);
 	createImage(texture.width, texture.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory, 12); /// TODO: Calculate mip levels
-	
 	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 12);
-		copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texture.width), static_cast<uint32_t>(texture.height), 0);
-		Image mip[12];
-		mip[0].load("/res/textures/chalet.jpg");
-		for (int i = 1; i < 12; ++i)
-		{
-			mip[i - 1].generateMipMap(mip[i]);
 
-			int textureSize = mip[i].data.size() * sizeof(Pixel);
+	copyBufferToImage(vkStagingBuffer, textureImage, u32(texture.width), u32(texture.height), 0);
+	destroyStagingBuffer();
 
-			VkBuffer stagingBuffer;
-			VkDeviceMemory stagingBufferMemory;
-			createVulkanBuffer(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+	Image mip[12];
+	mip[0].load("/res/textures/chalet.jpg");
+	for (int i = 1; i < 12; ++i)
+	{
+		mip[i - 1].generateMipMap(mip[i]);
 
-			void* data;
-			vkMapMemory(vkDevice, stagingBufferMemory, 0, textureSize, 0, &data);
-			memcpy(data, &(mip[i].data[0]), static_cast<size_t>(textureSize));
-			vkUnmapMemory(vkDevice, stagingBufferMemory);
+		int textureSize = mip[i].data.size() * sizeof(Pixel);
 
-			copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(mip[i].width), static_cast<uint32_t>(mip[i].height), i);
+		createStagingBuffer(textureSize);
+		copyToStagingBuffer(&(mip[i].data[0]), textureSize, 0);
 
-			vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
-			vkFreeMemory(vkDevice, stagingBufferMemory, nullptr);
-		}
+		copyBufferToImage(vkStagingBuffer, textureImage, u32(mip[i].width), u32(mip[i].height), i);
+		destroyStagingBuffer();
+	}
 	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 12);
-
-	vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
-	vkFreeMemory(vkDevice, stagingBufferMemory, nullptr);
 }
 
 void Renderer::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, int mipLevels) 
@@ -998,8 +959,6 @@ void Renderer::initVulkanDescriptorSet()
 	descriptorWrites[2].descriptorCount = 1;
 	descriptorWrites[2].pImageInfo = &imageInfo;
 
-
-
 	vkUpdateDescriptorSets(vkDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
 
@@ -1054,7 +1013,6 @@ void Renderer::initVulkanCommandBuffers()
 		vkCmdBindVertexBuffers(vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
 		vkCmdBindIndexBuffer(vkCommandBuffers[i], vkVertexIndexBuffer, INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
 
-		
 		auto& mesh = models[0].triMeshes[0][0];
 		vkCmdDrawIndexed(vkCommandBuffers[i], mesh.indexDataLength, 1, mesh.firstIndex, mesh.firstVertex, 0);
 		auto& mesh2 = models[1].triMeshes[0][0];
@@ -1083,6 +1041,47 @@ void Renderer::initVulkanSemaphores()
 
 		DBG_SEVERE("Failed to create Vulkan semaphores");
 	}
+}
+
+/*
+	@brief	Copies data into a device local (optimal) buffer using a staging buffer
+*/
+void Renderer::copyToDeviceLocalBuffer(void * srcData, VkDeviceSize size, VkBuffer dstBuffer, VkDeviceSize dstOffset)
+{
+	createStagingBuffer(size);
+	copyToStagingBuffer(srcData, size, 0);
+	copyVulkanBuffer(vkStagingBuffer, dstBuffer, size, dstOffset);
+	destroyStagingBuffer();
+}
+
+/*
+	@brief	Copies data to staging buffer
+*/
+void Renderer::copyToStagingBuffer(void * srcData, VkDeviceSize size, VkDeviceSize dstOffset)
+{
+	void* data;
+	vkMapMemory(vkDevice, vkStagingBufferMemory, 0, size, 0, &data);
+	memcpy(data, srcData, (size_t)size);
+	vkUnmapMemory(vkDevice, vkStagingBufferMemory);
+}
+
+/*
+	@brief	Creates staging buffer with requested size
+*/
+void Renderer::createStagingBuffer(VkDeviceSize size)
+{
+	createVulkanBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkStagingBuffer, vkStagingBufferMemory);
+}
+
+/*
+	@brief	Destroys staging buffer
+*/
+void Renderer::destroyStagingBuffer()
+{
+	vkDestroyBuffer(vkDevice, vkStagingBuffer, nullptr);
+	vkFreeMemory(vkDevice, vkStagingBufferMemory, nullptr);
+	vkStagingBuffer = 0;
+	vkStagingBufferMemory = 0;
 }
 
 /*
@@ -1188,8 +1187,6 @@ void Renderer::updateUniformBuffer()
 	glm::fmat4 t[2];
 	t[0] = glm::rotate(glm::fmat4(1.0f), time * glm::radians(90.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
 	t[1] = glm::translate(glm::fmat4(1),glm::fvec3(4.5,0,0));
-	//t[0] = glm::scale(glm::fmat4(1), glm::fvec3(2, 2, 2));
-	//t[1] = glm::scale(glm::fmat4(1), glm::fvec3(2, 2, 2));
 
 	vkMapMemory(vkDevice, vkTransformBufferMemory, 0, sizeof(t), 0, &data);
 	memcpy(data, &t, sizeof(t));

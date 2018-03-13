@@ -53,12 +53,6 @@ public:
 
 		s32 firstVertex; // In GPU buffer
 		u32 firstIndex; // In GPU buffer
-
-		//VkBuffer vkVertexBuffer;
-		//VkDeviceMemory vkVertexBufferMemory;
-
-		//VkBuffer vkIndexBuffer;
-		//VkDeviceMemory vkIndexBufferMemory;
 	};
 
 	std::vector<std::vector<TriangleMesh>> triMeshes;
