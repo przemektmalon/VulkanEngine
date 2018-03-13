@@ -32,8 +32,7 @@ void Renderer::initialise()
 	pushModelDataToGPU(models[0]);
 	pushModelDataToGPU(models[1]);
 
-	createTextureImage();
-	createTextureImageView();
+	texture.loadFile("/res/textures/chalet.jpg");
 	createTextureSampler();
 
 	initVulkanUniformBuffer();
@@ -51,9 +50,6 @@ void Renderer::cleanup()
 	cleanupVulkanSwapChain();
 
 	vkDestroySampler(vkDevice, textureSampler, nullptr);
-	vkDestroyImageView(vkDevice, textureImageView, nullptr);
-	vkDestroyImage(vkDevice, textureImage, nullptr);
-	vkFreeMemory(vkDevice, textureImageMemory, nullptr);
 
 	vkDestroyDescriptorPool(vkDevice, vkDescriptorPool, nullptr);
 	vkDestroyDescriptorSetLayout(vkDevice, vkDescriptorSetLayout, nullptr);
@@ -658,38 +654,6 @@ bool Renderer::hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void Renderer::createTextureImage()
-{
-	Image texture;
-	texture.load("/res/textures/chalet.jpg");
-	VkDeviceSize textureSize = texture.data.size() * sizeof(Pixel);
-
-	createStagingBuffer(textureSize);
-	copyToStagingBuffer(&(texture.data[0]), (size_t)textureSize);
-
-	createImage(texture.width, texture.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory, 12); /// TODO: Calculate mip levels
-	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 12);
-
-	copyBufferToImage(vkStagingBuffer, textureImage, u32(texture.width), u32(texture.height), 0);
-	destroyStagingBuffer();
-
-	Image mip[12];
-	mip[0].load("/res/textures/chalet.jpg");
-	for (int i = 1; i < 12; ++i)
-	{
-		mip[i - 1].generateMipMap(mip[i]);
-
-		int textureSize = mip[i].data.size() * sizeof(Pixel);
-
-		createStagingBuffer(textureSize);
-		copyToStagingBuffer(&(mip[i].data[0]), textureSize, 0);
-
-		copyBufferToImage(vkStagingBuffer, textureImage, u32(mip[i].width), u32(mip[i].height), i);
-		destroyStagingBuffer();
-	}
-	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 12);
-}
-
 void Renderer::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, int mipLevels) 
 {
 	VkImageCreateInfo imageInfo = {};
@@ -817,11 +781,6 @@ void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
 	endSingleTimeCommands(commandBuffer);
 }
 
-void Renderer::createTextureImageView()
-{
-	textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, 12);
-}
-
 VkImageView Renderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels) {
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -930,7 +889,7 @@ void Renderer::initVulkanDescriptorSet()
 
 	VkDescriptorImageInfo imageInfo = {};
 	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageInfo.imageView = textureImageView;
+	imageInfo.imageView = texture.getImageViewHandle();
 	imageInfo.sampler = textureSampler;
 
 	std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};

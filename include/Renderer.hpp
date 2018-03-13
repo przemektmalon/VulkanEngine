@@ -2,6 +2,7 @@
 #include "PCH.hpp"
 #include "Engine.hpp"
 #include "Model.hpp"
+#include "Texture.hpp"
 
 struct UniformBufferObject {
 	glm::mat4 view;
@@ -74,9 +75,7 @@ public:
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
 
-	VkImage textureImage;
-	VkImageView textureImageView;
-	VkDeviceMemory textureImageMemory;
+	Texture texture;
 	VkSampler textureSampler;
 
 	UniformBufferObject ubo;
@@ -95,11 +94,9 @@ public:
 	VkFormat findDepthFormat();
 	bool hasStencilComponent(VkFormat format);
 
-	void createTextureImage();
 	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, int mipLevels);
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel);
-	void createTextureImageView();
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels);
 	void createTextureSampler();
 
