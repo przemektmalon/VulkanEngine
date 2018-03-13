@@ -30,9 +30,6 @@ void Window::create(WindowCreateInfo * c)
 	win32WindowClass.cbClsExtra = 0;
 	win32WindowClass.cbWndExtra = 0;
 
-	resX = c->width;
-	resY = c->height;
-
 	if (!RegisterClassEx(&win32WindowClass))
 		DBG_SEVERE("Could not register win32 window class");
 
@@ -101,6 +98,9 @@ void Window::create(WindowCreateInfo * c)
 	sci.window = Window::window;
 	VkResult result = vkCreateXcbSurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface);
 #endif
+
+	resX = c->width;
+	resY = c->height;
 }
 
 /*
