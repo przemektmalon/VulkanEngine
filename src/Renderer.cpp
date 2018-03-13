@@ -24,6 +24,10 @@ void Renderer::initialise()
 	vertexInputByteOffset = 0;
 	indexInputByteOffset = 0;
 
+	/// TODO: set appropriate size
+	createVulkanBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkDrawCmdBuffer, vkDrawCmdBufferMemory);
+	
+
 	createVulkanVertexIndexBuffers();
 
 	models.push_back(Model("/res/models/pbrsphere.dae"));
@@ -31,6 +35,8 @@ void Renderer::initialise()
 
 	pushModelDataToGPU(models[0]);
 	pushModelDataToGPU(models[1]);
+
+	populateDrawCmdBuffer();
 
 	texture.loadFile("/res/textures/chalet.jpg");
 	createTextureSampler();
@@ -64,6 +70,9 @@ void Renderer::cleanup()
 
 	vkDestroyBuffer(vkDevice, vkVertexIndexBuffer, nullptr);
 	vkFreeMemory(vkDevice, vkVertexIndexBufferMemory, nullptr);
+
+	vkDestroyBuffer(vkDevice, vkDrawCmdBuffer, nullptr);
+	vkFreeMemory(vkDevice, vkDrawCmdBufferMemory, nullptr);
 
 	vkDestroySemaphore(vkDevice, renderFinishedSemaphore, 0);
 	vkDestroySemaphore(vkDevice, imageAvailableSemaphore, 0);
@@ -128,6 +137,36 @@ void Renderer::render()
 	vkQueueWaitIdle(vkPresentQueue);
 }
 
+void Renderer::populateDrawCmdBuffer()
+{
+	void* data;
+	VkDeviceSize size = sizeof(VkDrawIndexedIndirectCommand) * 100;
+	vkMapMemory(vkDevice, vkDrawCmdBufferMemory, 0, size, 0, &data);
+	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)data;
+
+	int i = 0;
+	for (auto& m : models)
+	{
+		for (auto& triMesh : m.triMeshes)
+		{
+			/// TODO: select appropriate LOD level
+			auto& lodMesh = triMesh[0];
+
+
+			cmd[i].firstIndex = lodMesh.firstIndex;
+			cmd[i].indexCount = lodMesh.indexDataLength;
+			cmd[i].vertexOffset = lodMesh.firstVertex;
+			cmd[i].firstInstance = i; /// TODO: think about if we can use this effectively as index into transform and/or texture buffers
+									  /// If we use real instanced drawing, subsequent instances' transforms would have to be congruent in memory
+									  /// We would have to keep track of this 'firstInstance' in the ModelInstance class
+			cmd[i].instanceCount = 1; /// TODO: do we want/need a different class for real instanced drawing ?
+			++i;
+		}
+	}
+
+	vkUnmapMemory(vkDevice, vkDrawCmdBufferMemory);
+}
+
 void Renderer::createVulkanVertexIndexBuffers()
 {
 	VkDeviceSize bufferSize = VERTEX_BUFFER_SIZE + INDEX_BUFFER_SIZE;
@@ -137,19 +176,19 @@ void Renderer::createVulkanVertexIndexBuffers()
 
 void Renderer::pushModelDataToGPU(Model & model)
 {
-	for (auto triMesh = model.triMeshes.begin(); triMesh != model.triMeshes.end(); ++triMesh)
+	for (auto& triMesh : model.triMeshes)
 	{
-		for (auto lodLevel = triMesh->begin(); lodLevel != triMesh->end(); ++lodLevel)
+		for (auto& lodLevel : triMesh)
 		{
-			copyToDeviceLocalBuffer(lodLevel->vertexData, lodLevel->vertexDataLength * sizeof(Vertex), vkVertexIndexBuffer, vertexInputByteOffset);
+			copyToDeviceLocalBuffer(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), vkVertexIndexBuffer, vertexInputByteOffset);
 
-			lodLevel->firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
-			vertexInputByteOffset += lodLevel->vertexDataLength * sizeof(Vertex);
+			lodLevel.firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
+			vertexInputByteOffset += lodLevel.vertexDataLength * sizeof(Vertex);
 
-			copyToDeviceLocalBuffer(lodLevel->indexData, lodLevel->indexDataLength * sizeof(u32), vkVertexIndexBuffer, INDEX_BUFFER_BASE + indexInputByteOffset);
+			copyToDeviceLocalBuffer(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), vkVertexIndexBuffer, INDEX_BUFFER_BASE + indexInputByteOffset);
 
-			lodLevel->firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
-			indexInputByteOffset += lodLevel->indexDataLength * sizeof(u32);
+			lodLevel.firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
+			indexInputByteOffset += lodLevel.indexDataLength * sizeof(u32);
 		}
 	}
 }
@@ -173,6 +212,7 @@ void Renderer::initVulkanLogicalDevice()
 
 	VkPhysicalDeviceFeatures pdf = {};
 	pdf.samplerAnisotropy = VK_TRUE;
+	pdf.multiDrawIndirect = VK_TRUE;
 
 	VkDeviceCreateInfo dci = {};
 	dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -984,10 +1024,12 @@ void Renderer::initVulkanCommandBuffers()
 		vkCmdBindVertexBuffers(vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
 		vkCmdBindIndexBuffer(vkCommandBuffers[i], vkVertexIndexBuffer, INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
 
-		auto& mesh = models[0].triMeshes[0][0];
-		vkCmdDrawIndexed(vkCommandBuffers[i], mesh.indexDataLength, 1, mesh.firstIndex, mesh.firstVertex, 0);
-		auto& mesh2 = models[1].triMeshes[0][0];
-		vkCmdDrawIndexed(vkCommandBuffers[i], mesh2.indexDataLength, 1, mesh2.firstIndex, mesh2.firstVertex, 1);
+		//auto& mesh = models[0].triMeshes[0][0];
+		//vkCmdDrawIndexed(vkCommandBuffers[i], mesh.indexDataLength, 1, mesh.firstIndex, mesh.firstVertex, 0);
+		//auto& mesh2 = models[1].triMeshes[0][0];
+		//vkCmdDrawIndexed(vkCommandBuffers[i], mesh2.indexDataLength, 1, mesh2.firstIndex, mesh2.firstVertex, 1);
+
+		vkCmdDrawIndexedIndirect(vkCommandBuffers[i], vkDrawCmdBuffer, 0, models.size(), sizeof(VkDrawIndexedIndirectCommand));
 
 		vkCmdEndRenderPass(vkCommandBuffers[i]);
 

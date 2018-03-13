@@ -66,6 +66,10 @@ public:
 
 	// End GPU mem management
 
+	VkBuffer vkDrawCmdBuffer;
+	VkDeviceMemory vkDrawCmdBufferMemory;
+	void populateDrawCmdBuffer();
+
 	VkBuffer vkUniformBuffer;
 	VkDeviceMemory vkUniformBufferMemory;
 
