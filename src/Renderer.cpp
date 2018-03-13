@@ -53,11 +53,23 @@ void Renderer::cleanup()
 
 	vkDestroyDescriptorPool(vkDevice, vkDescriptorPool, nullptr);
 	vkDestroyDescriptorSetLayout(vkDevice, vkDescriptorSetLayout, nullptr);
+
+	texture.destroy();
+
 	vkDestroyBuffer(vkDevice, vkUniformBuffer, nullptr);
 	vkFreeMemory(vkDevice, vkUniformBufferMemory, nullptr);
+
+	vkDestroyBuffer(vkDevice, vkTransformBuffer, nullptr);
+	vkFreeMemory(vkDevice, vkTransformBufferMemory, nullptr);
+
+	vkDestroyBuffer(vkDevice, vkVertexIndexBuffer, nullptr);
+	vkFreeMemory(vkDevice, vkVertexIndexBufferMemory, nullptr);
+
 	vkDestroySemaphore(vkDevice, renderFinishedSemaphore, 0);
 	vkDestroySemaphore(vkDevice, imageAvailableSemaphore, 0);
+
 	vkDestroyCommandPool(vkDevice, vkCommandPool, 0);
+
 	vkDestroyDevice(vkDevice, 0);
 }
 
