@@ -64,11 +64,9 @@ void Engine::start()
 			case Event::KeyDown: {
 				if (ev.eventUnion.keyEvent.key.code == Key::KC_ESCAPE)
 					engineRunning = false;
-				std::cout << "Key down: " << char(ev.eventUnion.keyEvent.key.code) << std::endl;
 				break;
 			}
 			case Event::KeyUp: {
-				std::cout << "Key up: " << char(ev.eventUnion.keyEvent.key.code) << std::endl;
 				break;
 			}
 			}

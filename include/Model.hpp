@@ -51,8 +51,8 @@ public:
 		u32* indexData;
 		u32 indexDataLength;
 
-		s32 vertexOffset; // In GPU buffer
-		s32 indexOffset; // In GPU buffer
+		s32 firstVertex; // In GPU buffer
+		u32 firstIndex; // In GPU buffer
 
 		//VkBuffer vkVertexBuffer;
 		//VkDeviceMemory vkVertexBufferMemory;

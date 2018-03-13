@@ -32,6 +32,20 @@ void Model::load(std::string path)
 	aiVector3D* pos = mesh->mVertices;
 	aiVector3D* uv = mesh->mTextureCoords[0];
 
+	for (u32 k = 0; k < mesh->mNumVertices; ++k)
+	{
+		aiVector3D p = pos[k];
+
+		triList.vertexData[k].pos = { p.x, p.y, p.z };
+		triList.vertexData[k].col = { 0.f,0.f,0.f };
+		if (!uv) {
+			triList.vertexData[k].texCoord = { 0.f, 0.f };
+		}
+		else {
+			triList.vertexData[k].texCoord = { uv[k].x, 1.0f - uv[k].y };
+		}
+	}
+
 	u32 curVertex = 0;
 	for (u32 i = 0; i < mesh->mNumFaces; ++i)
 	{
@@ -40,18 +54,6 @@ void Model::load(std::string path)
 		for (u32 j = 0; j < f.mNumIndices; ++j)
 		{
 			u32 vi = f.mIndices[j]; //Vertex Index
-
-			triList.vertexData[curVertex].pos = { pos[vi].x, pos[vi].y, pos[vi].z };
-			triList.vertexData[curVertex].col = { 0.f,0.f,0.f };
-
-			if (!uv)
-			{
-				triList.vertexData[curVertex].texCoord = { 0.f, 0.f };
-			}
-			else
-			{
-				triList.vertexData[curVertex].texCoord = { uv[vi].x, 1.0f - uv[vi].y };
-			}
 
 			triList.indexData[curVertex] = vi;
 

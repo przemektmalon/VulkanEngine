@@ -8,9 +8,9 @@ struct UniformBufferObject {
 	glm::mat4 proj;
 };
 
-#define VERTEX_BUFFER_SIZE 64 * 1024 * 1024 // 64 MB
+#define VERTEX_BUFFER_SIZE u64(512) * u64(1024) * u64(1024) // 512 MB
 #define INDEX_BUFFER_BASE VERTEX_BUFFER_SIZE
-#define INDEX_BUFFER_SIZE 8 * 1024 * 1024 // 8 MB
+#define INDEX_BUFFER_SIZE u64(128) * u64(1024) * u64(1024) // 128 MB
 
 /*
 	@brief	Collates Vulkan objects and controls rendering pipeline
@@ -58,8 +58,8 @@ public:
 	std::vector<Model> models;
 	VkBuffer vkVertexIndexBuffer;
 	VkDeviceMemory vkVertexIndexBufferMemory;
-	s32 vertexInputOffset;
-	s32 indexInputOffset;
+	u64 vertexByteInputOffset;
+	u64 indexByteInputOffset;
 	void createVulkanVertexIndexBuffers();
 	void pushModelDataToGPU(Model& model);
 

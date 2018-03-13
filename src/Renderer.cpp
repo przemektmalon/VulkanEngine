@@ -21,13 +21,13 @@ void Renderer::initialise()
 	initVulkanDepthResources();
 	initVulkanFramebuffers();
 
-	vertexInputOffset = 0;
-	indexInputOffset = 0;
+	vertexByteInputOffset = 0;
+	indexByteInputOffset = 0;
 
 	createVulkanVertexIndexBuffers();
 
-	models.push_back(Model("/res/models/hollowbox.obj"));
-	models.push_back(Model("/res/models/chalet.obj"));
+	models.push_back(Model("/res/models/pbrsphere.dae"));
+	models.push_back(Model("/res/models/object.obj"));
 
 	pushModelDataToGPU(models[0]);
 	pushModelDataToGPU(models[1]);
@@ -142,17 +142,17 @@ void Renderer::pushModelDataToGPU(Model & model)
 			memcpy(data, lodLevel->vertexData, (size_t)bufferSize);
 			vkUnmapMemory(vkDevice, vkStagingBufferMemory);
 
-			copyVulkanBuffer(vkStagingBuffer, vkVertexIndexBuffer, bufferSize, vertexInputOffset); /// PERF: Could use multi region copy instead of the function
+			copyVulkanBuffer(vkStagingBuffer, vkVertexIndexBuffer, bufferSize, vertexByteInputOffset); /// PERF: Could use multi region copy instead of the function
 
-			lodLevel->vertexOffset = vertexInputOffset;
-			vertexInputOffset += bufferSize;
+			lodLevel->firstVertex = (s32)vertexByteInputOffset / sizeof(Vertex);
+			vertexByteInputOffset += bufferSize;
 
 			vkDestroyBuffer(vkDevice, vkStagingBuffer, 0);
 			vkFreeMemory(vkDevice, vkStagingBufferMemory, 0);
 
-			bufferSize = lodLevel->indexDataLength * sizeof(s32);
 			
-
+			bufferSize = lodLevel->indexDataLength * sizeof(u32);
+			
 			createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkStagingBuffer, vkStagingBufferMemory);
 
 			data = nullptr;
@@ -160,10 +160,10 @@ void Renderer::pushModelDataToGPU(Model & model)
 			memcpy(data, lodLevel->indexData, (size_t)bufferSize);
 			vkUnmapMemory(vkDevice, vkStagingBufferMemory);
 
-			copyVulkanBuffer(vkStagingBuffer, vkVertexIndexBuffer, bufferSize, INDEX_BUFFER_BASE + indexInputOffset); /// PERF: Could use multi region copy instead of the function
+			copyVulkanBuffer(vkStagingBuffer, vkVertexIndexBuffer, bufferSize, INDEX_BUFFER_BASE + indexByteInputOffset); /// PERF: Could use multi region copy instead of the function
 
-			lodLevel->indexOffset = indexInputOffset;
-			indexInputOffset += bufferSize;
+			lodLevel->firstIndex = (u32)indexByteInputOffset / sizeof(u32);
+			indexByteInputOffset += bufferSize;
 
 			vkDestroyBuffer(vkDevice, vkStagingBuffer, 0);
 			vkFreeMemory(vkDevice, vkStagingBufferMemory, 0);
@@ -1056,9 +1056,9 @@ void Renderer::initVulkanCommandBuffers()
 
 		
 		auto& mesh = models[0].triMeshes[0][0];
-		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(mesh.indexDataLength), 1, 0, mesh.vertexOffset, 0);
+		vkCmdDrawIndexed(vkCommandBuffers[i], mesh.indexDataLength, 1, mesh.firstIndex, mesh.firstVertex, 0);
 		auto& mesh2 = models[1].triMeshes[0][0];
-		vkCmdDrawIndexed(vkCommandBuffers[i], static_cast<uint32_t>(mesh2.indexDataLength), 1, 0, mesh2.vertexOffset, 1);
+		vkCmdDrawIndexed(vkCommandBuffers[i], mesh2.indexDataLength, 1, mesh2.firstIndex, mesh2.firstVertex, 1);
 
 		vkCmdEndRenderPass(vkCommandBuffers[i]);
 
@@ -1176,9 +1176,8 @@ void Renderer::updateUniformBuffer()
 
 	float distance = (std::sin(Engine::clock.time().getSeconds()) + 1.f) * 3.5f;
 
-	//ubo.model = glm::rotate(glm::fmat4(1.0f), time * glm::radians(90.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
-	ubo.view = Engine::camera.getView(); // glm::lookAt(glm::fvec3(distance, distance, distance + 1), glm::fvec3(0.0f, 0.0f, 0.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = Engine::camera.getProj(); // glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 20.0f);
+	ubo.view = Engine::camera.getView();
+	ubo.proj = Engine::camera.getProj();
 	ubo.proj[1][1] *= -1;
 
 	void* data;
@@ -1188,7 +1187,9 @@ void Renderer::updateUniformBuffer()
 
 	glm::fmat4 t[2];
 	t[0] = glm::rotate(glm::fmat4(1.0f), time * glm::radians(90.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
-	t[1] = glm::translate(glm::fmat4(1),glm::fvec3(2.5,0,0));
+	t[1] = glm::translate(glm::fmat4(1),glm::fvec3(4.5,0,0));
+	//t[0] = glm::scale(glm::fmat4(1), glm::fvec3(2, 2, 2));
+	//t[1] = glm::scale(glm::fmat4(1), glm::fvec3(2, 2, 2));
 
 	vkMapMemory(vkDevice, vkTransformBufferMemory, 0, sizeof(t), 0, &data);
 	memcpy(data, &t, sizeof(t));
