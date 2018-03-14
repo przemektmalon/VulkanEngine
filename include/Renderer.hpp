@@ -56,7 +56,6 @@ public:
 	// It should keep track of free memory which may be "holes" (after removing memory from middle of buffer) and allocate if new additions fit
 	// If we want to compact data (not sure if this will be worth the effort) we'd have to keep track of which memory regions are used by which models
 
-	std::vector<Model> models;
 	VkBuffer vkVertexIndexBuffer;
 	VkDeviceMemory vkVertexIndexBufferMemory;
 	u64 vertexInputByteOffset;
@@ -79,8 +78,6 @@ public:
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
 
-	Texture texture;
-	Texture texture2;
 	VkSampler textureSampler;
 
 	UniformBufferObject ubo;

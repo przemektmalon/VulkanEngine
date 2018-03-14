@@ -11,7 +11,7 @@ void Model::load(std::string path)
 	char buff[FILENAME_MAX];
 	GetCurrentDir(buff, FILENAME_MAX);
 	std::string current_working_dir(buff);
-	const aiScene *scene = importer.ReadFile(current_working_dir + path, aiProcessPreset_TargetRealtime_MaxQuality);
+	const aiScene *scene = importer.ReadFile(current_working_dir + "/" + path, aiProcessPreset_TargetRealtime_MaxQuality);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
@@ -62,4 +62,31 @@ void Model::load(std::string path)
 	}
 
 	DBG_INFO("Model loaded: " << path);
+}
+
+void ModelInstance::setModel(Model * m)
+{
+	materialOverwrite.clear();
+	model = m;
+	for (int i = 0; i < model->triMeshes.size(); ++i)
+	{
+		materialOverwrite.push_back(std::vector<Material>());
+		for (int j = 0; j < model->triMeshes[i].size(); ++j)
+		{
+			materialOverwrite.back().push_back(Material());
+		}
+	}
+}
+
+void ModelInstance::setMaterial(int lodLevel, int meshIndex, Material & material)
+{
+	if (lodLevel > materialOverwrite.size() - 1)
+		return;
+
+	auto& lodMesh = materialOverwrite[lodLevel];
+
+	if (meshIndex > lodMesh.size() - 1)
+		return;
+
+	lodMesh[meshIndex] = material;
 }

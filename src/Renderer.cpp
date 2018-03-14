@@ -26,27 +26,18 @@ void Renderer::initialise()
 
 	/// TODO: set appropriate size
 	createVulkanBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkDrawCmdBuffer, vkDrawCmdBufferMemory);
-	
 
 	createVulkanVertexIndexBuffers();
 
-	models.push_back(Model("/res/models/pbrsphere.dae"));
-	models.push_back(Model("/res/models/object.dae"));
-
-	pushModelDataToGPU(models[0]);
-	pushModelDataToGPU(models[1]);
-
 	populateDrawCmdBuffer();
 
-	texture.loadFile("/res/textures/chalet.jpg");
-	texture2.loadFile("/res/textures/texture.png");
 	createTextureSampler();
-
+	Engine::assets.loadAssets("res/resources.txt");
 	initVulkanUniformBuffer();
 	initVulkanDescriptorPool();
 	initVulkanDescriptorSet();
-	initVulkanCommandBuffers();
 	initVulkanSemaphores();
+	
 }
 
 /*
@@ -60,9 +51,6 @@ void Renderer::cleanup()
 
 	vkDestroyDescriptorPool(vkDevice, vkDescriptorPool, nullptr);
 	vkDestroyDescriptorSetLayout(vkDevice, vkDescriptorSetLayout, nullptr);
-
-	texture.destroy();
-	texture2.destroy();
 
 	vkDestroyBuffer(vkDevice, vkUniformBuffer, nullptr);
 	vkFreeMemory(vkDevice, vkUniformBufferMemory, nullptr);
@@ -147,9 +135,9 @@ void Renderer::populateDrawCmdBuffer()
 	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)data;
 
 	int i = 0;
-	for (auto& m : models)
+	for (auto& m : Engine::world.models)
 	{
-		for (auto& triMesh : m.triMeshes)
+		for (auto& triMesh : m.model->triMeshes)
 		{
 			/// TODO: select appropriate LOD level
 			auto& lodMesh = triMesh[0];
@@ -887,7 +875,7 @@ void Renderer::initVulkanUniformBuffer()
 {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkUniformBuffer, vkUniformBufferMemory);
-	bufferSize = sizeof(glm::fmat4) * 2;
+	bufferSize = sizeof(glm::fmat4) * 3;
 	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkTransformBuffer, vkTransformBufferMemory);
 }
 
@@ -939,16 +927,18 @@ void Renderer::initVulkanDescriptorSet()
 	VkDescriptorBufferInfo bufferInfo2 = {};
 	bufferInfo2.buffer = vkTransformBuffer;
 	bufferInfo2.offset = 0;
-	bufferInfo2.range = sizeof(glm::fmat4) * 2;
+	bufferInfo2.range = sizeof(glm::fmat4) * 3;
 
 	VkDescriptorImageInfo	imageInfo[1000];
 	for (u32 i = 0; i < 1000; ++i)
 	{
 		imageInfo[i].sampler = textureSampler;
 		imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo[i].imageView = texture.getImageViewHandle();
+		imageInfo[i].imageView = Engine::assets.getTexture("bamboo_D")->getImageViewHandle();
 		if (i == 1)
-			imageInfo[i].imageView = texture2.getImageViewHandle();
+			imageInfo[i].imageView = Engine::assets.getTexture("stonewall_D")->getImageViewHandle();
+		else if (i == 2)
+			imageInfo[i].imageView = Engine::assets.getTexture("chalet_D")->getImageViewHandle();
 	}
 
 	std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
@@ -1036,7 +1026,7 @@ void Renderer::initVulkanCommandBuffers()
 		//auto& mesh2 = models[1].triMeshes[0][0];
 		//vkCmdDrawIndexed(vkCommandBuffers[i], mesh2.indexDataLength, 1, mesh2.firstIndex, mesh2.firstVertex, 1);
 
-		vkCmdDrawIndexedIndirect(vkCommandBuffers[i], vkDrawCmdBuffer, 0, models.size(), sizeof(VkDrawIndexedIndirectCommand));
+		vkCmdDrawIndexedIndirect(vkCommandBuffers[i], vkDrawCmdBuffer, 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand));
 
 		vkCmdEndRenderPass(vkCommandBuffers[i]);
 
@@ -1204,9 +1194,10 @@ void Renderer::updateUniformBuffer()
 	memcpy(data, &ubo, sizeof(ubo));
 	vkUnmapMemory(vkDevice, vkUniformBufferMemory);
 
-	glm::fmat4 t[2];
+	glm::fmat4 t[3];
 	t[0] = glm::rotate(glm::fmat4(1.0f), time * glm::radians(90.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
-	t[1] = glm::translate(glm::fmat4(1),glm::fvec3(4.5,0,0));
+	t[1] = glm::translate(glm::fmat4(1),glm::fvec3(4.5,0,0))  * glm::scale(glm::fmat4(1.f), glm::fvec3((glm::sin(time*1.5) + 1.5f) * 0.7f));
+	t[2] = glm::translate(glm::fmat4(1), glm::fvec3(-4.5, glm::sin(time) * 1.f, 0)) * glm::rotate(glm::fmat4(1.0f), glm::radians(-90.0f), glm::fvec3(1.0f, 0.0f, 0.0f)) * glm::scale(glm::fmat4(1.f), glm::fvec3(2.f));
 
 	vkMapMemory(vkDevice, vkTransformBufferMemory, 0, sizeof(t), 0, &data);
 	memcpy(data, &t, sizeof(t));

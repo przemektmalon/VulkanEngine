@@ -6,6 +6,12 @@ void Texture::loadFile(std::string pPath, bool genMipMaps)
 {
 	Image img;
 	img.load(pPath);
+	if (img.data.size() == 0)
+	{
+		DBG_WARNING("Failed to load image: " << pPath);
+		/// TODO: Load a default null texture
+		return;
+	}
 	loadImage(&img, genMipMaps);
 }
 
@@ -68,6 +74,7 @@ void Texture::loadImage(Image * pImage, bool genMipMaps)
 void Texture::destroy()
 {
 	const auto r = Engine::renderer;
+	DBG_INFO("Destroying: " << name);
 	vkDestroyImageView(r->vkDevice, vkImageView, nullptr);
 	vkDestroyImage(r->vkDevice, vkImage, nullptr);
 	vkFreeMemory(r->vkDevice, vkMemory, nullptr);

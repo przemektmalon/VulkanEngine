@@ -15,7 +15,7 @@ layout(binding = 0) uniform ProjViewUBO {
 } m;
 
 layout(binding = 1) uniform TranformUBO {
-    mat4 transform[2];
+    mat4 transform[3];
 } model;
 
 layout(location = 0) in vec3 inPosition;

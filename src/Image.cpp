@@ -17,7 +17,7 @@ void Image::load(std::string path)
 	char buff[FILENAME_MAX];
   	GetCurrentDir( buff, FILENAME_MAX );
   	std::string current_working_dir(buff);
-	path = current_working_dir + path;
+	path = current_working_dir + "/" + path;
 
 	int bpp;
 	DBG_INFO("Attempting to load image: " << path);

@@ -4,6 +4,8 @@
 #include "Clock.hpp"
 #include "Time.hpp"
 #include "Camera.hpp"
+#include "World.hpp"
+#include "AssetStore.hpp"
 
 class Window;
 class Renderer;
@@ -38,6 +40,8 @@ public:
 	static xcb_connection_t * connection;
 #endif
 
+	static AssetStore assets;
+	static World world;
 	static Clock clock;
 	static Window* window;
 	static Renderer* renderer;

@@ -2,11 +2,7 @@
 #include "Engine.hpp"
 #include "Window.hpp"
 #include "Renderer.hpp"
-
 #include "Image.hpp"
-
-#include "cro_mipmap.h"
-
 #include "Profiler.hpp"
 
 /*
@@ -28,10 +24,22 @@ void Engine::start()
 	createVulkanInstance();
 	createWindow();
 	queryVulkanPhysicalDeviceDetails();
-
+	
 	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 3.5f, 0.1, 50.f);
+
 	renderer = new Renderer();
 	renderer->initialise();
+
+	ModelInstance aInstance, bInstance, cInstance; 
+	aInstance.setModel(assets.getModel("hollowbox"));
+	bInstance.setModel(assets.getModel("pbrsphere"));
+	cInstance.setModel(assets.getModel("chalet"));
+	world.addModelInstance(aInstance);
+	world.addModelInstance(bInstance);
+	world.addModelInstance(cInstance);
+
+	renderer->populateDrawCmdBuffer();
+	renderer->initVulkanCommandBuffers();
 
 	Time initTime = clock.time() - engineStartTime;
 	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
@@ -248,6 +256,7 @@ void Engine::quit()
 {
 	DBG_INFO("Exiting");
 
+	assets.cleanup();
 	renderer->cleanup();
 	window->destroy();
 #ifdef ENABLE_VULKAN_VALIDATION
@@ -291,3 +300,5 @@ int Engine::physicalDeviceIndex;
 bool Engine::engineRunning = true;
 Time Engine::engineStartTime;
 Camera Engine::camera;
+World Engine::world;
+AssetStore Engine::assets;

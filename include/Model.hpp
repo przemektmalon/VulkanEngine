@@ -1,5 +1,6 @@
 #pragma once
 #include "PCH.hpp"
+#include "Material.hpp"
 
 struct Vertex
 {
@@ -41,6 +42,7 @@ struct Vertex
 class Model
 {
 public:
+	Model() {}
 	Model(std::string path) { load(path); }
 
 	struct TriangleMesh
@@ -53,9 +55,28 @@ public:
 
 		s32 firstVertex; // In GPU buffer
 		u32 firstIndex; // In GPU buffer
+
+		Material material;
 	};
 
 	std::vector<std::vector<TriangleMesh>> triMeshes;
+	std::vector<std::string> lodPaths;
+	std::vector<u32> lodLimits;
+	std::string physicsInfoFilePath;
 
 	void load(std::string path);
+};
+
+class ModelInstance
+{
+public:
+	Model * model;
+	glm::fmat4 transform;
+	Material material;
+
+	std::vector<std::vector<Material>> materialOverwrite;
+
+	void setModel(Model* m);
+
+	void setMaterial(int lodLevel, int meshIndex, Material& material);
 };
