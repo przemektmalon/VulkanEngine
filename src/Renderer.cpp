@@ -39,6 +39,7 @@ void Renderer::initialise()
 	populateDrawCmdBuffer();
 
 	texture.loadFile("/res/textures/chalet.jpg");
+	texture2.loadFile("/res/textures/texture.png");
 	createTextureSampler();
 
 	initVulkanUniformBuffer();
@@ -61,6 +62,7 @@ void Renderer::cleanup()
 	vkDestroyDescriptorSetLayout(vkDevice, vkDescriptorSetLayout, nullptr);
 
 	texture.destroy();
+	texture2.destroy();
 
 	vkDestroyBuffer(vkDevice, vkUniformBuffer, nullptr);
 	vkFreeMemory(vkDevice, vkUniformBufferMemory, nullptr);
@@ -452,7 +454,7 @@ void Renderer::initVulkanDescriptorSetLayout()
 
 	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
 	samplerLayoutBinding.binding = 2;
-	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorCount = 1000;
 	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	samplerLayoutBinding.pImmutableSamplers = nullptr;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -900,7 +902,7 @@ void Renderer::initVulkanDescriptorPool()
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[1].descriptorCount = 1;
 	poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[2].descriptorCount = 1;
+	poolSizes[2].descriptorCount = 1024;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -939,10 +941,15 @@ void Renderer::initVulkanDescriptorSet()
 	bufferInfo2.offset = 0;
 	bufferInfo2.range = sizeof(glm::fmat4) * 2;
 
-	VkDescriptorImageInfo imageInfo = {};
-	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageInfo.imageView = texture.getImageViewHandle();
-	imageInfo.sampler = textureSampler;
+	VkDescriptorImageInfo	imageInfo[1000];
+	for (u32 i = 0; i < 1000; ++i)
+	{
+		imageInfo[i].sampler = textureSampler;
+		imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo[i].imageView = texture.getImageViewHandle();
+		if (i == 1)
+			imageInfo[i].imageView = texture2.getImageViewHandle();
+	}
 
 	std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
 
@@ -967,8 +974,8 @@ void Renderer::initVulkanDescriptorSet()
 	descriptorWrites[2].dstBinding = 2;
 	descriptorWrites[2].dstArrayElement = 0;
 	descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[2].descriptorCount = 1;
-	descriptorWrites[2].pImageInfo = &imageInfo;
+	descriptorWrites[2].descriptorCount = 1000;
+	descriptorWrites[2].pImageInfo = imageInfo;
 
 	vkUpdateDescriptorSets(vkDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

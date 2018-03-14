@@ -40,6 +40,7 @@ void ShaderModule::compile()
 		shaderc::CompileOptions o;
 		o.SetAutoBindUniforms(true);
 		o.AddMacroDefinition(stageMacro);
+		o.SetLimit(shaderc_limit::shaderc_limit_max_combined_texture_image_units, 1024);
 		auto res = c.CompileGlslToSpv(glslSource, intStage, path.c_str(), o);
 		if (res.GetCompilationStatus() != shaderc_compilation_status_success)
 		{

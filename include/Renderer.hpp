@@ -80,6 +80,7 @@ public:
 	VkSemaphore renderFinishedSemaphore;
 
 	Texture texture;
+	Texture texture2;
 	VkSampler textureSampler;
 
 	UniformBufferObject ubo;
