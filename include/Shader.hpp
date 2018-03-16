@@ -19,6 +19,7 @@ private:
 	std::vector<u32> spirvSource;
 
 	VkShaderModule vkModule;
+	VkDescriptorSetLayoutBinding descriptorSetLayout;
 	
 	std::string infoLog;
 	std::string debugLog;
@@ -31,8 +32,7 @@ public:
 
 	void load(std::string path);
 	void compile();
-	void createVulkanModule();
-	void destroyVulkanModule();
+	void destroy();
 
 private:
 	void setIntStage();

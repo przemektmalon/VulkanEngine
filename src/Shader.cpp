@@ -1,3 +1,4 @@
+#include "PCH.hpp"
 #include "Shader.hpp"
 #include "File.hpp"
 #include "Engine.hpp"
@@ -48,10 +49,6 @@ void ShaderModule::compile()
 		}
 		spirvSource.assign(res.begin(), res.end());
 	}
-}
-
-void ShaderModule::createVulkanModule()
-{
 	if (spirvSource.size() == 0) {
 		DBG_SEVERE("SPIRV source missing, cannot compile shader: " << path);
 		return;
@@ -66,7 +63,7 @@ void ShaderModule::createVulkanModule()
 	}
 }
 
-void ShaderModule::destroyVulkanModule()
+void ShaderModule::destroy()
 {
 	vkDestroyShaderModule(Engine::renderer->vkDevice, vkModule, 0);
 }

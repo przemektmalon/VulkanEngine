@@ -1,3 +1,4 @@
+#include "PCH.hpp"
 #include "AssetStore.hpp"
 #include "Engine.hpp"
 #include "Renderer.hpp"
@@ -9,7 +10,7 @@ void AssetStore::cleanup()
 	}
 }
 
-void AssetStore::loadAssets(std::string assetListFilePath)
+void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for this instead (after xml wrappers are done)
 {
 	std::ifstream file;
 	file.open(assetListFilePath.c_str());
@@ -146,23 +147,24 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 				model.physicsInfoFilePath = physics;
 				model.lodPaths = paths;
 				model.lodLimits = limits;
+				model.name = name;
 				model.load(path);
 				for (auto& triMesh : model.triMeshes)
 				{
 					for (auto &lodLevel : triMesh)
 					{
 						if (material.length() != 0)
-							lodLevel.material = *getMaterial(material);
+							lodLevel.material = getMaterial(material);
 						else
 						{
-							lodLevel.material.albedo = getTexture(albedo);
-							lodLevel.material.normal = getTexture(normal);
+							lodLevel.material->albedo = getTexture(albedo);
+							lodLevel.material->normal = getTexture(normal);
 							if (specular.length() != 0)
-								lodLevel.material.specularMetallic = getTexture(specular);
+								lodLevel.material->specularMetallic = getTexture(specular);
 							else
-								lodLevel.material.specularMetallic = getTexture(metallic);
+								lodLevel.material->specularMetallic = getTexture(metallic);
 
-							lodLevel.material.roughness = getTexture(roughness);
+							lodLevel.material->roughness = getTexture(roughness);
 						}
 
 						/// TODO: AO texture
@@ -250,4 +252,6 @@ void AssetStore::addMaterial(std::string name, std::string albedo, std::string n
 	materials[name].roughness = getTexture(roughness);
 	materials[name].ao = getTexture(ao);
 	materials[name].height = getTexture(height);
+
+	materials[name].gpuIndexBase = (materials.size() - 1) * 6;
 }

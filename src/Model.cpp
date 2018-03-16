@@ -1,3 +1,4 @@
+#include "PCH.hpp"
 #include "Model.hpp"
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
@@ -66,27 +67,27 @@ void Model::load(std::string path)
 
 void ModelInstance::setModel(Model * m)
 {
-	materialOverwrite.clear();
+	material.clear();
 	model = m;
 	for (int i = 0; i < model->triMeshes.size(); ++i)
 	{
-		materialOverwrite.push_back(std::vector<Material>());
+		material.push_back(std::vector<Material*>());
 		for (int j = 0; j < model->triMeshes[i].size(); ++j)
 		{
-			materialOverwrite.back().push_back(Material());
+			material.back().push_back(m->triMeshes[i][j].material);
 		}
 	}
 }
 
-void ModelInstance::setMaterial(int lodLevel, int meshIndex, Material & material)
+void ModelInstance::setMaterial(int lodLevel, int meshIndex, Material* pMaterial)
 {
-	if (lodLevel > materialOverwrite.size() - 1)
+	if (lodLevel > material.size() - 1)
 		return;
 
-	auto& lodMesh = materialOverwrite[lodLevel];
+	auto& lodMesh = material[lodLevel];
 
 	if (meshIndex > lodMesh.size() - 1)
 		return;
 
-	lodMesh[meshIndex] = material;
+	lodMesh[meshIndex] = pMaterial;
 }

@@ -29,15 +29,12 @@ void Renderer::initialise()
 
 	createVulkanVertexIndexBuffers();
 
-	populateDrawCmdBuffer();
-
 	createTextureSampler();
 	Engine::assets.loadAssets("res/resources.txt");
 	initVulkanUniformBuffer();
 	initVulkanDescriptorPool();
 	initVulkanDescriptorSet();
 	initVulkanSemaphores();
-	
 }
 
 /*
@@ -48,6 +45,8 @@ void Renderer::cleanup()
 	cleanupVulkanSwapChain();
 
 	vkDestroySampler(vkDevice, textureSampler, nullptr);
+
+	gBufferShader.destroy();
 
 	vkDestroyDescriptorPool(vkDevice, vkDescriptorPool, nullptr);
 	vkDestroyDescriptorSetLayout(vkDevice, vkDescriptorSetLayout, nullptr);
@@ -134,11 +133,15 @@ void Renderer::populateDrawCmdBuffer()
 	vkMapMemory(vkDevice, vkDrawCmdBufferMemory, 0, size, 0, &data);
 	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)data;
 
+	
 	int i = 0;
+	
 	for (auto& m : Engine::world.models)
 	{
+		int meshIndex = 0;
 		for (auto& triMesh : m.model->triMeshes)
 		{
+			int lodIndex = 0;
 			/// TODO: select appropriate LOD level
 			auto& lodMesh = triMesh[0];
 
@@ -146,10 +149,9 @@ void Renderer::populateDrawCmdBuffer()
 			cmd[i].firstIndex = lodMesh.firstIndex;
 			cmd[i].indexCount = lodMesh.indexDataLength;
 			cmd[i].vertexOffset = lodMesh.firstVertex;
-			cmd[i].firstInstance = i; /// TODO: think about if we can use this effectively as index into transform and/or texture buffers
-									  /// If we use real instanced drawing, subsequent instances' transforms would have to be congruent in memory
-									  /// We would have to keep track of this 'firstInstance' in the ModelInstance class
+			cmd[i].firstInstance = (m.material[meshIndex][lodIndex]->gpuIndexBase << 20) | (m.transformIndex);
 			cmd[i].instanceCount = 1; /// TODO: do we want/need a different class for real instanced drawing ?
+			++meshIndex;
 			++i;
 		}
 	}
@@ -467,27 +469,7 @@ void Renderer::initVulkanGraphicsPipeline()
 
 	// Compile GLSL code to SPIR-V
 
-	ShaderModule sh(ShaderModule::Vertex, "/res/shaders/square.glsl");
-	sh.compile();
-	sh.createVulkanModule();
-
-	ShaderModule sh2(ShaderModule::Fragment, "/res/shaders/square.glsl");
-	sh2.compile();
-	sh2.createVulkanModule();
-
-	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
-	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = sh.getVkModule();
-	vertShaderStageInfo.pName = "main";
-
-	VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
-	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = sh2.getVkModule();
-	fragShaderStageInfo.pName = "main";
-
-	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+	gBufferShader.compile();
 
 	// Get the vertex layout format
 	auto bindingDescription = Vertex::getBindingDescription();
@@ -588,7 +570,7 @@ void Renderer::initVulkanGraphicsPipeline()
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.stageCount = 2;
-	pipelineInfo.pStages = shaderStages;
+	pipelineInfo.pStages = gBufferShader.getShaderStageCreateInfos();
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &inputAssembly;
 	pipelineInfo.pViewportState = &viewportState;
@@ -606,10 +588,6 @@ void Renderer::initVulkanGraphicsPipeline()
 	if (result != VK_SUCCESS) {
 		DBG_SEVERE("Failed to create Vulkan graphics pipeline");
 	}
-
-	// Pipeline saves the shader modules we can delete them
-	sh.destroyVulkanModule();
-	sh2.destroyVulkanModule();
 }
 
 /*
@@ -859,7 +837,7 @@ void Renderer::createTextureSampler()
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	samplerInfo.mipLodBias = -1.0f;
+	samplerInfo.mipLodBias = 0.0f;
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 11.0f;
 
@@ -875,7 +853,7 @@ void Renderer::initVulkanUniformBuffer()
 {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkUniformBuffer, vkUniformBufferMemory);
-	bufferSize = sizeof(glm::fmat4) * 3;
+	bufferSize = sizeof(glm::fmat4) * 1000;
 	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vkTransformBuffer, vkTransformBufferMemory);
 }
 
@@ -934,11 +912,39 @@ void Renderer::initVulkanDescriptorSet()
 	{
 		imageInfo[i].sampler = textureSampler;
 		imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo[i].imageView = Engine::assets.getTexture("bamboo_D")->getImageViewHandle();
-		if (i == 1)
-			imageInfo[i].imageView = Engine::assets.getTexture("stonewall_D")->getImageViewHandle();
-		else if (i == 2)
-			imageInfo[i].imageView = Engine::assets.getTexture("chalet_D")->getImageViewHandle();
+		imageInfo[i].imageView = Engine::assets.materials.begin()->second.albedo->getImageViewHandle();
+	}
+
+	u32 i = 0;
+	for (auto& material : Engine::assets.materials)
+	{
+		imageInfo[i].imageView = material.second.albedo->getImageViewHandle();
+
+		if (material.second.normal)
+			imageInfo[i + 1].imageView = material.second.normal->getImageViewHandle();
+		else
+			imageInfo[i + 1].imageView = material.second.albedo->getImageViewHandle(); /// TODO: some null texture
+
+		if (material.second.specularMetallic)
+			imageInfo[i + 2].imageView = material.second.specularMetallic->getImageViewHandle();
+		else
+			imageInfo[i + 2].imageView = material.second.albedo->getImageViewHandle();
+
+		if (material.second.roughness)
+			imageInfo[i + 3].imageView = material.second.roughness->getImageViewHandle();
+		else
+			imageInfo[i + 3].imageView = material.second.albedo->getImageViewHandle();
+
+		if (material.second.ao)
+			imageInfo[i + 4].imageView = material.second.ao->getImageViewHandle();
+		else
+			imageInfo[i + 4].imageView = material.second.albedo->getImageViewHandle();
+
+		if (material.second.height)
+			imageInfo[i + 5].imageView = material.second.height->getImageViewHandle();
+		else
+			imageInfo[i + 5].imageView = material.second.albedo->getImageViewHandle();
+		i += 6;
 	}
 
 	std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
@@ -1194,13 +1200,17 @@ void Renderer::updateUniformBuffer()
 	memcpy(data, &ubo, sizeof(ubo));
 	vkUnmapMemory(vkDevice, vkUniformBufferMemory);
 
-	glm::fmat4 t[3];
-	t[0] = glm::rotate(glm::fmat4(1.0f), time * glm::radians(90.0f), glm::fvec3(0.0f, 0.0f, 1.0f));
-	t[1] = glm::translate(glm::fmat4(1),glm::fvec3(4.5,0,0))  * glm::scale(glm::fmat4(1.f), glm::fvec3((glm::sin(time*1.5) + 1.5f) * 0.7f));
-	t[2] = glm::translate(glm::fmat4(1), glm::fvec3(-4.5, glm::sin(time) * 1.f, 0)) * glm::rotate(glm::fmat4(1.0f), glm::radians(-90.0f), glm::fvec3(1.0f, 0.0f, 0.0f)) * glm::scale(glm::fmat4(1.f), glm::fvec3(2.f));
+	vkMapMemory(vkDevice, vkTransformBufferMemory, 0, Engine::world.models.size() * sizeof(glm::fmat4), 0, &data);
 
-	vkMapMemory(vkDevice, vkTransformBufferMemory, 0, sizeof(t), 0, &data);
-	memcpy(data, &t, sizeof(t));
+	glm::fmat4* transform = (glm::fmat4*)data;
+
+	int i = 0;
+	for (auto& m : Engine::world.models)
+	{
+		transform[i] = m.transform;
+		++i;
+	}
+
 	vkUnmapMemory(vkDevice, vkTransformBufferMemory);
 }
 

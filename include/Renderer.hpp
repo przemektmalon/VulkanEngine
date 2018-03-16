@@ -3,6 +3,7 @@
 #include "Engine.hpp"
 #include "Model.hpp"
 #include "Texture.hpp"
+#include "GBufferShader.hpp"
 
 struct UniformBufferObject {
 	glm::mat4 view;
@@ -81,6 +82,8 @@ public:
 	VkSampler textureSampler;
 
 	UniformBufferObject ubo;
+
+	GBufferShader gBufferShader;
 
 	void initVulkanLogicalDevice();
 	void initVulkanSwapChain();

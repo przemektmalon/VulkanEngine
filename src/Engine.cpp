@@ -30,20 +30,26 @@ void Engine::start()
 	renderer = new Renderer();
 	renderer->initialise();
 
-	ModelInstance aInstance, bInstance, cInstance; 
-	aInstance.setModel(assets.getModel("hollowbox"));
-	bInstance.setModel(assets.getModel("pbrsphere"));
-	cInstance.setModel(assets.getModel("chalet"));
-	world.addModelInstance(aInstance);
-	world.addModelInstance(bInstance);
-	world.addModelInstance(cInstance);
+	std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahogany", "copper" };
+
+	for (int i = 0; i < 25; ++i)
+	{
+		world.addModelInstance("hollowbox", "hollowbox" + std::to_string(i));
+		world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i%5) *4), std::floor(int(i / (int)5)*4), 0));
+		world.modelMap["hollowbox" + std::to_string(i)]->setMaterial(0,0,assets.getMaterial(materialList[i % 6]));
+	}
+
+	world.addModelInstance("pbrsphere");
+	world.modelMap["pbrsphere"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(4, 0, 0));
+
+	//world.addModelInstance("chalet");
 
 	renderer->populateDrawCmdBuffer();
 	renderer->initVulkanCommandBuffers();
 
 	Time initTime = clock.time() - engineStartTime;
 	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
-
+	
 	Time frameTime;
 	double fpsDisplay = 0.f;
 	int frames = 0;
@@ -264,6 +270,8 @@ void Engine::quit()
 #endif
 	vkDestroyInstance(vkInstance, nullptr);
 }
+
+
 
 #ifdef ENABLE_VULKAN_VALIDATION
 /*

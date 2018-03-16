@@ -26,4 +26,5 @@ private:
 	VkImage vkImage;
 	VkDeviceMemory vkMemory;
 	VkImageView vkImageView;
+	u32 gpuIndex;
 };

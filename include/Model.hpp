@@ -56,8 +56,10 @@ public:
 		s32 firstVertex; // In GPU buffer
 		u32 firstIndex; // In GPU buffer
 
-		Material material;
+		Material* material;
 	};
+
+	std::string name;
 
 	std::vector<std::vector<TriangleMesh>> triMeshes;
 	std::vector<std::string> lodPaths;
@@ -70,13 +72,14 @@ public:
 class ModelInstance
 {
 public:
-	Model * model;
+	std::string name;
 	glm::fmat4 transform;
-	Material material;
+	Model * model;
+	u32 transformIndex; // Index into gpu transform buffer
 
-	std::vector<std::vector<Material>> materialOverwrite;
+	std::vector<std::vector<Material*>> material;
 
 	void setModel(Model* m);
 
-	void setMaterial(int lodLevel, int meshIndex, Material& material);
+	void setMaterial(int lodLevel, int meshIndex, Material* pMaterial);
 };

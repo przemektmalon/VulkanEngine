@@ -4,10 +4,8 @@
 
 struct Material
 {
-	bool splatted;
+	u32 gpuIndexBase;
 	Texture *albedo, *normal, *specularMetallic, *roughness, *ao, *height;
-
-	Material() : splatted(false) {}
 
 	Material& operator=(Material& rhs)
 	{
