@@ -31,14 +31,16 @@ void Model::load(std::string path)
 	triList.indexData = new u32[triList.indexDataLength];
 
 	aiVector3D* pos = mesh->mVertices;
+	aiVector3D* nor = mesh->mNormals;
 	aiVector3D* uv = mesh->mTextureCoords[0];
 
 	for (u32 k = 0; k < mesh->mNumVertices; ++k)
 	{
 		aiVector3D p = pos[k];
+		aiVector3D n = nor[k];
 
 		triList.vertexData[k].pos = { p.x, p.y, p.z };
-		triList.vertexData[k].col = { 0.f,0.f,0.f };
+		triList.vertexData[k].nor = { 0.f,0.f,0.f };
 		if (!uv) {
 			triList.vertexData[k].texCoord = { 0.f, 0.f };
 		}

@@ -5,7 +5,7 @@
 struct Vertex
 {
 	glm::fvec3 pos;
-	glm::fvec3 col;
+	glm::fvec3 nor;
 	glm::fvec2 texCoord;
 
 	static VkVertexInputBindingDescription getBindingDescription()
@@ -28,7 +28,7 @@ struct Vertex
 		attributeDescriptions[1].binding = 0;
 		attributeDescriptions[1].location = 1;
 		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, col);
+		attributeDescriptions[1].offset = offsetof(Vertex, nor);
 
 		attributeDescriptions[2].binding = 0;
 		attributeDescriptions[2].location = 2;

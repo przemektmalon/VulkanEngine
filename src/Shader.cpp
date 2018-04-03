@@ -58,14 +58,14 @@ void ShaderModule::compile()
 	createInfo.codeSize = spirvSource.size() * sizeof(int);
 	createInfo.pCode = spirvSource.data();
 
-	if (vkCreateShaderModule(Engine::renderer->vkDevice, &createInfo, nullptr, &vkModule) != VK_SUCCESS) {
+	if (vkCreateShaderModule(Engine::renderer->device, &createInfo, nullptr, &vkModule) != VK_SUCCESS) {
 		DBG_SEVERE("Failed to create shader module");
 	}
 }
 
 void ShaderModule::destroy()
 {
-	vkDestroyShaderModule(Engine::renderer->vkDevice, vkModule, 0);
+	vkDestroyShaderModule(Engine::renderer->device, vkModule, 0);
 }
 
 void ShaderModule::setIntStage()

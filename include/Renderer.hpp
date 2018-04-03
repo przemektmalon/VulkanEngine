@@ -5,6 +5,7 @@
 #include "Texture.hpp"
 #include "GBufferShader.hpp"
 #include "ScreenShader.hpp"
+#include "PBRShader.hpp"
 
 struct UniformBufferObject {
 	glm::mat4 view;
@@ -21,57 +22,126 @@ struct UniformBufferObject {
 class Renderer
 {
 public:
+	Renderer() : vertexInputByteOffset(0), indexInputByteOffset(0) {}
 
+	// Top level
 	void initialise();
 	void cleanup();
 	void render();
 
-	VkDevice vkDevice;
-	VkQueue vkGraphicsQueue;
-	VkQueue vkPresentQueue;
-	VkSwapchainKHR vkSwapChain;
-
-	VkPipeline vkOffscreenPipeline;
-	VkPipelineLayout vkOffscreenPipelineLayout;
-
-	VkPipeline vkScreenPipeline;
-	VkPipelineLayout vkScreenPipelineLayout;
-
-	VkDescriptorPool vkDescriptorPool;
-
-	VkDescriptorSetLayout vkOffscreenDescriptorSetLayout;
-	VkDescriptorSet vkOffscreenDescriptorSet;
-
-	VkDescriptorSetLayout vkScreenDescriptorSetLayout;
-	VkDescriptorSet vkScreenDescriptorSet;
-
-	VkRenderPass vkScreenRenderPass;
-	VkRenderPass vkOffscreenRenderPass;
-
-	VkCommandPool vkCommandPool;
-	std::vector<VkCommandBuffer> vkScreenCommandBuffers;
-	std::vector<VkFramebuffer> vkFramebuffers;
-	std::vector<VkImage> vkSwapChainImages;
-	std::vector<VkImageView> vkSwapChainImageViews;
-
-	VkCommandBuffer vkOffscreenCommandBuffer;
-	VkFramebuffer vkOffscreenFramebuffer;
-	VkImage vkOffscreenColImage;
-	VkImage vkOffscreenDepImage;
-	VkDeviceMemory vkOffscreenColImageMemory;
-	VkDeviceMemory vkOffscreenDepImageMemory;
-	VkImageView vkOffscreenColImageView;
-	VkImageView vkOffscreenDepImageView;
-
-	VkImage depthImage;
-	VkDeviceMemory depthImageMemory;
-	VkImageView depthImageView;
-
+	// Device, queues, swap chain
+	VkDevice device;
+	VkQueue graphicsQueue;
+	VkQueue presentQueue;
+	VkSwapchainKHR swapChain;
 	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
+	VkExtent2D renderResolution;
 
-	VkBuffer vkStagingBuffer;
-	VkDeviceMemory vkStagingBufferMemory;
+	// Memory pools
+	VkDescriptorPool descriptorPool;
+	VkCommandPool commandPool;
+
+	void createLogicalDevice();
+	void createDescriptorPool();
+	void createCommandPool();
+	void createTextureSampler();
+
+	// Shaders
+	GBufferShader gBufferShader;
+	PBRShader pbrShader;
+	ScreenShader screenShader;
+
+	/// --------------------
+	/// GBuffer pipeline
+	/// --------------------
+
+	// Functions
+	void createGBufferAttachments();
+	void createGBufferRenderPass();
+	void createGBufferDescriptorSetLayouts();
+	void createGBufferPipeline();
+	void createGBufferFramebuffers();
+	void createGBufferDescriptorSets();
+	void updateGBufferDescriptorSets();
+
+	// Pipeline objets
+	VkPipeline gBufferPipeline;
+	VkPipelineLayout gBufferPipelineLayout;
+	
+	// Descriptors
+	VkDescriptorSetLayout gBufferDescriptorSetLayout;
+	VkDescriptorSet gBufferDescriptorSet;
+
+	// Framebuffer and attachments
+	VkFramebuffer gBufferFramebuffer;
+	Texture gBufferColourAttachment;
+	Texture gBufferNormalAttachment;
+	Texture gBufferDepthAttachment;
+
+	// Render pass
+	VkRenderPass gBufferRenderPass;
+
+	// Command buffer
+	VkCommandBuffer gBufferCommandBuffer;
+
+	/// --------------------
+	/// PBR shading pipeline
+	/// --------------------
+
+	// Functions
+	void createPBRAttachments();
+	void createPBRDescriptorSetLayouts();
+	void createPBRPipeline();
+	void createPBRDescriptorSets();
+	void updatePBRDescriptorSets();
+
+	// Pipeline objects
+	VkPipeline pbrPipeline;
+	VkPipelineLayout pbrPipelineLayout;
+
+	// Descriptors
+	VkDescriptorSetLayout pbrDescriptorSetLayout;
+	VkDescriptorSet pbrDescriptorSet;
+
+	// Framebuffer and attachments
+	Texture pbrOutput;
+
+	// Command buffer
+	VkCommandBuffer pbrCommandBuffer;
+
+	/// --------------------
+	/// Screen pipeline
+	/// --------------------
+
+	// Functions
+	void createScreenSwapChain();
+	void createScreenAttachments();
+	void createScreenRenderPass();
+	void createScreenDescriptorSetLayouts();
+	void createScreenPipeline();
+	void createScreenFramebuffers();
+	void createScreenDescriptorSets();
+	void updateScreenDescriptorSets();
+
+	// Pipeline objects
+	VkPipeline screenPipeline;
+	VkPipelineLayout screenPipelineLayout;
+	
+	// Descriptors
+	VkDescriptorSetLayout screenDescriptorSetLayout;
+	VkDescriptorSet screenDescriptorSet;
+
+	// Framebuffer and attachments
+	std::vector<VkFramebuffer> screenFramebuffers;
+	std::vector<VkImage> swapChainImages;
+	std::vector<VkImageView> swapChainImageViews;
+
+	// Render pass
+	VkRenderPass screenRenderPass;
+
+	// Command buffers
+	std::vector<VkCommandBuffer> screenCommandBuffers;
+	
 
 	// GPU Memory management
 	// Joint vertex/index buffer
@@ -79,52 +149,48 @@ public:
 	// It should keep track of free memory which may be "holes" (after removing memory from middle of buffer) and allocate if new additions fit
 	// If we want to compact data (not sure if this will be worth the effort) we'd have to keep track of which memory regions are used by which models
 
-	VkBuffer vkQuadBuffer;
-	VkDeviceMemory vkQuadBufferMemory;
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+
+	VkBuffer screenQuadBuffer;
+	VkDeviceMemory screenQuadBufferMemory;
 
 	std::vector<Vertex2D> quad;
 
-	VkBuffer vkVertexIndexBuffer;
-	VkDeviceMemory vkVertexIndexBufferMemory;
+	VkBuffer vertexIndexBuffer;
+	VkDeviceMemory vertexIndexBufferMemory;
 	u64 vertexInputByteOffset;
 	u64 indexInputByteOffset;
 	void createVulkanVertexIndexBuffers();
 	void pushModelDataToGPU(Model& model);
+	void createDataBuffers();
 
 	// End GPU mem management
 
-	VkBuffer vkDrawCmdBuffer;
-	VkDeviceMemory vkDrawCmdBufferMemory;
+	// Draw buffers
+	VkBuffer drawCmdBuffer;
+	VkDeviceMemory drawCmdBufferMemory;
 	void populateDrawCmdBuffer();
 
-	VkBuffer vkUniformBuffer;
-	VkDeviceMemory vkUniformBufferMemory;
+	// Uniform buffers
+	VkBuffer uniformBuffer;
+	VkDeviceMemory uniformBufferMemory;
 
-	VkBuffer vkTransformBuffer;
-	VkDeviceMemory vkTransformBufferMemory;
+	VkBuffer transformBuffer;
+	VkDeviceMemory transformBufferMemory;
 
+	UniformBufferObject ubo;
+
+	// Semaphores
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
 	VkSemaphore screenFinishedSemaphore;
 
-
+	// Samplers
 	VkSampler textureSampler;
 
-	UniformBufferObject ubo;
 
-	GBufferShader gBufferShader;
-	ScreenShader screenShader;
-
-	void initVulkanLogicalDevice();
-	void initVulkanSwapChain();
-	void initVulkanImageViews();
-	void initVulkanRenderPass();
-	void initVulkanDescriptorSetLayout();
-	void initVulkanGraphicsPipeline();
-	void initVulkanFramebuffers();
-	void initVulkanCommandPool();
-
-	void initVulkanDepthResources();
+	
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat findDepthFormat();
 	bool hasStencilComponent(VkFormat format);
@@ -133,13 +199,12 @@ public:
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel);
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels);
-	void createTextureSampler();
+	
 
 	void initVulkanUniformBuffer();
-	void initVulkanDescriptorPool();
-	void initVulkanDescriptorSet();
+
 	void initVulkanCommandBuffers();
-	void initVulkanSemaphores();
+	void createSemaphores();
 
 	// Copies to optimal (efficient) device local buffer
 	void copyToDeviceLocalBuffer(void* srcData, VkDeviceSize size, VkBuffer dstBuffer, VkDeviceSize dstOffset = 0);
