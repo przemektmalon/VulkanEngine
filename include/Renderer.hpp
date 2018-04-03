@@ -4,6 +4,7 @@
 #include "Model.hpp"
 #include "Texture.hpp"
 #include "GBufferShader.hpp"
+#include "ScreenShader.hpp"
 
 struct UniformBufferObject {
 	glm::mat4 view;
@@ -29,17 +30,38 @@ public:
 	VkQueue vkGraphicsQueue;
 	VkQueue vkPresentQueue;
 	VkSwapchainKHR vkSwapChain;
-	VkPipeline vkPipeline;
-	VkPipelineLayout vkPipelineLayout;
-	VkDescriptorSetLayout vkDescriptorSetLayout;
+
+	VkPipeline vkOffscreenPipeline;
+	VkPipelineLayout vkOffscreenPipelineLayout;
+
+	VkPipeline vkScreenPipeline;
+	VkPipelineLayout vkScreenPipelineLayout;
+
 	VkDescriptorPool vkDescriptorPool;
-	VkDescriptorSet vkDescriptorSet;
-	VkRenderPass vkRenderPass;
+
+	VkDescriptorSetLayout vkOffscreenDescriptorSetLayout;
+	VkDescriptorSet vkOffscreenDescriptorSet;
+
+	VkDescriptorSetLayout vkScreenDescriptorSetLayout;
+	VkDescriptorSet vkScreenDescriptorSet;
+
+	VkRenderPass vkScreenRenderPass;
+	VkRenderPass vkOffscreenRenderPass;
+
 	VkCommandPool vkCommandPool;
-	std::vector<VkCommandBuffer> vkCommandBuffers;
+	std::vector<VkCommandBuffer> vkScreenCommandBuffers;
 	std::vector<VkFramebuffer> vkFramebuffers;
 	std::vector<VkImage> vkSwapChainImages;
 	std::vector<VkImageView> vkSwapChainImageViews;
+
+	VkCommandBuffer vkOffscreenCommandBuffer;
+	VkFramebuffer vkOffscreenFramebuffer;
+	VkImage vkOffscreenColImage;
+	VkImage vkOffscreenDepImage;
+	VkDeviceMemory vkOffscreenColImageMemory;
+	VkDeviceMemory vkOffscreenDepImageMemory;
+	VkImageView vkOffscreenColImageView;
+	VkImageView vkOffscreenDepImageView;
 
 	VkImage depthImage;
 	VkDeviceMemory depthImageMemory;
@@ -56,6 +78,11 @@ public:
 	/// TODO: We need a better allocator/deallocator
 	// It should keep track of free memory which may be "holes" (after removing memory from middle of buffer) and allocate if new additions fit
 	// If we want to compact data (not sure if this will be worth the effort) we'd have to keep track of which memory regions are used by which models
+
+	VkBuffer vkQuadBuffer;
+	VkDeviceMemory vkQuadBufferMemory;
+
+	std::vector<Vertex2D> quad;
 
 	VkBuffer vkVertexIndexBuffer;
 	VkDeviceMemory vkVertexIndexBufferMemory;
@@ -78,12 +105,15 @@ public:
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
+	VkSemaphore screenFinishedSemaphore;
+
 
 	VkSampler textureSampler;
 
 	UniformBufferObject ubo;
 
 	GBufferShader gBufferShader;
+	ScreenShader screenShader;
 
 	void initVulkanLogicalDevice();
 	void initVulkanSwapChain();
