@@ -9,8 +9,8 @@ void Renderer::createGBufferAttachments()
 	tci.bpp = 32;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_B8G8R8A8_UNORM;
-	tci.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-	tci.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
+	tci.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 
 	gBufferColourAttachment.loadStream(&tci);
 
@@ -21,6 +21,7 @@ void Renderer::createGBufferAttachments()
 
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	tci.format = findDepthFormat();
+	tci.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
 	gBufferDepthAttachment.loadStream(&tci);
@@ -37,7 +38,7 @@ void Renderer::createGBufferRenderPass()
 	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 	VkAttachmentReference colorAttachmentRef = {};
 	colorAttachmentRef.attachment = 0;
@@ -51,7 +52,7 @@ void Renderer::createGBufferRenderPass()
 	normalAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	normalAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	normalAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	normalAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	normalAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 	VkAttachmentReference normalAttachmentRef = {};
 	normalAttachmentRef.attachment = 1;
@@ -379,4 +380,57 @@ void Renderer::updateGBufferDescriptorSets()
 	descriptorWrites[2].pImageInfo = imageInfo;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+}
+
+void Renderer::createGBufferCommands()
+{
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = commandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = 1;
+
+	if (vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommandBuffer) != VK_SUCCESS) {
+		DBG_SEVERE("Failed to allocate Vulkan command buffers");
+	}
+
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+	vkBeginCommandBuffer(gBufferCommandBuffer, &beginInfo);
+
+	VkRenderPassBeginInfo renderPassInfo = {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = gBufferRenderPass;
+	renderPassInfo.framebuffer = gBufferFramebuffer;
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent = renderResolution;
+
+	std::array<VkClearValue, 3> clearValues = {};
+	clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+	clearValues[1].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+	clearValues[2].depthStencil = { 1.0f, 0 };
+	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	renderPassInfo.pClearValues = clearValues.data();
+
+	vkCmdBeginRenderPass(gBufferCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline);
+
+	vkCmdBindDescriptorSets(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet, 0, nullptr);
+
+	VkBuffer vertexBuffers[] = { vertexIndexBuffer };
+	VkDeviceSize offsets[] = { 0 };
+	vkCmdBindVertexBuffers(gBufferCommandBuffer, 0, 1, vertexBuffers, offsets);
+	vkCmdBindIndexBuffer(gBufferCommandBuffer, vertexIndexBuffer, INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer, 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand));
+
+	vkCmdEndRenderPass(gBufferCommandBuffer);
+
+	auto result = vkEndCommandBuffer(gBufferCommandBuffer);
+	if (result != VK_SUCCESS) {
+		DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
+	}
 }

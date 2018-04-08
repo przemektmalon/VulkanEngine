@@ -23,6 +23,7 @@ void Renderer::initialise()
 
 	// Pipeline attachments
 	createGBufferAttachments();
+	createPBRAttachments();
 	createScreenAttachments();
 	
 	// Pipeline render passes
@@ -31,10 +32,12 @@ void Renderer::initialise()
 
 	// Pipeline descriptor set layouts
 	createGBufferDescriptorSetLayouts();
+	createPBRDescriptorSetLayouts();
 	createScreenDescriptorSetLayouts();
 
 	// Pipeline objects
 	createGBufferPipeline();
+	createPBRPipeline();
 	createScreenPipeline();
 	
 	// Pipeline framebuffers
@@ -46,6 +49,7 @@ void Renderer::initialise()
 
 	// Pipeline descriptor sets
 	createGBufferDescriptorSets();
+	createPBRDescriptorSets();
 	createScreenDescriptorSets();
 }
 
@@ -102,18 +106,16 @@ void Renderer::render()
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitSemaphores = &imageAvailableSemaphore;
 	submitInfo.pWaitDstStageMask = waitStages;
 
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &gBufferCommandBuffer;
 
-	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
 	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = signalSemaphores;
+	submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 
 	auto submitResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 
@@ -121,16 +123,26 @@ void Renderer::render()
 		DBG_SEVERE("Failed to submit Vulkan draw command buffer. Error: " << submitResult);
 	}
 
+
+
+	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
+	submitInfo.pWaitSemaphores = &renderFinishedSemaphore;
+	submitInfo.pWaitDstStageMask = waitStages3;
+	submitInfo.pCommandBuffers = &pbrCommandBuffer;
+	submitInfo.pSignalSemaphores = &pbrFinishedSemaphore;
+
+	submitResult = vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE);
+
+	if (submitResult != VK_SUCCESS) {
+		DBG_SEVERE("Failed to submit Vulkan draw command buffer. Error: " << submitResult);
+	}
+
+
 	
 	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &renderFinishedSemaphore;
+	submitInfo.pWaitSemaphores = &pbrFinishedSemaphore;
 	submitInfo.pWaitDstStageMask = waitStages2;
-	
-	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &screenCommandBuffers[imageIndex];
-
-	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &screenFinishedSemaphore;
 
 	submitResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
@@ -138,6 +150,8 @@ void Renderer::render()
 	if (submitResult != VK_SUCCESS) {
 		DBG_SEVERE("Failed to submit Vulkan draw command buffer. Error: " << submitResult);
 	}
+
+	
 
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -282,6 +296,7 @@ void Renderer::createLogicalDevice()
 
 	vkGetDeviceQueue(device, 0, 0, &graphicsQueue);
 	vkGetDeviceQueue(device, 0, 0, &presentQueue); /// Todo: Support for AMD gpus which have non-universal queues
+	vkGetDeviceQueue(device, 0, 0, &computeQueue);
 }
 
 /*
@@ -341,7 +356,7 @@ void Renderer::initVulkanUniformBuffer()
 */
 void Renderer::createDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 4> poolSizes = {};
+	std::array<VkDescriptorPoolSize, 6> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = 1;
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -350,131 +365,19 @@ void Renderer::createDescriptorPool()
 	poolSizes[2].descriptorCount = 1024;
 	poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[3].descriptorCount = 1;
+	poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[4].descriptorCount = 1;
+	poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	poolSizes[5].descriptorCount = 3;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = 2;
+	poolInfo.maxSets = 3;
 
 	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 		DBG_SEVERE("Failed to create Vulkan descriptor pool");
-	}
-}
-
-/*
-	@brief	Create Vulkan command buffers
-*/
-void Renderer::initVulkanCommandBuffers()
-{
-	DBG_INFO("Creating Vulkan command buffers");
-
-	// Offscreen command buffers
-	{
-		VkCommandBufferAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = commandPool;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = 1;
-
-		if (vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommandBuffer) != VK_SUCCESS) {
-			DBG_SEVERE("Failed to allocate Vulkan command buffers");
-		}
-
-		VkCommandBufferBeginInfo beginInfo = {};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-		vkBeginCommandBuffer(gBufferCommandBuffer, &beginInfo);
-
-		VkRenderPassBeginInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = gBufferRenderPass;
-		renderPassInfo.framebuffer = gBufferFramebuffer;
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = renderResolution;
-
-		std::array<VkClearValue, 3> clearValues = {};
-		clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
-		clearValues[1].color = { 0.1f, 0.1f, 0.1f, 1.0f };
-		clearValues[2].depthStencil = { 1.0f, 0 };
-		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-		renderPassInfo.pClearValues = clearValues.data();
-
-		vkCmdBeginRenderPass(gBufferCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-		vkCmdBindPipeline(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline);
-
-		vkCmdBindDescriptorSets(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet, 0, nullptr);
-
-		VkBuffer vertexBuffers[] = { vertexIndexBuffer };
-		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(gBufferCommandBuffer, 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(gBufferCommandBuffer, vertexIndexBuffer, INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
-
-		vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer, 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand));
-
-		vkCmdEndRenderPass(gBufferCommandBuffer);
-
-		auto result = vkEndCommandBuffer(gBufferCommandBuffer);
-		if (result != VK_SUCCESS) {
-			DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
-		}
-	}
-
-	{
-		// We need a command buffer for each framebuffer
-		screenCommandBuffers.resize(screenFramebuffers.size());
-
-		VkCommandBufferAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = commandPool;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = (uint32_t)screenCommandBuffers.size();
-
-		if (vkAllocateCommandBuffers(device, &allocInfo, screenCommandBuffers.data()) != VK_SUCCESS) {
-			DBG_SEVERE("Failed to allocate Vulkan command buffers");
-		}
-
-		for (size_t i = 0; i < screenCommandBuffers.size(); i++) {
-			VkCommandBufferBeginInfo beginInfo = {};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-			vkBeginCommandBuffer(screenCommandBuffers[i], &beginInfo);
-
-			VkRenderPassBeginInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = screenRenderPass;
-			renderPassInfo.framebuffer = screenFramebuffers[i];
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = renderResolution;
-
-			std::array<VkClearValue, 2> clearValues = {};
-			clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
-			clearValues[1].depthStencil = { 1.0f, 0 };
-			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-			renderPassInfo.pClearValues = clearValues.data();
-
-			vkCmdBeginRenderPass(screenCommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			vkCmdBindPipeline(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline);
-
-			vkCmdBindDescriptorSets(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet, 0, nullptr);
-
-			VkBuffer vertexBuffers[] = { screenQuadBuffer };
-			VkDeviceSize offsets[] = { 0 };
-			vkCmdBindVertexBuffers(screenCommandBuffers[i], 0, 1, vertexBuffers, offsets);
-
-			vkCmdDraw(screenCommandBuffers[i], 6, 1, 0, 0);
-
-			vkCmdEndRenderPass(screenCommandBuffers[i]);
-
-			auto result = vkEndCommandBuffer(screenCommandBuffers[i]);
-			if (result != VK_SUCCESS) {
-				DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
-			}
-		}
 	}
 }
 
@@ -489,6 +392,7 @@ void Renderer::createSemaphores()
 
 	if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
 		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
+		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &pbrFinishedSemaphore) != VK_SUCCESS ||
 		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &screenFinishedSemaphore) != VK_SUCCESS) {
 
 		DBG_SEVERE("Failed to create Vulkan semaphores");
@@ -682,7 +586,6 @@ void Renderer::recreateVulkanSwapChain()
 	vkDeviceWaitIdle(device);
 
 	createScreenSwapChain();
-	initVulkanCommandBuffers();
 }
 
 
@@ -769,6 +672,9 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 	VkPipelineStageFlags sourceStage;
 	VkPipelineStageFlags destinationStage;
 
+	if (oldLayout == newLayout)
+		return;
+
 	if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -790,8 +696,12 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 	}
-	else if (oldLayout == newLayout) {
-		return;
+	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
 	}
 	else {
 		DBG_SEVERE("unsupported layout transition!");

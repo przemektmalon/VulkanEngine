@@ -32,6 +32,7 @@ public:
 	// Device, queues, swap chain
 	VkDevice device;
 	VkQueue graphicsQueue;
+	VkQueue computeQueue;
 	VkQueue presentQueue;
 	VkSwapchainKHR swapChain;
 	VkFormat swapChainImageFormat;
@@ -63,6 +64,7 @@ public:
 	void createGBufferFramebuffers();
 	void createGBufferDescriptorSets();
 	void updateGBufferDescriptorSets();
+	void createGBufferCommands();
 
 	// Pipeline objets
 	VkPipeline gBufferPipeline;
@@ -94,6 +96,7 @@ public:
 	void createPBRPipeline();
 	void createPBRDescriptorSets();
 	void updatePBRDescriptorSets();
+	void createPBRCommands();
 
 	// Pipeline objects
 	VkPipeline pbrPipeline;
@@ -122,6 +125,7 @@ public:
 	void createScreenFramebuffers();
 	void createScreenDescriptorSets();
 	void updateScreenDescriptorSets();
+	void createScreenCommands();
 
 	// Pipeline objects
 	VkPipeline screenPipeline;
@@ -185,6 +189,7 @@ public:
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
 	VkSemaphore screenFinishedSemaphore;
+	VkSemaphore pbrFinishedSemaphore;
 
 	// Samplers
 	VkSampler textureSampler;
@@ -203,7 +208,6 @@ public:
 
 	void initVulkanUniformBuffer();
 
-	void initVulkanCommandBuffers();
 	void createSemaphores();
 
 	// Copies to optimal (efficient) device local buffer

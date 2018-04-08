@@ -370,12 +370,12 @@ void Renderer::updateScreenDescriptorSets()
 {
 	VkDescriptorImageInfo colInfoScreen;
 	colInfoScreen.sampler = textureSampler;
-	colInfoScreen.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	colInfoScreen.imageView = gBufferColourAttachment.getImageViewHandle();
+	colInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	colInfoScreen.imageView = pbrOutput.getImageViewHandle();
 
 	VkDescriptorImageInfo norInfoScreen;
 	norInfoScreen.sampler = textureSampler;
-	norInfoScreen.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	norInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	norInfoScreen.imageView = gBufferNormalAttachment.getImageViewHandle();
 
 	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
@@ -397,4 +397,60 @@ void Renderer::updateScreenDescriptorSets()
 	descriptorWrites[1].pImageInfo = &norInfoScreen;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+}
+
+void Renderer::createScreenCommands()
+{
+	// We need a command buffer for each framebuffer
+	screenCommandBuffers.resize(screenFramebuffers.size());
+
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = commandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = (uint32_t)screenCommandBuffers.size();
+
+	if (vkAllocateCommandBuffers(device, &allocInfo, screenCommandBuffers.data()) != VK_SUCCESS) {
+		DBG_SEVERE("Failed to allocate Vulkan command buffers");
+	}
+
+	for (size_t i = 0; i < screenCommandBuffers.size(); i++) {
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+		vkBeginCommandBuffer(screenCommandBuffers[i], &beginInfo);
+
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = screenRenderPass;
+		renderPassInfo.framebuffer = screenFramebuffers[i];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = renderResolution;
+
+		std::array<VkClearValue, 2> clearValues = {};
+		clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
+
+		vkCmdBeginRenderPass(screenCommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline);
+
+		vkCmdBindDescriptorSets(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet, 0, nullptr);
+
+		VkBuffer vertexBuffers[] = { screenQuadBuffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(screenCommandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+		vkCmdDraw(screenCommandBuffers[i], 6, 1, 0, 0);
+
+		vkCmdEndRenderPass(screenCommandBuffers[i]);
+
+		auto result = vkEndCommandBuffer(screenCommandBuffers[i]);
+		if (result != VK_SUCCESS) {
+			DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
+		}
+	}
 }

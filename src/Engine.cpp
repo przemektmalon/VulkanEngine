@@ -33,6 +33,7 @@ void Engine::start()
 	Engine::assets.loadAssets("res/resources.txt");
 
 	renderer->updateGBufferDescriptorSets();
+	renderer->updatePBRDescriptorSets();
 	renderer->updateScreenDescriptorSets();
 
 	// Adding models to the world
@@ -52,7 +53,10 @@ void Engine::start()
 
 
 	renderer->populateDrawCmdBuffer();
-	renderer->initVulkanCommandBuffers();
+
+	renderer->createGBufferCommands();
+	renderer->createPBRCommands();
+	renderer->createScreenCommands();
 
 
 	Time initTime = clock.time() - engineStartTime;

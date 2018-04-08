@@ -6,39 +6,45 @@ void Renderer::createPBRAttachments()
 	TextureCreateInfo tci;
 	tci.width = renderResolution.width;
 	tci.height = renderResolution.height;
-	tci.bpp = 32;
+	tci.bpp = 32 * 4;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-	tci.format = VK_FORMAT_B8G8R8A8_UNORM;
-	tci.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-	tci.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	tci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
+	tci.usageFlags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	pbrOutput.loadStream(&tci);
 }
 
 void Renderer::createPBRDescriptorSetLayouts()
 {
+	VkDescriptorSetLayoutBinding outLayoutBinding = {};
+	outLayoutBinding.binding = 0;
+	outLayoutBinding.descriptorCount = 1;
+	outLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	outLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
 	VkDescriptorSetLayoutBinding colLayoutBinding = {};
-	colLayoutBinding.binding = 0;
+	colLayoutBinding.binding = 1;
 	colLayoutBinding.descriptorCount = 1;
-	colLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	colLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	colLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	colLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
 	VkDescriptorSetLayoutBinding norLayoutBinding = {};
-	norLayoutBinding.binding = 1;
+	norLayoutBinding.binding = 2;
 	norLayoutBinding.descriptorCount = 1;
-	norLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	norLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	norLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	norLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
 	/// TODO: other PBR stuff
 
-	VkDescriptorSetLayoutBinding bindings[] = { colLayoutBinding, norLayoutBinding };
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 2;
+	layoutInfo.bindingCount = 3;
 	layoutInfo.pBindings = bindings;
 
-	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &screenDescriptorSetLayout) != VK_SUCCESS) {
+	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout) != VK_SUCCESS) {
 		DBG_SEVERE("Failed to create Vulkan descriptor set layout");
 	}
 }
@@ -53,18 +59,18 @@ void Renderer::createPBRPipeline()
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &gBufferDescriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &pbrDescriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &gBufferPipelineLayout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pbrPipelineLayout) != VK_SUCCESS) {
 		DBG_SEVERE("Failed to create Vulkan pipeline layout");
 	}
 
 	// Collate all the data necessary to create pipeline
 	VkComputePipelineCreateInfo pipelineInfo = {};
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	pipelineInfo.stage = *pbrShader.getShaderStageCreateInfos();
-	pipelineInfo.layout = gBufferPipelineLayout;
+	pipelineInfo.layout = pbrPipelineLayout;
 
 	VkResult result = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pbrPipeline);
 
@@ -85,21 +91,88 @@ void Renderer::createPBRDescriptorSets()
 	if (vkAllocateDescriptorSets(device, &allocInfo, &pbrDescriptorSet) != VK_SUCCESS) {
 		DBG_SEVERE("Failed to allocate descriptor set");
 	}
+}
 
-	VkDescriptorImageInfo colInfoPBR;
-	colInfoPBR.sampler = textureSampler;
-	colInfoPBR.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	colInfoPBR.imageView = pbrOutput.getImageViewHandle();
+void Renderer::updatePBRDescriptorSets()
+{
+	VkDescriptorImageInfo outputImageInfo;
+	outputImageInfo.sampler = textureSampler;
+	outputImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	outputImageInfo.imageView = pbrOutput.getImageViewHandle();
 
-	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+	VkDescriptorImageInfo colInfoScreen;
+	colInfoScreen.sampler = textureSampler;
+	colInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	colInfoScreen.imageView = gBufferColourAttachment.getImageViewHandle();
+
+	VkDescriptorImageInfo norInfoScreen;
+	norInfoScreen.sampler = textureSampler;
+	norInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	norInfoScreen.imageView = gBufferNormalAttachment.getImageViewHandle();
+
+	std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
+
+	// We'll need:
+	// 3 Light buffers (point, spot, direction)
+	// 4 GBuffer images (albedospec, normal, pbr, depth)
+	// SSAO image
+	// Skybox image
+	// Output image
+	// Uniforms:
+	// 
+	
 
 	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[0].dstSet = pbrDescriptorSet;
-	descriptorWrites[0].dstBinding = 0;
+	descriptorWrites[0].dstBinding = 2;
 	descriptorWrites[0].dstArrayElement = 0;
-	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	descriptorWrites[0].descriptorCount = 1;
-	descriptorWrites[0].pImageInfo = &colInfoPBR;
+	descriptorWrites[0].pImageInfo = &colInfoScreen;
+
+	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[1].dstSet = pbrDescriptorSet;
+	descriptorWrites[1].dstBinding = 1;
+	descriptorWrites[1].dstArrayElement = 0;
+	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	descriptorWrites[1].descriptorCount = 1;
+	descriptorWrites[1].pImageInfo = &norInfoScreen;
+
+	descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[2].dstSet = pbrDescriptorSet;
+	descriptorWrites[2].dstBinding = 0;
+	descriptorWrites[2].dstArrayElement = 0;
+	descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	descriptorWrites[2].descriptorCount = 1;
+	descriptorWrites[2].pImageInfo = &outputImageInfo;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+}
+
+void Renderer::createPBRCommands()
+{
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = commandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = 1;
+
+	if (vkAllocateCommandBuffers(device, &allocInfo, &pbrCommandBuffer) != VK_SUCCESS) {
+		DBG_SEVERE("Failed to allocate Vulkan command buffers");
+	}
+
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+	vkBeginCommandBuffer(pbrCommandBuffer, &beginInfo);
+
+	vkCmdBindPipeline(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipeline);
+	vkCmdBindDescriptorSets(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipelineLayout, 0, 1, &pbrDescriptorSet, 0, 0);
+	vkCmdDispatch(pbrCommandBuffer, renderResolution.width / 16, renderResolution.height / 16, 1);
+
+	auto result = vkEndCommandBuffer(pbrCommandBuffer);
+	if (result != VK_SUCCESS) {
+		DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
+	}
 }
