@@ -20,7 +20,7 @@ void Image::load(std::string path)
 	path = current_working_dir + "/" + path;
 
 	int bpp;
-	DBG_INFO("Attempting to load image: " << path);
+	DBG_INFO("Loading image: " << path);
 	unsigned char* loadedData = stbi_load(path.c_str(), &width, &height, &bpp, 4);
 	if (!loadedData) {
 		DBG_WARNING("Failed to load image: " << path);

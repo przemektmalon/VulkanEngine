@@ -21,6 +21,8 @@ void Engine::start()
 		DBG_SEVERE("Failed to connect to X server using XCB");
 #endif
 
+	PROFILE_START("init");
+
 	createVulkanInstance();
 	createWindow();
 	queryVulkanPhysicalDeviceDetails();
@@ -30,11 +32,23 @@ void Engine::start()
 	renderer = new Renderer();
 	renderer->initialise();
 
+	PROFILE_END("init");
+
+	PROFILE_START("assets");
+
 	Engine::assets.loadAssets("res/resources.txt");
+
+	PROFILE_END("assets");
+
+	PROFILE_START("descsets");
 
 	renderer->updateGBufferDescriptorSets();
 	renderer->updatePBRDescriptorSets();
 	renderer->updateScreenDescriptorSets();
+
+	PROFILE_END("descsets");
+
+	PROFILE_START("world");
 
 	// Adding models to the world
 	{
@@ -51,6 +65,9 @@ void Engine::start()
 		world.modelMap["pbrsphere"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(4, 0, 0));
 	}
 
+	PROFILE_END("world");
+
+	PROFILE_START("cmds");
 
 	renderer->populateDrawCmdBuffer();
 
@@ -58,9 +75,14 @@ void Engine::start()
 	renderer->updatePBRCommands();
 	renderer->updateScreenCommands();
 
+	PROFILE_END("cmds");
 
-	Time initTime = clock.time() - engineStartTime;
-	DBG_INFO("Initialisation time: " << initTime.getSecondsf() << " seconds");
+	std::cout << std::endl;
+	DBG_INFO("Initialisation time:     " << PROFILE_TIME("init") << " seconds");
+	DBG_INFO("Asset load time:         " << PROFILE_TIME("assets") << " seconds");
+	DBG_INFO("Descriptor sets time:    " << PROFILE_TIME("descsets") << " seconds");
+	DBG_INFO("World loading time:      " << PROFILE_TIME("world") << " seconds");
+	DBG_INFO("Command submission time: " << PROFILE_TIME("cmds") << " seconds");
 	
 	Time frameTime;
 	double fpsDisplay = 0.f;

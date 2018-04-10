@@ -29,7 +29,6 @@ void Renderer::createGBufferAttachments()
 
 void Renderer::createGBufferRenderPass()
 {
-	DBG_INFO("Creating Vulkan render pass");
 	VkAttachmentDescription colorAttachment = {};
 	colorAttachment.format = swapChainImageFormat;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;

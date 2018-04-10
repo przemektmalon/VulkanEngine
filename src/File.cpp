@@ -50,7 +50,7 @@ bool File::open(Mode pFileMode)
   	GetCurrentDir( buff, FILENAME_MAX );
   	std::string current_working_dir(buff);
 	meta.path = current_working_dir + meta.path;
-	DBG_INFO("Path: " + meta.path);
+	//DBG_INFO("Path: " + meta.path);
 	meta.fileMode = pFileMode;
 
 	file.open(meta.path.c_str(), (std::ios_base::openmode)meta.fileMode);
@@ -62,6 +62,7 @@ bool File::open(Mode pFileMode)
 		return true;
 	}
 	else{
+		DBG_WARNING("File open errors: " << meta.path);
 		DBG_WARNING("File good: " << file.good());
 		DBG_WARNING("File eof: " << file.eof());
 		DBG_WARNING("File fail: " << file.fail());

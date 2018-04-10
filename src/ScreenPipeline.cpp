@@ -9,8 +9,6 @@
 */
 void Renderer::createScreenSwapChain()
 {
-	DBG_INFO("Creating Vulkan swap chain");
-
 	auto& deviceDets = Engine::getPhysicalDeviceDetails();
 
 	VkSurfaceFormatKHR surfaceFormat;
@@ -120,7 +118,6 @@ void Renderer::createScreenSwapChain()
 
 void Renderer::createScreenAttachments()
 {
-	DBG_INFO("Creating Vulkan image views");
 	swapChainImageViews.resize(swapChainImages.size());
 
 	// Views describe how the GPU will write to or sample the image (ie. mip mapping)
@@ -131,7 +128,6 @@ void Renderer::createScreenAttachments()
 
 void Renderer::createScreenRenderPass()
 {
-	DBG_INFO("Creating Vulkan render pass");
 	VkAttachmentDescription colorAttachment = {};
 	colorAttachment.format = swapChainImageFormat;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -202,7 +198,6 @@ void Renderer::createScreenDescriptorSetLayouts()
 
 void Renderer::createScreenPipeline()
 {
-	DBG_INFO("Creating vulkan graphics pipeline");
 	// Compile GLSL code to SPIR-V
 
 	screenShader.compile();
@@ -329,8 +324,6 @@ void Renderer::createScreenPipeline()
 
 void Renderer::createScreenFramebuffers()
 {
-	DBG_INFO("Creating Vulkan framebuffers");
-
 	screenFramebuffers.resize(swapChainImageViews.size());
 
 	// Create a framebuffer for each image in our swap chain (two if double buffering, etc)

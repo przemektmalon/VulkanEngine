@@ -54,7 +54,6 @@ void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for
 
 				auto& tex = textures.insert(std::make_pair(name, Texture(path))).first->second;
 				tex.setName(name);
-				DBG_INFO("Loaded texture: " << path);
 			}
 			else if (line == "[Model]")
 			{
@@ -252,6 +251,5 @@ void AssetStore::addMaterial(std::string name, std::string albedo, std::string n
 	materials[name].roughness = getTexture(roughness);
 	materials[name].ao = getTexture(ao);
 	materials[name].height = getTexture(height);
-
 	materials[name].gpuIndexBase = (materials.size() - 1) * 6;
 }

@@ -14,8 +14,8 @@ public:
 	~Time() {};
 
 	Time& setMicroSeconds(s64 ms) { microSeconds = ms; milliSeconds = double(ms) * 0.001; seconds = double(ms) * 0.000001; return *this; }
-	Time& setMilliSeconds(double ms) { milliSeconds = ms; microSeconds = ms * 1000; seconds = ms * 0.001; return *this; }
-	Time& setSeconds(double s) { seconds = s; microSeconds = s * 1000000; milliSeconds = s * 1000; return *this; }
+	Time& setMilliSeconds(double ms) { milliSeconds = (double)ms; microSeconds = s64(ms * 1000.0); seconds = ms * 0.001; return *this; }
+	Time& setSeconds(double s) { seconds = s; microSeconds = s64(s * 1000000.0); milliSeconds = s * 1000.0; return *this; }
 
 	s64 getMicroSeconds() const { return microSeconds; }
 	double getMilliSeconds() const { return milliSeconds; }
@@ -60,11 +60,6 @@ public:
 	}
 
 	void operator=(Time& rhs)
-	{
-		setMicroSeconds(rhs.getMicroSeconds());
-	}
-
-	void operator=(Time rhs)
 	{
 		setMicroSeconds(rhs.getMicroSeconds());
 	}
