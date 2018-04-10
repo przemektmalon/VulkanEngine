@@ -129,7 +129,7 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	descriptorWrites[0].descriptorCount = 1;
 	descriptorWrites[0].pImageInfo = &colInfoScreen;
-
+	
 	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[1].dstSet = pbrDescriptorSet;
 	descriptorWrites[1].dstBinding = 1;
@@ -160,7 +160,10 @@ void Renderer::createPBRCommands()
 	if (vkAllocateCommandBuffers(device, &allocInfo, &pbrCommandBuffer) != VK_SUCCESS) {
 		DBG_SEVERE("Failed to allocate Vulkan command buffers");
 	}
+}
 
+void Renderer::updatePBRCommands()
+{
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -175,4 +178,30 @@ void Renderer::createPBRCommands()
 	if (result != VK_SUCCESS) {
 		DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
 	}
+}
+
+void Renderer::destroyPBRAttachments()
+{
+	pbrOutput.destroy();
+}
+
+void Renderer::destroyPBRDescriptorSetLayouts()
+{
+	vkDestroyDescriptorSetLayout(device, pbrDescriptorSetLayout, 0);
+}
+
+void Renderer::destroyPBRPipeline()
+{
+	vkDestroyPipelineLayout(device, pbrPipelineLayout, 0);
+	vkDestroyPipeline(device, pbrPipeline, 0);
+}
+
+void Renderer::destroyPBRDescriptorSets()
+{
+	vkFreeDescriptorSets(device, descriptorPool, 1, &pbrDescriptorSet);
+}
+
+void Renderer::destroyPBRCommands()
+{
+	vkFreeCommandBuffers(device, commandPool, 1, &pbrCommandBuffer);
 }

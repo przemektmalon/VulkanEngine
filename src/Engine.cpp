@@ -54,9 +54,9 @@ void Engine::start()
 
 	renderer->populateDrawCmdBuffer();
 
-	renderer->createGBufferCommands();
-	renderer->createPBRCommands();
-	renderer->createScreenCommands();
+	renderer->updateGBufferCommands();
+	renderer->updatePBRCommands();
+	renderer->updateScreenCommands();
 
 
 	Time initTime = clock.time() - engineStartTime;

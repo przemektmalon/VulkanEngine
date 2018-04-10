@@ -51,6 +51,11 @@ void Renderer::initialise()
 	createGBufferDescriptorSets();
 	createPBRDescriptorSets();
 	createScreenDescriptorSets();
+
+	// Pipeline commands
+	createGBufferCommands();
+	createPBRCommands();
+	createScreenCommands();
 }
 
 /*
@@ -58,14 +63,51 @@ void Renderer::initialise()
 */
 void Renderer::cleanup()
 {
-	cleanupVulkanSwapChain();
+	// GBuffer pipeline
+	{
+		destroyGBufferAttachments();
+		destroyGBufferRenderPass();
+		destroyGBufferDescriptorSetLayouts();
+		destroyGBufferPipeline();
+		destroyGBufferFramebuffers();
+		//destroyGBufferDescriptorSets();
+		destroyGBufferCommands();
+	}
+
+	// PBR pipeline
+	{
+		destroyPBRAttachments();
+		destroyPBRDescriptorSetLayouts();
+		destroyPBRPipeline();
+		//destroyPBRDescriptorSets();
+		destroyPBRCommands();
+	}
+
+	// Screen pipeline
+	{
+		destroyScreenAttachments();
+		destroyScreenRenderPass();
+		destroyScreenDescriptorSetLayouts();
+		destroyScreenPipeline();
+		destroyScreenFramebuffers();
+		//destroyScreenDescriptorSets();
+		destroyScreenCommands();
+		destroyScreenSwapChain();
+	}
+
+	gBufferShader.destroy();
+	pbrShader.destroy();
+	screenShader.destroy();
+
+	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+	vkDestroyCommandPool(device, commandPool, 0);
 
 	vkDestroySampler(device, textureSampler, nullptr);
 
-	gBufferShader.destroy();
-
-	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-	vkDestroyDescriptorSetLayout(device, gBufferDescriptorSetLayout, nullptr);
+	vkDestroySemaphore(device, renderFinishedSemaphore, 0);
+	vkDestroySemaphore(device, imageAvailableSemaphore, 0);
+	vkDestroySemaphore(device, pbrFinishedSemaphore, 0);
+	vkDestroySemaphore(device, screenFinishedSemaphore, 0);
 
 	vkDestroyBuffer(device, uniformBuffer, nullptr);
 	vkFreeMemory(device, uniformBufferMemory, nullptr);
@@ -79,10 +121,8 @@ void Renderer::cleanup()
 	vkDestroyBuffer(device, drawCmdBuffer, nullptr);
 	vkFreeMemory(device, drawCmdBufferMemory, nullptr);
 
-	vkDestroySemaphore(device, renderFinishedSemaphore, 0);
-	vkDestroySemaphore(device, imageAvailableSemaphore, 0);
-
-	vkDestroyCommandPool(device, commandPool, 0);
+	vkDestroyBuffer(device, screenQuadBuffer, nullptr);
+	vkFreeMemory(device, screenQuadBufferMemory, nullptr);
 
 	vkDestroyDevice(device, 0);
 }
@@ -556,36 +596,15 @@ void Renderer::updateUniformBuffer()
 }
 
 /*
-	@brief	Clean up Vulkan swapchain
-*/
-void Renderer::cleanupVulkanSwapChain()
-{
-	for (auto framebuffer : screenFramebuffers) {
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
-	}
-
-	vkFreeCommandBuffers(device, commandPool, u32(screenCommandBuffers.size()), screenCommandBuffers.data());
-	vkDestroyPipeline(device, gBufferPipeline, nullptr);
-	vkDestroyPipelineLayout(device, gBufferPipelineLayout, nullptr);
-	vkDestroyRenderPass(device, screenRenderPass, nullptr);
-
-	for (auto imageView : swapChainImageViews) {
-		vkDestroyImageView(device, imageView, nullptr);
-	}
-
-	vkDestroySwapchainKHR(device, swapChain, nullptr);
-}
-
-/*
 	@brief	Recreate Vulkan swap chain
 */
 void Renderer::recreateVulkanSwapChain()
 {
 	DBG_SEVERE("UNIMPLEMENTED");
-	cleanupVulkanSwapChain();
-	vkDeviceWaitIdle(device);
+	//cleanupVulkanSwapChain();
+	//vkDeviceWaitIdle(device);
 
-	createScreenSwapChain();
+	//createScreenSwapChain();
 }
 
 

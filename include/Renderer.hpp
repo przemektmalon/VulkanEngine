@@ -63,8 +63,18 @@ public:
 	void createGBufferPipeline();
 	void createGBufferFramebuffers();
 	void createGBufferDescriptorSets();
-	void updateGBufferDescriptorSets();
 	void createGBufferCommands();
+
+	void updateGBufferDescriptorSets();
+	void updateGBufferCommands();
+
+	void destroyGBufferAttachments();
+	void destroyGBufferRenderPass();
+	void destroyGBufferDescriptorSetLayouts();
+	void destroyGBufferPipeline();
+	void destroyGBufferFramebuffers();
+	void destroyGBufferDescriptorSets();
+	void destroyGBufferCommands();
 
 	// Pipeline objets
 	VkPipeline gBufferPipeline;
@@ -95,8 +105,16 @@ public:
 	void createPBRDescriptorSetLayouts();
 	void createPBRPipeline();
 	void createPBRDescriptorSets();
-	void updatePBRDescriptorSets();
 	void createPBRCommands();
+	
+	void updatePBRDescriptorSets();
+	void updatePBRCommands();
+
+	void destroyPBRAttachments();
+	void destroyPBRDescriptorSetLayouts();
+	void destroyPBRPipeline();
+	void destroyPBRDescriptorSets();
+	void destroyPBRCommands();
 
 	// Pipeline objects
 	VkPipeline pbrPipeline;
@@ -124,9 +142,20 @@ public:
 	void createScreenPipeline();
 	void createScreenFramebuffers();
 	void createScreenDescriptorSets();
-	void updateScreenDescriptorSets();
 	void createScreenCommands();
 
+	void updateScreenDescriptorSets();
+	void updateScreenCommands();
+
+	void destroyScreenSwapChain();
+	void destroyScreenAttachments();
+	void destroyScreenRenderPass();
+	void destroyScreenDescriptorSetLayouts();
+	void destroyScreenPipeline();
+	void destroyScreenFramebuffers();
+	void destroyScreenDescriptorSets();
+	void destroyScreenCommands();
+	
 	// Pipeline objects
 	VkPipeline screenPipeline;
 	VkPipelineLayout screenPipelineLayout;
@@ -225,6 +254,6 @@ public:
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void updateUniformBuffer();
 
-	void cleanupVulkanSwapChain();
+	//void cleanupVulkanSwapChain();
 	void recreateVulkanSwapChain();
 };

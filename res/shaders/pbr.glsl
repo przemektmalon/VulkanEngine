@@ -20,7 +20,7 @@ void main()
 	
 	uint localID = gl_LocalInvocationIndex;
 
-	vec4 alb = imageLoad(gAlbedoSpec, pixel);
+	vec4 albedoSpec = imageLoad(gAlbedoSpec, pixel);
 
-	imageStore(outColour, pixel, alb);
+	imageStore(outColour, pixel, albedoSpec);
 }

@@ -150,7 +150,12 @@ void Texture::loadStream(TextureCreateInfo * ci)
 void Texture::destroy()
 {
 	const auto r = Engine::renderer;
-	DBG_INFO("Destroying: " << name);
+	if (name.length() == 0) {
+		DBG_INFO("Destroying unnamed texture");
+	}
+	else {
+		DBG_INFO("Destroying texture: " << name);
+	}
 	vkDestroyImageView(r->device, vkImageView, nullptr);
 	vkDestroyImage(r->device, vkImage, nullptr);
 	vkFreeMemory(r->device, vkMemory, nullptr);

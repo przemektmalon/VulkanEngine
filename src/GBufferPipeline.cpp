@@ -393,7 +393,10 @@ void Renderer::createGBufferCommands()
 	if (vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommandBuffer) != VK_SUCCESS) {
 		DBG_SEVERE("Failed to allocate Vulkan command buffers");
 	}
+}
 
+void Renderer::updateGBufferCommands()
+{
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -433,4 +436,42 @@ void Renderer::createGBufferCommands()
 	if (result != VK_SUCCESS) {
 		DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
 	}
+}
+
+void Renderer::destroyGBufferAttachments()
+{
+	gBufferColourAttachment.destroy();
+	gBufferNormalAttachment.destroy();
+	gBufferDepthAttachment.destroy();
+}
+
+void Renderer::destroyGBufferRenderPass()
+{
+	vkDestroyRenderPass(device, gBufferRenderPass, 0);
+}
+
+void Renderer::destroyGBufferDescriptorSetLayouts()
+{
+	vkDestroyDescriptorSetLayout(device, gBufferDescriptorSetLayout, 0);
+}
+
+void Renderer::destroyGBufferPipeline()
+{
+	vkDestroyPipelineLayout(device, gBufferPipelineLayout, 0);
+	vkDestroyPipeline(device, gBufferPipeline, 0);
+}
+
+void Renderer::destroyGBufferFramebuffers()
+{
+	vkDestroyFramebuffer(device, gBufferFramebuffer, 0);
+}
+
+void Renderer::destroyGBufferDescriptorSets()
+{
+	vkFreeDescriptorSets(device, descriptorPool, 1, &gBufferDescriptorSet);
+}
+
+void Renderer::destroyGBufferCommands()
+{
+	vkFreeCommandBuffers(device, commandPool, 1, &gBufferCommandBuffer);
 }

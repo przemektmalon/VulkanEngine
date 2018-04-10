@@ -413,8 +413,12 @@ void Renderer::createScreenCommands()
 	if (vkAllocateCommandBuffers(device, &allocInfo, screenCommandBuffers.data()) != VK_SUCCESS) {
 		DBG_SEVERE("Failed to allocate Vulkan command buffers");
 	}
+}
 
-	for (size_t i = 0; i < screenCommandBuffers.size(); i++) {
+void Renderer::updateScreenCommands()
+{
+	for (size_t i = 0; i < screenCommandBuffers.size(); i++)
+	{
 		VkCommandBufferBeginInfo beginInfo = {};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -453,4 +457,51 @@ void Renderer::createScreenCommands()
 			DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
 		}
 	}
+}
+
+void Renderer::destroyScreenSwapChain()
+{
+	vkDestroySwapchainKHR(device, swapChain, 0);
+}
+
+void Renderer::destroyScreenAttachments()
+{
+	for (int i = 0; i < swapChainImages.size(); ++i)
+	{
+		// Gives error, maybe because these images are created from the swap chain by KHR extension
+		//vkDestroyImage(device, swapChainImages[i], 0);
+		vkDestroyImageView(device, swapChainImageViews[i], 0);
+	}
+}
+
+void Renderer::destroyScreenRenderPass()
+{
+	vkDestroyRenderPass(device, screenRenderPass, 0);
+}
+
+void Renderer::destroyScreenDescriptorSetLayouts()
+{
+	vkDestroyDescriptorSetLayout(device, screenDescriptorSetLayout, 0);
+}
+
+void Renderer::destroyScreenPipeline()
+{
+	vkDestroyPipelineLayout(device, screenPipelineLayout, 0);
+	vkDestroyPipeline(device, screenPipeline, 0);
+}
+
+void Renderer::destroyScreenFramebuffers()
+{
+	for (auto fb : screenFramebuffers)
+		vkDestroyFramebuffer(device, fb, 0);
+}
+
+void Renderer::destroyScreenDescriptorSets()
+{
+	vkFreeDescriptorSets(device, descriptorPool, 1, &screenDescriptorSet);
+}
+
+void Renderer::destroyScreenCommands()
+{
+	vkFreeCommandBuffers(device, commandPool, screenCommandBuffers.size(), &screenCommandBuffers[0]);
 }
