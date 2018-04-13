@@ -109,20 +109,11 @@ void Renderer::cleanup()
 	vkDestroySemaphore(device, pbrFinishedSemaphore, 0);
 	vkDestroySemaphore(device, screenFinishedSemaphore, 0);
 
-	vkDestroyBuffer(device, uniformBuffer, nullptr);
-	vkFreeMemory(device, uniformBufferMemory, nullptr);
-
-	vkDestroyBuffer(device, transformBuffer, nullptr);
-	vkFreeMemory(device, transformBufferMemory, nullptr);
-
-	vkDestroyBuffer(device, vertexIndexBuffer, nullptr);
-	vkFreeMemory(device, vertexIndexBufferMemory, nullptr);
-
-	vkDestroyBuffer(device, drawCmdBuffer, nullptr);
-	vkFreeMemory(device, drawCmdBufferMemory, nullptr);
-
-	vkDestroyBuffer(device, screenQuadBuffer, nullptr);
-	vkFreeMemory(device, screenQuadBufferMemory, nullptr);
+	cameraUBO.destroy();
+	transformUBO.destroy();
+	vertexIndexBuffer.destroy();
+	drawCmdBuffer.destroy();
+	screenQuadBuffer.destroy();
 
 	vkDestroyDevice(device, 0);
 }
@@ -212,11 +203,7 @@ void Renderer::render()
 
 void Renderer::populateDrawCmdBuffer()
 {
-	void* data;
-	VkDeviceSize size = sizeof(VkDrawIndexedIndirectCommand) * 100;
-	vkMapMemory(device, drawCmdBufferMemory, 0, size, 0, &data);
-	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)data;
-
+	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)drawCmdBuffer.map();
 	
 	int i = 0;
 	
@@ -240,14 +227,13 @@ void Renderer::populateDrawCmdBuffer()
 		}
 	}
 
-	vkUnmapMemory(device, drawCmdBufferMemory);
+	drawCmdBuffer.unmap();
 }
 
 void Renderer::createVertexIndexBuffers()
 {
 	VkDeviceSize bufferSize = VERTEX_BUFFER_SIZE + INDEX_BUFFER_SIZE;
-
-	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexIndexBuffer, vertexIndexBufferMemory);
+	vertexIndexBuffer.create(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 void Renderer::pushModelDataToGPU(Model & model)
@@ -256,12 +242,12 @@ void Renderer::pushModelDataToGPU(Model & model)
 	{
 		for (auto& lodLevel : triMesh)
 		{
-			copyToDeviceLocalBuffer(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), vertexIndexBuffer, vertexInputByteOffset);
+			copyToDeviceLocalBuffer(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), &vertexIndexBuffer, vertexInputByteOffset);
 
 			lodLevel.firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
 			vertexInputByteOffset += lodLevel.vertexDataLength * sizeof(Vertex);
 
-			copyToDeviceLocalBuffer(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), vertexIndexBuffer, INDEX_BUFFER_BASE + indexInputByteOffset);
+			copyToDeviceLocalBuffer(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), &vertexIndexBuffer, INDEX_BUFFER_BASE + indexInputByteOffset);
 
 			lodLevel.firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
 			indexInputByteOffset += lodLevel.indexDataLength * sizeof(u32);
@@ -272,7 +258,7 @@ void Renderer::pushModelDataToGPU(Model & model)
 void Renderer::createDataBuffers()
 {
 	/// TODO: set appropriate size
-	createVulkanBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, drawCmdBuffer, drawCmdBufferMemory);
+	drawCmdBuffer.create(sizeof(VkDrawIndexedIndirectCommand) * 100, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 	createVertexIndexBuffers();
 
@@ -283,11 +269,11 @@ void Renderer::createDataBuffers()
 	quad.push_back({ { 1,-1 },{ 1,0 } });
 	quad.push_back({ { 1,1 },{ 1,1 } });
 
-	createVulkanBuffer(quad.size() * sizeof(Vertex2D), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, screenQuadBuffer, screenQuadBufferMemory);
+	screenQuadBuffer.create(quad.size() * sizeof(Vertex2D), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	copyToDeviceLocalBuffer(quad.data(), quad.size() * sizeof(Vertex2D), screenQuadBuffer, 0);
+	copyToDeviceLocalBuffer(quad.data(), quad.size() * sizeof(Vertex2D), screenQuadBuffer.getBuffer(), 0);
 
-	createCameraUBO();
+	createUBOs();
 }
 
 /*
@@ -384,12 +370,10 @@ void Renderer::createTextureSampler()
 /*
 	@brief	Create vulkan uniform buffer for MVP matrices
 */
-void Renderer::createCameraUBO()
+void Renderer::createUBOs()
 {
-	VkDeviceSize bufferSize = sizeof(CameraUBO);
-	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffer, uniformBufferMemory);
-	bufferSize = sizeof(glm::fmat4) * 1000;
-	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, transformBuffer, transformBufferMemory);
+	cameraUBO.create(sizeof(CameraUBOData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	transformUBO.create(sizeof(glm::fmat4) * 1000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 /*
@@ -449,7 +433,15 @@ void Renderer::copyToDeviceLocalBuffer(void * srcData, VkDeviceSize size, VkBuff
 {
 	createStagingBuffer(size);
 	copyToStagingBuffer(srcData, size, 0);
-	copyVulkanBuffer(stagingBuffer, dstBuffer, size, dstOffset);
+	copyVulkanBuffer(stagingBuffer.getBuffer(), dstBuffer, size, dstOffset);
+	destroyStagingBuffer();
+}
+
+void Renderer::copyToDeviceLocalBuffer(void * srcData, VkDeviceSize size, Buffer * dstBuffer, VkDeviceSize dstOffset)
+{
+	createStagingBuffer(size);
+	copyToStagingBuffer(srcData, size, 0);
+	copyVulkanBuffer(stagingBuffer.getBuffer(), dstBuffer->getBuffer(), size, dstOffset);
 	destroyStagingBuffer();
 }
 
@@ -458,10 +450,9 @@ void Renderer::copyToDeviceLocalBuffer(void * srcData, VkDeviceSize size, VkBuff
 */
 void Renderer::copyToStagingBuffer(void * srcData, VkDeviceSize size, VkDeviceSize dstOffset)
 {
-	void* data;
-	vkMapMemory(device, stagingBufferMemory, 0, size, 0, &data);
+	void* data = stagingBuffer.map();
 	memcpy(data, srcData, (size_t)size);
-	vkUnmapMemory(device, stagingBufferMemory);
+	stagingBuffer.unmap();
 }
 
 /*
@@ -469,7 +460,7 @@ void Renderer::copyToStagingBuffer(void * srcData, VkDeviceSize size, VkDeviceSi
 */
 void Renderer::createStagingBuffer(VkDeviceSize size)
 {
-	createVulkanBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+	stagingBuffer.create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 /*
@@ -477,10 +468,7 @@ void Renderer::createStagingBuffer(VkDeviceSize size)
 */
 void Renderer::destroyStagingBuffer()
 {
-	vkDestroyBuffer(device, stagingBuffer, nullptr);
-	vkFreeMemory(device, stagingBufferMemory, nullptr);
-	stagingBuffer = 0;
-	stagingBufferMemory = 0;
+	stagingBuffer.destroy();
 }
 
 /*
@@ -568,20 +556,18 @@ void Renderer::copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, V
 */
 void Renderer::updateUniformBuffer()
 {
-	cameraUBO.view = Engine::camera.getView();
-	cameraUBO.proj = Engine::camera.getProj();
-	cameraUBO.proj[1][1] *= -1;
+	cameraUBOData.view = Engine::camera.getView();
+	cameraUBOData.proj = Engine::camera.getProj();
+	cameraUBOData.proj[1][1] *= -1;
 
-	cameraUBO.pos = Engine::camera.getPosition();
+	cameraUBOData.pos = Engine::camera.getPosition();
 
-	void* data;
-	vkMapMemory(device, uniformBufferMemory, 0, sizeof(cameraUBO), 0, &data);
-	memcpy(data, &cameraUBO, sizeof(cameraUBO));
-	vkUnmapMemory(device, uniformBufferMemory);
 
-	vkMapMemory(device, transformBufferMemory, 0, Engine::world.models.size() * sizeof(glm::fmat4), 0, &data);
+	void* data = cameraUBO.map();
+	memcpy(data, &cameraUBOData, sizeof(cameraUBOData));
+	cameraUBO.unmap();
 
-	glm::fmat4* transform = (glm::fmat4*)data;
+	glm::fmat4* transform = (glm::fmat4*)transformUBO.map();
 
 	int i = 0;
 	for (auto& m : Engine::world.models)
@@ -590,7 +576,7 @@ void Renderer::updateUniformBuffer()
 		++i;
 	}
 
-	vkUnmapMemory(device, transformBufferMemory);
+	transformUBO.unmap();
 }
 
 /*

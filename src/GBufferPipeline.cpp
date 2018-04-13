@@ -324,12 +324,12 @@ void Renderer::createGBufferDescriptorSets()
 void Renderer::updateGBufferDescriptorSets()
 {
 	VkDescriptorBufferInfo bufferInfo = {};
-	bufferInfo.buffer = uniformBuffer;
+	bufferInfo.buffer = cameraUBO.getBuffer();
 	bufferInfo.offset = 0;
-	bufferInfo.range = sizeof(CameraUBO);
+	bufferInfo.range = sizeof(CameraUBOData);
 
 	VkDescriptorBufferInfo bufferInfo2 = {};
-	bufferInfo2.buffer = transformBuffer;
+	bufferInfo2.buffer = transformUBO.getBuffer();;
 	bufferInfo2.offset = 0;
 	bufferInfo2.range = sizeof(glm::fmat4) * 3;
 
@@ -444,12 +444,12 @@ void Renderer::updateGBufferCommands()
 
 	vkCmdBindDescriptorSets(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet, 0, nullptr);
 
-	VkBuffer vertexBuffers[] = { vertexIndexBuffer };
+	VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
 	VkDeviceSize offsets[] = { 0 };
 	vkCmdBindVertexBuffers(gBufferCommandBuffer, 0, 1, vertexBuffers, offsets);
-	vkCmdBindIndexBuffer(gBufferCommandBuffer, vertexIndexBuffer, INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(gBufferCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
 
-	vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer, 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand));
+	vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand));
 
 	vkCmdEndRenderPass(gBufferCommandBuffer);
 

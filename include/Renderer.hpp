@@ -6,8 +6,9 @@
 #include "GBufferShader.hpp"
 #include "ScreenShader.hpp"
 #include "PBRShader.hpp"
+#include "Buffer.hpp"
 
-struct CameraUBO {
+struct CameraUBOData {
 	glm::fmat4 view;
 	glm::fmat4 proj;
 	glm::fvec3 pos;
@@ -184,16 +185,13 @@ public:
 	// It should keep track of free memory which may be "holes" (after removing memory from middle of buffer) and allocate if new additions fit
 	// If we want to compact data (not sure if this will be worth the effort) we'd have to keep track of which memory regions are used by which models
 
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-
-	VkBuffer screenQuadBuffer;
-	VkDeviceMemory screenQuadBufferMemory;
-
+	Buffer stagingBuffer;
+	
+	Buffer screenQuadBuffer;
+	
 	std::vector<Vertex2D> quad;
 
-	VkBuffer vertexIndexBuffer;
-	VkDeviceMemory vertexIndexBufferMemory;
+	Buffer vertexIndexBuffer;
 	u64 vertexInputByteOffset;
 	u64 indexInputByteOffset;
 	void createVertexIndexBuffers();
@@ -203,19 +201,15 @@ public:
 	// End GPU mem management
 
 	// Draw buffers
-	VkBuffer drawCmdBuffer;
-	VkDeviceMemory drawCmdBufferMemory;
+	Buffer drawCmdBuffer;
 	void populateDrawCmdBuffer();
 
 	// Uniform buffers
-	VkBuffer uniformBuffer;
-	VkDeviceMemory uniformBufferMemory;
 
-	VkBuffer transformBuffer;
-	VkDeviceMemory transformBufferMemory;
-
-	CameraUBO cameraUBO;
-
+	CameraUBOData cameraUBOData;
+	Buffer cameraUBO;
+	Buffer transformUBO;
+	
 	// Semaphores
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
@@ -237,12 +231,13 @@ public:
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels);
 	
 
-	void createCameraUBO();
+	void createUBOs();
 
 	void createSemaphores();
 
 	// Copies to optimal (efficient) device local buffer
 	void copyToDeviceLocalBuffer(void* srcData, VkDeviceSize size, VkBuffer dstBuffer, VkDeviceSize dstOffset = 0);
+	void copyToDeviceLocalBuffer(void* srcData, VkDeviceSize size, Buffer* dstBuffer, VkDeviceSize dstOffset = 0);
 	// Copies to staging buffer
 	void copyToStagingBuffer(void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
 	// Creates staging buffer with requested size

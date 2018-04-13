@@ -13,6 +13,13 @@ public:
 	void* map();
 	void unmap();
 
+	VkBuffer getBuffer() { return buffer; }
+	VkDeviceMemory getMemory() { return memory; }
+	VkDeviceSize getSize() { return size; }
+	VkBufferUsageFlags getUsage() { return usage; }
+	VkMemoryPropertyFlags getMemFlags() { return memFlags; }
+
+private:
 	VkBuffer buffer;
 	VkDeviceMemory memory;
 	VkDeviceSize size;

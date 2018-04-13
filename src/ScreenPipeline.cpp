@@ -416,7 +416,7 @@ void Renderer::updateScreenCommands()
 
 		vkCmdBindDescriptorSets(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet, 0, nullptr);
 
-		VkBuffer vertexBuffers[] = { screenQuadBuffer };
+		VkBuffer vertexBuffers[] = { screenQuadBuffer.getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(screenCommandBuffers[i], 0, 1, vertexBuffers, offsets);
 

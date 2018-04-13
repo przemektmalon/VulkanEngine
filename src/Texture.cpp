@@ -34,7 +34,7 @@ void Texture::loadImage(Image * pImage, bool genMipMaps)
 	r->createImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkImage, vkMemory, maxMipLevel);
 	r->transitionImageLayout(vkImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel);
 
-	r->copyBufferToImage(r->stagingBuffer, vkImage, u32(pImage->width), u32(pImage->height), 0);
+	r->copyBufferToImage(r->stagingBuffer.getBuffer(), vkImage, u32(pImage->width), u32(pImage->height), 0);
 	r->destroyStagingBuffer();
 
 	if (genMipMaps)
@@ -48,7 +48,7 @@ void Texture::loadImage(Image * pImage, bool genMipMaps)
 		r->createStagingBuffer(textureSize);
 		r->copyToStagingBuffer(&(mip[currentMip].data[0]), textureSize, 0);
 
-		r->copyBufferToImage(r->stagingBuffer, vkImage, u32(mip[currentMip].width), u32(mip[currentMip].height), 1);
+		r->copyBufferToImage(r->stagingBuffer.getBuffer(), vkImage, u32(mip[currentMip].width), u32(mip[currentMip].height), 1);
 		r->destroyStagingBuffer();
 
 		currentMip = 1;
@@ -61,7 +61,7 @@ void Texture::loadImage(Image * pImage, bool genMipMaps)
 			r->createStagingBuffer(textureSize);
 			r->copyToStagingBuffer(&(mip[currentMip].data[0]), textureSize, 0);
 
-			r->copyBufferToImage(r->stagingBuffer, vkImage, u32(mip[currentMip].width), u32(mip[currentMip].height), i);
+			r->copyBufferToImage(r->stagingBuffer.getBuffer(), vkImage, u32(mip[currentMip].width), u32(mip[currentMip].height), i);
 			r->destroyStagingBuffer();
 
 			std::swap(previousMip, currentMip);
@@ -105,7 +105,7 @@ void Texture::loadStream(TextureCreateInfo * ci)
 
 	if (ci->pData)
 	{
-		r->copyBufferToImage(r->stagingBuffer, vkImage, u32(width), u32(height), 0);
+		r->copyBufferToImage(r->stagingBuffer.getBuffer(), vkImage, u32(width), u32(height), 0);
 		r->destroyStagingBuffer();
 	}
 
