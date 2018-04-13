@@ -325,7 +325,7 @@ void Renderer::updateGBufferDescriptorSets()
 	VkDescriptorBufferInfo bufferInfo = {};
 	bufferInfo.buffer = uniformBuffer;
 	bufferInfo.offset = 0;
-	bufferInfo.range = sizeof(UniformBufferObject);
+	bufferInfo.range = sizeof(CameraUBO);
 
 	VkDescriptorBufferInfo bufferInfo2 = {};
 	bufferInfo2.buffer = transformBuffer;

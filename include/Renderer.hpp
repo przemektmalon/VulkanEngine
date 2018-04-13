@@ -7,7 +7,7 @@
 #include "ScreenShader.hpp"
 #include "PBRShader.hpp"
 
-struct UniformBufferObject {
+struct CameraUBO {
 	glm::fmat4 view;
 	glm::fmat4 proj;
 	glm::fvec3 pos;
@@ -196,7 +196,7 @@ public:
 	VkDeviceMemory vertexIndexBufferMemory;
 	u64 vertexInputByteOffset;
 	u64 indexInputByteOffset;
-	void createVulkanVertexIndexBuffers();
+	void createVertexIndexBuffers();
 	void pushModelDataToGPU(Model& model);
 	void createDataBuffers();
 
@@ -214,7 +214,7 @@ public:
 	VkBuffer transformBuffer;
 	VkDeviceMemory transformBufferMemory;
 
-	UniformBufferObject ubo;
+	CameraUBO cameraUBO;
 
 	// Semaphores
 	VkSemaphore imageAvailableSemaphore;
@@ -237,7 +237,7 @@ public:
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels);
 	
 
-	void initVulkanUniformBuffer();
+	void createCameraUBO();
 
 	void createSemaphores();
 

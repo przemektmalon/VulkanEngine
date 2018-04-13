@@ -243,7 +243,7 @@ void Renderer::populateDrawCmdBuffer()
 	vkUnmapMemory(device, drawCmdBufferMemory);
 }
 
-void Renderer::createVulkanVertexIndexBuffers()
+void Renderer::createVertexIndexBuffers()
 {
 	VkDeviceSize bufferSize = VERTEX_BUFFER_SIZE + INDEX_BUFFER_SIZE;
 
@@ -274,7 +274,7 @@ void Renderer::createDataBuffers()
 	/// TODO: set appropriate size
 	createVulkanBuffer(sizeof(VkDrawIndexedIndirectCommand) * 100, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, drawCmdBuffer, drawCmdBufferMemory);
 
-	createVulkanVertexIndexBuffers();
+	createVertexIndexBuffers();
 
 	quad.push_back({ { -1,-1 },{ 0,0 } });
 	quad.push_back({ { 1,1 },{ 1,1 } });
@@ -287,7 +287,7 @@ void Renderer::createDataBuffers()
 
 	copyToDeviceLocalBuffer(quad.data(), quad.size() * sizeof(Vertex2D), screenQuadBuffer, 0);
 
-	initVulkanUniformBuffer();
+	createCameraUBO();
 }
 
 /*
@@ -383,9 +383,9 @@ void Renderer::createTextureSampler()
 /*
 	@brief	Create vulkan uniform buffer for MVP matrices
 */
-void Renderer::initVulkanUniformBuffer()
+void Renderer::createCameraUBO()
 {
-	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+	VkDeviceSize bufferSize = sizeof(CameraUBO);
 	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffer, uniformBufferMemory);
 	bufferSize = sizeof(glm::fmat4) * 1000;
 	createVulkanBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, transformBuffer, transformBufferMemory);
@@ -574,15 +574,15 @@ void Renderer::updateUniformBuffer()
 
 	float distance = (std::sin(Engine::clock.time().getSeconds()) + 1.f) * 3.5f;
 
-	ubo.view = Engine::camera.getView();
-	ubo.proj = Engine::camera.getProj();
-	ubo.proj[1][1] *= -1;
+	cameraUBO.view = Engine::camera.getView();
+	cameraUBO.proj = Engine::camera.getProj();
+	cameraUBO.proj[1][1] *= -1;
 
-	ubo.pos = Engine::camera.getPosition();
+	cameraUBO.pos = Engine::camera.getPosition();
 
 	void* data;
-	vkMapMemory(device, uniformBufferMemory, 0, sizeof(ubo), 0, &data);
-	memcpy(data, &ubo, sizeof(ubo));
+	vkMapMemory(device, uniformBufferMemory, 0, sizeof(cameraUBO), 0, &data);
+	memcpy(data, &cameraUBO, sizeof(cameraUBO));
 	vkUnmapMemory(device, uniformBufferMemory);
 
 	vkMapMemory(device, transformBufferMemory, 0, Engine::world.models.size() * sizeof(glm::fmat4), 0, &data);

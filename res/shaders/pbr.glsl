@@ -25,8 +25,4 @@ void main()
 	vec4 pbr = imageLoad(gPBR, pixel);
 
 	imageStore(outColour, pixel, albedoSpec);
-
-	float depth = texelFetch(gDepth, pixel, 0).r;
-
-	imageStore(outColour, pixel, vec4(depth));
 }
