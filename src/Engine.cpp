@@ -27,7 +27,7 @@ void Engine::start()
 	createWindow();
 	queryVulkanPhysicalDeviceDetails();
 	
-	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 3.5f, 0.1, 50.f);
+	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 3.5f, 0.1, 50000.f);
 
 	renderer = new Renderer();
 	renderer->initialise();
@@ -175,12 +175,12 @@ void Engine::createWindow()
 #ifdef __linux__
 	wci.connection = connection;
 #endif
-	wci.width = 1600;
-	wci.height = 900;
+	wci.width = 1280;
+	wci.height = 720;
 	wci.posX = 100;
 	wci.posY = 100;
 	wci.title = "Vulkan Engine";
-	wci.borderless = false;
+	wci.borderless = true;
 
 	window = new Window;
 	window->create(&wci);

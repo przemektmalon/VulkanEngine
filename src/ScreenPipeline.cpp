@@ -178,17 +178,11 @@ void Renderer::createScreenDescriptorSetLayouts()
 	colLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	colLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	VkDescriptorSetLayoutBinding norLayoutBinding = {};
-	norLayoutBinding.binding = 1;
-	norLayoutBinding.descriptorCount = 1;
-	norLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	norLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	VkDescriptorSetLayoutBinding bindings[] = { colLayoutBinding, norLayoutBinding };
+	VkDescriptorSetLayoutBinding bindings[] = { colLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 2;
+	layoutInfo.bindingCount = 1;
 	layoutInfo.pBindings = bindings;
 
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &screenDescriptorSetLayout) != VK_SUCCESS) {
@@ -365,13 +359,7 @@ void Renderer::updateScreenDescriptorSets()
 	colInfoScreen.sampler = textureSampler;
 	colInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	colInfoScreen.imageView = pbrOutput.getImageViewHandle();
-
-	VkDescriptorImageInfo norInfoScreen;
-	norInfoScreen.sampler = textureSampler;
-	norInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	norInfoScreen.imageView = gBufferNormalAttachment.getImageViewHandle();
-
-	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
 
 	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[0].dstSet = screenDescriptorSet;
@@ -380,14 +368,6 @@ void Renderer::updateScreenDescriptorSets()
 	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptorWrites[0].descriptorCount = 1;
 	descriptorWrites[0].pImageInfo = &colInfoScreen;
-
-	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[1].dstSet = screenDescriptorSet;
-	descriptorWrites[1].dstBinding = 1;
-	descriptorWrites[1].dstArrayElement = 0;
-	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[1].descriptorCount = 1;
-	descriptorWrites[1].pImageInfo = &norInfoScreen;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
@@ -425,9 +405,8 @@ void Renderer::updateScreenCommands()
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = renderResolution;
 
-		std::array<VkClearValue, 2> clearValues = {};
-		clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
-		clearValues[1].depthStencil = { 1.0f, 0 };
+		std::array<VkClearValue, 1> clearValues = {};
+		clearValues[0].color = { 1.f, 0.1f, 0.1f, 1.0f };
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 

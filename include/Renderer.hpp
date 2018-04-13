@@ -8,8 +8,9 @@
 #include "PBRShader.hpp"
 
 struct UniformBufferObject {
-	glm::mat4 view;
-	glm::mat4 proj;
+	glm::fmat4 view;
+	glm::fmat4 proj;
+	glm::fvec3 pos;
 };
 
 #define VERTEX_BUFFER_SIZE u64(512) * u64(1024) * u64(1024) // 512 MB

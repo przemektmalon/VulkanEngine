@@ -576,6 +576,8 @@ void Renderer::updateUniformBuffer()
 	ubo.proj = Engine::camera.getProj();
 	ubo.proj[1][1] *= -1;
 
+	ubo.pos = Engine::camera.getPosition();
+
 	void* data;
 	vkMapMemory(device, uniformBufferMemory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));

@@ -22,14 +22,13 @@ void main() {
 #ifdef FRAGMENT ////////////////////////////////////////////////////
 
 layout(binding = 0) uniform sampler2D colSampler;
-layout(binding = 1) uniform sampler2D norSampler;
 
 layout(location = 0) in vec2 fragTexCoord;
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = texture(colSampler, fragTexCoord) - texture(norSampler, fragTexCoord);
+    outColor = texture(colSampler, fragTexCoord);
 }
 
 #endif

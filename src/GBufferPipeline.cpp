@@ -8,7 +8,7 @@ void Renderer::createGBufferAttachments()
 	tci.height = renderResolution.height;
 	tci.bpp = 32;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-	tci.format = VK_FORMAT_B8G8R8A8_UNORM;
+	tci.format = VK_FORMAT_R8G8B8A8_UNORM;
 	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
 	tci.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 
@@ -30,7 +30,7 @@ void Renderer::createGBufferAttachments()
 void Renderer::createGBufferRenderPass()
 {
 	VkAttachmentDescription colorAttachment = {};
-	colorAttachment.format = swapChainImageFormat;
+	colorAttachment.format = VK_FORMAT_R8G8B8A8_UNORM;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -42,20 +42,6 @@ void Renderer::createGBufferRenderPass()
 	VkAttachmentReference colorAttachmentRef = {};
 	colorAttachmentRef.attachment = 0;
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	VkAttachmentDescription normalAttachment = {};
-	normalAttachment.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	normalAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	normalAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	normalAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	normalAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	normalAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	normalAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	normalAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-	VkAttachmentReference normalAttachmentRef = {};
-	normalAttachmentRef.attachment = 1;
-	normalAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription depthAttachment = {};
 	depthAttachment.format = findDepthFormat();
@@ -70,6 +56,20 @@ void Renderer::createGBufferRenderPass()
 	VkAttachmentReference depthAttachmentRef = {};
 	depthAttachmentRef.attachment = 2;
 	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentDescription normalAttachment = {};
+	normalAttachment.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	normalAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	normalAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	normalAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	normalAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	normalAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	normalAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	normalAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+	VkAttachmentReference normalAttachmentRef = {};
+	normalAttachmentRef.attachment = 1;
+	normalAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentReference refs[] = { colorAttachmentRef, normalAttachmentRef };
 	VkSubpassDescription subpass = {};
@@ -107,7 +107,7 @@ void Renderer::createGBufferDescriptorSetLayouts()
 	uboLayoutBinding.binding = 0;
 	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uboLayoutBinding.descriptorCount = 1;
-	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	VkDescriptorSetLayoutBinding transLayoutBinding = {};
 	transLayoutBinding.binding = 1;
@@ -226,7 +226,7 @@ void Renderer::createGBufferPipeline()
 	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 	depthStencil.depthBoundsTestEnable = VK_FALSE;
 	depthStencil.minDepthBounds = 0.0f;
-	depthStencil.maxDepthBounds = 1.0f;
+	depthStencil.maxDepthBounds = 1000.0f; /// TODO: make variable
 
 
 	// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources indirectly)
@@ -411,7 +411,7 @@ void Renderer::updateGBufferCommands()
 
 	std::array<VkClearValue, 3> clearValues = {};
 	clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
-	clearValues[1].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+	clearValues[1].color = { 0.0f, 0.0f, 0.0f, 0.0f };
 	clearValues[2].depthStencil = { 1.0f, 0 };
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();

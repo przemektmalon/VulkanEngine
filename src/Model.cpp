@@ -40,7 +40,7 @@ void Model::load(std::string path)
 		aiVector3D n = nor[k];
 
 		triList.vertexData[k].pos = { p.x, p.y, p.z };
-		triList.vertexData[k].nor = { 0.f,0.f,0.f };
+		triList.vertexData[k].nor = { n.x, n.y, n.z };
 		if (!uv) {
 			triList.vertexData[k].texCoord = { 0.f, 0.f };
 		}

@@ -5,7 +5,7 @@
 class GBufferShader
 {
 public:
-	GBufferShader() : vertexModule(ShaderModule::Vertex, "/res/shaders/square.glsl"), fragmentModule(ShaderModule::Fragment, "/res/shaders/square.glsl") {}
+	GBufferShader() : vertexModule(ShaderModule::Vertex, "/res/shaders/gbuffer.glsl"), fragmentModule(ShaderModule::Fragment, "/res/shaders/gbuffer.glsl") {}
 
 	void compile()
 	{
