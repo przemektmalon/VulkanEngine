@@ -59,11 +59,17 @@ void Renderer::createPBRDescriptorSetLayouts()
 	spotLightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	spotLightsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding };
+	VkDescriptorSetLayoutBinding cameraLayoutBinding = {};
+	cameraLayoutBinding.binding = 9;
+	cameraLayoutBinding.descriptorCount = 1;
+	cameraLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	cameraLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 7;
+	layoutInfo.bindingCount = 8;
 	layoutInfo.pBindings = bindings;
 
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout) != VK_SUCCESS) {
@@ -152,7 +158,12 @@ void Renderer::updatePBRDescriptorSets()
 	spotLightsInfo.offset = 0;
 	spotLightsInfo.range = 150 * sizeof(SpotLight::GPUData);
 
-	std::array<VkWriteDescriptorSet, 7> descriptorWrites = {};
+	VkDescriptorBufferInfo cameraInfo;
+	cameraInfo.buffer = cameraUBO.getBuffer();
+	cameraInfo.offset = 0;
+	cameraInfo.range = sizeof(CameraUBOData);
+
+	std::array<VkWriteDescriptorSet, 8> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -219,6 +230,14 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	descriptorWrites[6].descriptorCount = 1;
 	descriptorWrites[6].pBufferInfo = &spotLightsInfo;
+
+	descriptorWrites[7].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[7].dstSet = pbrDescriptorSet;
+	descriptorWrites[7].dstBinding = 9;
+	descriptorWrites[7].dstArrayElement = 0;
+	descriptorWrites[7].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrites[7].descriptorCount = 1;
+	descriptorWrites[7].pBufferInfo = &cameraInfo;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

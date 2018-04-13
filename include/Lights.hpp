@@ -457,7 +457,9 @@ public: ///TODO: Max light count is 150, add setters etc
 	{
 		for (auto& l : pointLights)
 			l.update();
-		void* data = pointLightsBuffer.map();
+		u32* data = (u32*)pointLightsBuffer.map();
+		data[0] = pointLights.size();
+		data = data + 1;
 		memcpy(data, pointLightsGPUData.data(), pointLightsGPUData.size() * sizeof(PointLight::GPUData));
 		pointLightsBuffer.unmap();
 	}
@@ -479,7 +481,9 @@ public: ///TODO: Max light count is 150, add setters etc
 	{
 		for (auto& l : spotLights)
 			l.update();
-		void* data = spotLightsBuffer.map();
+		u32* data = (u32*)spotLightsBuffer.map();
+		data[0] = spotLights.size();
+		data = data + 1;
 		memcpy(data, spotLightsGPUData.data(), spotLightsGPUData.size() * sizeof(PointLight::GPUData));
 		spotLightsBuffer.unmap();
 	}

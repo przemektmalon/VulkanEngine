@@ -407,7 +407,7 @@ void Renderer::createDescriptorPool()
 	poolSizes[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[6].descriptorCount = 1;
 	poolSizes[7].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[7].descriptorCount = 2;
+	poolSizes[7].descriptorCount = 3;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -574,6 +574,7 @@ void Renderer::updateUniformBuffer()
 
 	cameraUBOData.pos = Engine::camera.getPosition();
 
+	cameraUBOData.viewRays = Engine::camera.getViewRays();
 
 	void* data = cameraUBO.map();
 	memcpy(data, &cameraUBOData, sizeof(cameraUBOData));
@@ -602,7 +603,6 @@ void Renderer::recreateVulkanSwapChain()
 
 	//createScreenSwapChain();
 }
-
 
 VkFormat Renderer::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
 	for (VkFormat format : candidates) {

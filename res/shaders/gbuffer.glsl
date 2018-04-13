@@ -1,10 +1,11 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(binding = 0) uniform ProjViewUBO {
+layout(binding = 0) uniform CameraUBO {
     mat4 view;
     mat4 proj;
     vec3 position;
+    vec4 viewRays;
 } camera;
 
 

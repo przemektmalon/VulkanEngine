@@ -13,6 +13,7 @@ struct CameraUBOData {
 	glm::fmat4 view;
 	glm::fmat4 proj;
 	glm::fvec3 pos;
+	glm::fvec4 viewRays;
 };
 
 #define VERTEX_BUFFER_SIZE u64(512) * u64(1024) * u64(1024) // 512 MB
