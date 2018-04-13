@@ -310,6 +310,7 @@ void Renderer::createLogicalDevice()
 	VkPhysicalDeviceFeatures pdf = {};
 	pdf.samplerAnisotropy = VK_TRUE;
 	pdf.multiDrawIndirect = VK_TRUE;
+	pdf.shaderStorageImageExtendedFormats = VK_TRUE;
 
 	VkDeviceCreateInfo dci = {};
 	dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -567,13 +568,6 @@ void Renderer::copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, V
 */
 void Renderer::updateUniformBuffer()
 {
-	static auto startTime = std::chrono::high_resolution_clock::now();
-
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-	float distance = (std::sin(Engine::clock.time().getSeconds()) + 1.f) * 3.5f;
-
 	cameraUBO.view = Engine::camera.getView();
 	cameraUBO.proj = Engine::camera.getProj();
 	cameraUBO.proj[1][1] *= -1;

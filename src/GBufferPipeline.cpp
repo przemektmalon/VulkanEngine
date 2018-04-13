@@ -15,13 +15,14 @@ void Renderer::createGBufferAttachments()
 	gBufferColourAttachment.loadStream(&tci);
 	gBufferPBRAttachment.loadStream(&tci);
 
-	tci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	tci.bpp = 32 * 4;
+	tci.format = VK_FORMAT_R32G32_SFLOAT;
+	tci.bpp = 32 * 2;
 
 	gBufferNormalAttachment.loadStream(&tci);
 
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	tci.format = findDepthFormat();
+	tci.bpp = 32;
 	tci.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
@@ -59,7 +60,7 @@ void Renderer::createGBufferRenderPass()
 	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription normalAttachment = {};
-	normalAttachment.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	normalAttachment.format = VK_FORMAT_R32G32_SFLOAT;
 	normalAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	normalAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	normalAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;

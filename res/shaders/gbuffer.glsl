@@ -54,10 +54,10 @@ layout(location = 2) flat in uint textureIndex;
 layout(location = 3) in vec3 viewVec;
 
 layout(location = 0) out vec4 colour;
-layout(location = 1) out vec4 normal;
+layout(location = 1) out vec2 normal;
 layout(location = 2) out vec4 pbr;
 
-vec2 encode(vec3 n)
+vec2 encodeNormal(vec3 n)
 {
     if (n.z < -0.999)
         n = normalize(vec3(0.001,0.001,-1)); // Temp fix for encoding bug when n.z < ~ -0.999, though this has no visible performace impact, maybe find a better fix
@@ -95,7 +95,7 @@ vec3 perturbNormal(vec3 N, vec3 V, vec2 texcoord)
 void main()
 {
     colour = texture(texSampler[textureIndex], fragTexCoord);
-    normal = vec4(normalize(perturbNormal(normalize(fragNormal), normalize(viewVec), fragTexCoord)),1.f);
+    normal = encodeNormal(normalize(perturbNormal(normalize(fragNormal), normalize(viewVec), fragTexCoord)));
 
     colour.w = texture(texSampler[textureIndex+2], fragTexCoord).r; // Spec/Metal
     pbr.x = texture(texSampler[textureIndex+3], fragTexCoord).r; // Roughness
