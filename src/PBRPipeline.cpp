@@ -47,11 +47,23 @@ void Renderer::createPBRDescriptorSetLayouts()
 	depthLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	depthLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding };
+	VkDescriptorSetLayoutBinding pointLightsLayoutBinding = {};
+	pointLightsLayoutBinding.binding = 10;
+	pointLightsLayoutBinding.descriptorCount = 1;
+	pointLightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	pointLightsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	VkDescriptorSetLayoutBinding spotLightsLayoutBinding = {};
+	spotLightsLayoutBinding.binding = 11;
+	spotLightsLayoutBinding.descriptorCount = 1;
+	spotLightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	spotLightsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 5;
+	layoutInfo.bindingCount = 7;
 	layoutInfo.pBindings = bindings;
 
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout) != VK_SUCCESS) {
@@ -130,7 +142,17 @@ void Renderer::updatePBRDescriptorSets()
 	depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	depthImageInfo.imageView = gBufferDepthAttachment.getImageViewHandle();
 
-	std::array<VkWriteDescriptorSet, 5> descriptorWrites = {};
+	VkDescriptorBufferInfo pointLightsInfo;
+	pointLightsInfo.buffer = lightManager.pointLightsBuffer.getBuffer();
+	pointLightsInfo.offset = 0;
+	pointLightsInfo.range = 150 * sizeof(PointLight::GPUData);
+	
+	VkDescriptorBufferInfo spotLightsInfo;
+	spotLightsInfo.buffer = lightManager.spotLightsBuffer.getBuffer();
+	spotLightsInfo.offset = 0;
+	spotLightsInfo.range = 150 * sizeof(SpotLight::GPUData);
+
+	std::array<VkWriteDescriptorSet, 7> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -181,6 +203,22 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptorWrites[4].descriptorCount = 1;
 	descriptorWrites[4].pImageInfo = &depthImageInfo;
+
+	descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[5].dstSet = pbrDescriptorSet;
+	descriptorWrites[5].dstBinding = 10;
+	descriptorWrites[5].dstArrayElement = 0;
+	descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrites[5].descriptorCount = 1;
+	descriptorWrites[5].pBufferInfo = &pointLightsInfo;
+
+	descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[6].dstSet = pbrDescriptorSet;
+	descriptorWrites[6].dstBinding = 11;
+	descriptorWrites[6].dstArrayElement = 0;
+	descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrites[6].descriptorCount = 1;
+	descriptorWrites[6].pBufferInfo = &spotLightsInfo;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

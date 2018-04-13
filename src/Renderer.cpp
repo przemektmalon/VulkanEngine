@@ -56,6 +56,14 @@ void Renderer::initialise()
 	createGBufferCommands();
 	createPBRCommands();
 	createScreenCommands();
+
+	lightManager.init();
+
+	PointLight::GPUData light;
+	light.setColour(glm::fvec3(1, 0, 1));
+
+	lightManager.addPointLight(light);
+	lightManager.updateAllPointLights();
 }
 
 /*
@@ -114,6 +122,8 @@ void Renderer::cleanup()
 	vertexIndexBuffer.destroy();
 	drawCmdBuffer.destroy();
 	screenQuadBuffer.destroy();
+
+	lightManager.cleanup();
 
 	vkDestroyDevice(device, 0);
 }
@@ -381,7 +391,7 @@ void Renderer::createUBOs()
 */
 void Renderer::createDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 7> poolSizes = {};
+	std::array<VkDescriptorPoolSize, 8> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = 1;
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -396,6 +406,8 @@ void Renderer::createDescriptorPool()
 	poolSizes[5].descriptorCount = 4;
 	poolSizes[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[6].descriptorCount = 1;
+	poolSizes[7].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[7].descriptorCount = 2;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

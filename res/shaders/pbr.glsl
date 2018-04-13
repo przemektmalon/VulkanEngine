@@ -11,6 +11,34 @@ layout(binding=2, rg32f) uniform readonly image2D gNormal;
 layout(binding=3, rgba8) uniform readonly image2D gPBR;
 layout(binding=4) uniform sampler2D gDepth;
 
+struct PointLight
+{
+	vec4 posRad;
+	vec4 colQuad;
+	vec4 linearFadeTexHandle;
+	mat4 pv[6];
+};
+
+struct SpotLight
+{
+	vec4 posRad;
+	vec4 colQuad;
+	vec4 linearFadeTexHandle;
+	vec4 dirInner;
+	vec4 outer;
+	mat4 pv;
+};
+
+layout(binding = 10) uniform PointLightBuffer {
+	uint count;
+	PointLight data[150];
+} pointLights;
+
+layout(binding = 11) uniform SpotLightBuffer {
+	uint count;
+	SpotLight data[150];
+} spotLights;
+
 vec3 decodeNormal(vec2 enc)
 {
     vec2 fenc = enc*4.f-2.f;

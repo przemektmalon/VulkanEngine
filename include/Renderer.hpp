@@ -7,6 +7,7 @@
 #include "ScreenShader.hpp"
 #include "PBRShader.hpp"
 #include "Buffer.hpp"
+#include "Lights.hpp"
 
 struct CameraUBOData {
 	glm::fmat4 view;
@@ -209,6 +210,7 @@ public:
 	CameraUBOData cameraUBOData;
 	Buffer cameraUBO;
 	Buffer transformUBO;
+	LightManager lightManager;
 	
 	// Semaphores
 	VkSemaphore imageAvailableSemaphore;
