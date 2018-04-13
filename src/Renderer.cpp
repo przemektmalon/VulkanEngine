@@ -396,7 +396,7 @@ void Renderer::initVulkanUniformBuffer()
 */
 void Renderer::createDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 6> poolSizes = {};
+	std::array<VkDescriptorPoolSize, 7> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = 1;
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -408,7 +408,9 @@ void Renderer::createDescriptorPool()
 	poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[4].descriptorCount = 1;
 	poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	poolSizes[5].descriptorCount = 3;
+	poolSizes[5].descriptorCount = 4;
+	poolSizes[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[6].descriptorCount = 1;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

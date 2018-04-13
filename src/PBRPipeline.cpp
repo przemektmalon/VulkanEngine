@@ -41,11 +41,17 @@ void Renderer::createPBRDescriptorSetLayouts()
 	pbrLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	pbrLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding };
+	VkDescriptorSetLayoutBinding depthLayoutBinding = {};
+	depthLayoutBinding.binding = 4;
+	depthLayoutBinding.descriptorCount = 1;
+	depthLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	depthLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 4;
+	layoutInfo.bindingCount = 5;
 	layoutInfo.pBindings = bindings;
 
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout) != VK_SUCCESS) {
@@ -104,22 +110,27 @@ void Renderer::updatePBRDescriptorSets()
 	outputImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	outputImageInfo.imageView = pbrOutput.getImageViewHandle();
 
-	VkDescriptorImageInfo colInfoScreen;
-	colInfoScreen.sampler = textureSampler;
-	colInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	colInfoScreen.imageView = gBufferColourAttachment.getImageViewHandle();
+	VkDescriptorImageInfo colourImageInfo;
+	colourImageInfo.sampler = textureSampler;
+	colourImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	colourImageInfo.imageView = gBufferColourAttachment.getImageViewHandle();
 
-	VkDescriptorImageInfo norInfoScreen;
-	norInfoScreen.sampler = textureSampler;
-	norInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	norInfoScreen.imageView = gBufferNormalAttachment.getImageViewHandle();
+	VkDescriptorImageInfo normalImageInfo;
+	normalImageInfo.sampler = textureSampler;
+	normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	normalImageInfo.imageView = gBufferNormalAttachment.getImageViewHandle();
 
-	VkDescriptorImageInfo pbrInfoScreen;
-	pbrInfoScreen.sampler = textureSampler;
-	pbrInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	pbrInfoScreen.imageView = gBufferPBRAttachment.getImageViewHandle();
+	VkDescriptorImageInfo pbrImageInfo;
+	pbrImageInfo.sampler = textureSampler;
+	pbrImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	pbrImageInfo.imageView = gBufferPBRAttachment.getImageViewHandle();
 
-	std::array<VkWriteDescriptorSet, 4> descriptorWrites = {};
+	VkDescriptorImageInfo depthImageInfo;
+	depthImageInfo.sampler = textureSampler;
+	depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	depthImageInfo.imageView = gBufferDepthAttachment.getImageViewHandle();
+
+	std::array<VkWriteDescriptorSet, 5> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -137,7 +148,7 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[0].dstArrayElement = 0;
 	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	descriptorWrites[0].descriptorCount = 1;
-	descriptorWrites[0].pImageInfo = &colInfoScreen;
+	descriptorWrites[0].pImageInfo = &colourImageInfo;
 	
 	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[1].dstSet = pbrDescriptorSet;
@@ -145,7 +156,7 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[1].dstArrayElement = 0;
 	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	descriptorWrites[1].descriptorCount = 1;
-	descriptorWrites[1].pImageInfo = &norInfoScreen;
+	descriptorWrites[1].pImageInfo = &normalImageInfo;
 
 	descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[2].dstSet = pbrDescriptorSet;
@@ -161,7 +172,15 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[3].dstArrayElement = 0;
 	descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	descriptorWrites[3].descriptorCount = 1;
-	descriptorWrites[3].pImageInfo = &pbrInfoScreen;
+	descriptorWrites[3].pImageInfo = &pbrImageInfo;
+
+	descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[4].dstSet = pbrDescriptorSet;
+	descriptorWrites[4].dstBinding = 4;
+	descriptorWrites[4].dstArrayElement = 0;
+	descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrites[4].descriptorCount = 1;
+	descriptorWrites[4].pImageInfo = &depthImageInfo;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

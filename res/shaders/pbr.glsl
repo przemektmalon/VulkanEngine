@@ -9,7 +9,7 @@ layout(binding=0, rgba32f) uniform writeonly image2D outColour;
 layout(binding=1, rgba8) uniform readonly image2D gAlbedoSpec;
 layout(binding=2, rgba32f) uniform readonly image2D gNormal;
 layout(binding=3, rgba8) uniform readonly image2D gPBR;
-//layout(binding=5) uniform sampler2D gDepth;
+layout(binding=4) uniform sampler2D gDepth;
 
 void main()
 {
@@ -25,4 +25,8 @@ void main()
 	vec4 pbr = imageLoad(gPBR, pixel);
 
 	imageStore(outColour, pixel, albedoSpec);
+
+	float depth = texelFetch(gDepth, pixel, 0).r;
+
+	imageStore(outColour, pixel, vec4(depth));
 }
