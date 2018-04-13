@@ -184,7 +184,136 @@ void main()
 	float farZMinf = uintBitsToFloat(farZMin);
 	float nearZMaxf = uintBitsToFloat(nearZMax);
 
+	/*float minZView = exp2(minZf * log2(FAR + 1.0)) - 1.f;
+	float maxZView = exp2(maxZf * log2(FAR + 1.0)) - 1.f;
+
+	float farZMinView = exp2(farZMinf * log2(FAR + 1.0)) - 1.f;
+	float nearZMaxView = exp2(nearZMaxf * log2(FAR + 1.0)) - 1.f;*/
+
+	vec4 viewRays = camera.viewRays;
+
+	float minZView = minZf;
+	float maxZView = maxZf;
+	float farZMinView = farZMinf;
+	float nearZMaxView = nearZMaxf;
+
+	vec3 viewRay;
+	viewRay.x = mix(viewRays.z, viewRays.x, float(pixel.x)/renderSize.x);
+	viewRay.y = mix(viewRays.w, viewRays.y, float(pixel.y)/renderSize.y);
+
+	viewRay = vec3(camera.view * vec4(viewRay.xy,1.f,1.f));
+
+	//float zView = exp2(depth * log2(FAR + 1.0)) - 1.f;
+	float zView = depth;
+
+	vec3 worldPos = viewPos + (viewRay * -zView);
+
+	//vec3 oCol = worldPos;
+	//imageStore(outColour, pixel, vec4(oCol,1.f));
+
+	const uvec3 groupID = gl_WorkGroupID;
+
+	//barrier();
+
+	float xMixRatio1 = float(gl_WorkGroupID.x)/(float(renderSize.x)/float(gl_WorkGroupSize.x));
+	float yMixRatio1 = float(gl_WorkGroupID.y)/(float(renderSize.y)/float(gl_WorkGroupSize.y));
+
+	float xMixRatio2 = float(gl_WorkGroupID.x+1)/(float(renderSize.x)/float(gl_WorkGroupSize.x));
+	float yMixRatio2 = float(gl_WorkGroupID.y+1)/(float(renderSize.y)/float(gl_WorkGroupSize.y));
+
+	//FAR LIGHTS
+	vec3 viewRayTLFar;
+	viewRayTLFar.x = mix(viewRays.z, viewRays.x, xMixRatio1);
+	viewRayTLFar.y = mix(viewRays.w, viewRays.y, yMixRatio1);
+	viewRayTLFar.z = 1.f;
+
+	mat3 m3View = mat3(camera.view);
+
+	//viewRayTLFar = vec3(mat3(view) * vec3(viewRayTLFar.xy,1.f));
+	viewRayTLFar = m3View * vec3(viewRayTLFar);
+
+	vec3 viewRayBRFar;
+	viewRayBRFar.x = mix(viewRays.z, viewRays.x, xMixRatio2);
+	viewRayBRFar.y = mix(viewRays.w, viewRays.y, yMixRatio2);
+	viewRayBRFar.z = 1.f;
+
+	//viewRayBRFar = vec3(mat3(view) * vec3(viewRayBRFar.xy,1.f));
+	viewRayBRFar = m3View * vec3(viewRayBRFar);
+
+	vec3 TLFar = viewPos + (viewRayTLFar * -maxZView);
+	vec3 BRFar = viewPos + (viewRayBRFar * -farZMinView);
+
+	vec3 AABBFarHalfSize = (abs(BRFar - TLFar) / 2.f);
+	vec3 AABBFarCenter = BRFar - (BRFar - TLFar) / 2.f;
+	//FAR LIGHTS
+
+	//NEAR LIGHTS
+	vec3 viewRayTLNear;
+	viewRayTLNear.x = mix(viewRays.z, viewRays.x, xMixRatio1);
+	viewRayTLNear.y = mix(viewRays.w, viewRays.y, yMixRatio1);
+	viewRayTLNear.z = 1.f;
+
+	//viewRayTLNear = vec3(mat3(view) * vec3(viewRayTLNear.xy,1.f));
+	viewRayTLNear = m3View * vec3(viewRayTLNear);
+
+	vec3 viewRayBRNear;
+	viewRayBRNear.x = mix(viewRays.z, viewRays.x, xMixRatio2);
+	viewRayBRNear.y = mix(viewRays.w, viewRays.y, yMixRatio2);
+	viewRayBRNear.z = 1.f;
+
+	//viewRayBRNear = vec3(mat3(view) * vec3(viewRayBRNear.xy,1.f));
+	viewRayBRNear = m3View * vec3(viewRayBRNear);
+
+	vec3 TLNear = viewPos + (viewRayTLNear * -nearZMaxView);
+	vec3 BRNear = viewPos + (viewRayBRNear * -minZView);
+
+	vec3 AABBNearHalfSize = (abs(BRNear - TLNear) / 2.f);
+	vec3 AABBNearCenter = BRNear - (BRNear - TLNear) / 2.f;
+	//NEAR LIGHTS
+
+	uint threadCount = gl_WorkGroupSize.x*gl_WorkGroupSize.y;
+	uint passCount = (pointLights.count + threadCount - 1) / threadCount;
+
+	for(uint i = 0; i < passCount; ++i)
+	{	
+		uint lightIndex =  (i * threadCount) + gl_LocalInvocationIndex;
+
+		if(lightIndex > pointLights.count)
+			continue;
+
+		vec4 lightPos = pointLights.data[lightIndex].posRad;
+		float rad = lightPos.w;
+
+		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
+
+		if(inFrustum)
+		{
+			uint nextTileLightIndex = atomicAdd(currentTilePointLightIndex,1);
+			tilePointLightIndices[nextTileLightIndex] = lightIndex;
+		}
+	}
+
+	passCount = (spotLights.count + threadCount - 1) / threadCount;
 	
+	for(uint i = 0; i < passCount; ++i)
+	{
+		uint lightIndex =  (i * threadCount) + gl_LocalInvocationIndex;
+
+		if (lightIndex > spotLights.count)
+			continue;
+
+		vec4 lightPos = spotLights.data[lightIndex].posRad;
+		float rad = lightPos.w * 0.5;
+		lightPos.xyz = lightPos.xyz + (spotLights.data[lightIndex].dirInner.xyz * rad);
+
+		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
+
+		//if (inFrustum)
+		{
+			uint nextTileLightIndex = atomicAdd(currentTileSpotLightIndex,1);
+			tileSpotLightIndices[nextTileLightIndex] = lightIndex;
+		}
+	}
 
 	barrier();
 
@@ -192,5 +321,5 @@ void main()
 	vec3 normal = decodeNormal(imageLoad(gNormal, pixel).xy);
 	vec4 pbr = imageLoad(gPBR, pixel);
 
-	imageStore(outColour, pixel, vec4(vec3(farZMinf),1.f));
+	imageStore(outColour, pixel, vec4(vec3(minZView),1.f));
 }
