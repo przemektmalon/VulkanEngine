@@ -22,11 +22,10 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexCoord;
 
-layout(location = 0) out vec3 fragColor;
-layout(location = 1) out vec2 fragTexCoord;
-layout(location = 2) out vec3 fragNormal;
-layout(location = 3) flat out uint textureIndex;
-layout(location = 4) out vec3 viewVec;
+layout(location = 0) out vec2 fragTexCoord;
+layout(location = 1) out vec3 fragNormal;
+layout(location = 2) flat out uint textureIndex;
+layout(location = 3) out vec3 viewVec;
 
 void main() {
 
@@ -49,14 +48,14 @@ void main() {
 
 layout(binding = 2) uniform sampler2D texSampler[1000];
 
-layout(location = 0) in vec3 fragColor;
-layout(location = 1) in vec2 fragTexCoord;
-layout(location = 2) in vec3 fragNormal;
-layout(location = 3) flat in uint textureIndex;
-layout(location = 4) in vec3 viewVec;
+layout(location = 0) in vec2 fragTexCoord;
+layout(location = 1) in vec3 fragNormal;
+layout(location = 2) flat in uint textureIndex;
+layout(location = 3) in vec3 viewVec;
 
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out vec4 colour;
 layout(location = 1) out vec4 normal;
+layout(location = 2) out vec4 pbr;
 
 vec2 encode(vec3 n)
 {
@@ -95,8 +94,13 @@ vec3 perturbNormal(vec3 N, vec3 V, vec2 texcoord)
 
 void main()
 {
-    outColor = texture(texSampler[textureIndex], fragTexCoord);
+    colour = texture(texSampler[textureIndex], fragTexCoord);
     normal = vec4(normalize(perturbNormal(normalize(fragNormal), normalize(viewVec), fragTexCoord)),1.f);
+
+    colour.w = texture(texSampler[textureIndex+2], fragTexCoord).r; // Spec/Metal
+    pbr.x = texture(texSampler[textureIndex+3], fragTexCoord).r; // Roughness
+    pbr.y = texture(texSampler[textureIndex+4], fragTexCoord).r; // AO
+    pbr.z = texture(texSampler[textureIndex+5], fragTexCoord).r; // height
 }
 
 #endif

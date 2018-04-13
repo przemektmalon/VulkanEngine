@@ -13,6 +13,7 @@ void Renderer::createGBufferAttachments()
 	tci.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 
 	gBufferColourAttachment.loadStream(&tci);
+	gBufferPBRAttachment.loadStream(&tci);
 
 	tci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 	tci.bpp = 32 * 4;
@@ -54,7 +55,7 @@ void Renderer::createGBufferRenderPass()
 	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentReference depthAttachmentRef = {};
-	depthAttachmentRef.attachment = 2;
+	depthAttachmentRef.attachment = 3;
 	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription normalAttachment = {};
@@ -71,10 +72,24 @@ void Renderer::createGBufferRenderPass()
 	normalAttachmentRef.attachment = 1;
 	normalAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentReference refs[] = { colorAttachmentRef, normalAttachmentRef };
+	VkAttachmentDescription pbrAttachment = {};
+	pbrAttachment.format = VK_FORMAT_R8G8B8A8_UNORM;
+	pbrAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	pbrAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	pbrAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	pbrAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	pbrAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	pbrAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	pbrAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+	VkAttachmentReference pbrAttachmentRef = {};
+	pbrAttachmentRef.attachment = 2;
+	pbrAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference refs[] = { colorAttachmentRef, normalAttachmentRef, pbrAttachmentRef };
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 2;
+	subpass.colorAttachmentCount = 3;
 	subpass.pColorAttachments = refs;
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
@@ -88,7 +103,7 @@ void Renderer::createGBufferRenderPass()
 
 	VkRenderPassCreateInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	std::array<VkAttachmentDescription, 3> attachments = { colorAttachment, normalAttachment, depthAttachment };
+	std::array<VkAttachmentDescription, 4> attachments = { colorAttachment, normalAttachment, pbrAttachment, depthAttachment };
 	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 	renderPassInfo.pAttachments = attachments.data();
 	renderPassInfo.subpassCount = 1;
@@ -205,13 +220,17 @@ void Renderer::createGBufferPipeline()
 	normalBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	normalBlendAttachment.blendEnable = VK_FALSE;
 
-	VkPipelineColorBlendAttachmentState blendAtts[] = { colorBlendAttachment, normalBlendAttachment };
+	VkPipelineColorBlendAttachmentState pbrBlendAttachment = {};
+	pbrBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	pbrBlendAttachment.blendEnable = VK_FALSE;
+
+	VkPipelineColorBlendAttachmentState blendAtts[] = { colorBlendAttachment, normalBlendAttachment, pbrBlendAttachment };
 
 	VkPipelineColorBlendStateCreateInfo colorBlending = {};
 	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	colorBlending.logicOpEnable = VK_FALSE;
 	colorBlending.logicOp = VK_LOGIC_OP_COPY;
-	colorBlending.attachmentCount = 2;
+	colorBlending.attachmentCount = 3;
 	colorBlending.pAttachments = blendAtts;
 	colorBlending.blendConstants[0] = 0.0f;
 	colorBlending.blendConstants[1] = 0.0f;
@@ -266,9 +285,10 @@ void Renderer::createGBufferPipeline()
 
 void Renderer::createGBufferFramebuffers()
 {
-	std::array<VkImageView, 3> attachments = {
+	std::array<VkImageView, 4> attachments = {
 		gBufferColourAttachment.getImageViewHandle(),
 		gBufferNormalAttachment.getImageViewHandle(),
+		gBufferPBRAttachment.getImageViewHandle(),
 		gBufferDepthAttachment.getImageViewHandle()
 	};
 
@@ -409,10 +429,11 @@ void Renderer::updateGBufferCommands()
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = renderResolution;
 
-	std::array<VkClearValue, 3> clearValues = {};
+	std::array<VkClearValue, 4> clearValues = {};
 	clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
 	clearValues[1].color = { 0.0f, 0.0f, 0.0f, 0.0f };
-	clearValues[2].depthStencil = { 1.0f, 0 };
+	clearValues[2].color = { 0.0f, 0.0f, 0.0f, 0.0f };
+	clearValues[3].depthStencil = { 1.0f, 0 };
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 

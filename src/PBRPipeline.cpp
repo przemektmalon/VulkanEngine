@@ -35,13 +35,17 @@ void Renderer::createPBRDescriptorSetLayouts()
 	norLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	norLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	/// TODO: other PBR stuff
+	VkDescriptorSetLayoutBinding pbrLayoutBinding = {};
+	pbrLayoutBinding.binding = 3;
+	pbrLayoutBinding.descriptorCount = 1;
+	pbrLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	pbrLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding };
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 3;
+	layoutInfo.bindingCount = 4;
 	layoutInfo.pBindings = bindings;
 
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout) != VK_SUCCESS) {
@@ -110,7 +114,12 @@ void Renderer::updatePBRDescriptorSets()
 	norInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	norInfoScreen.imageView = gBufferNormalAttachment.getImageViewHandle();
 
-	std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
+	VkDescriptorImageInfo pbrInfoScreen;
+	pbrInfoScreen.sampler = textureSampler;
+	pbrInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	pbrInfoScreen.imageView = gBufferPBRAttachment.getImageViewHandle();
+
+	std::array<VkWriteDescriptorSet, 4> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -145,6 +154,14 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	descriptorWrites[2].descriptorCount = 1;
 	descriptorWrites[2].pImageInfo = &outputImageInfo;
+
+	descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[3].dstSet = pbrDescriptorSet;
+	descriptorWrites[3].dstBinding = 3;
+	descriptorWrites[3].dstArrayElement = 0;
+	descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	descriptorWrites[3].descriptorCount = 1;
+	descriptorWrites[3].pImageInfo = &pbrInfoScreen;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

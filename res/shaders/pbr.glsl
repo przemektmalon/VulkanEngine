@@ -8,7 +8,7 @@ layout(binding=0, rgba32f) uniform writeonly image2D outColour;
 
 layout(binding=1, rgba8) uniform readonly image2D gAlbedoSpec;
 layout(binding=2, rgba32f) uniform readonly image2D gNormal;
-//layout(binding=7, rgba8) uniform readonly image2D gPBR;
+layout(binding=3, rgba8) uniform readonly image2D gPBR;
 //layout(binding=5) uniform sampler2D gDepth;
 
 void main()
@@ -22,6 +22,7 @@ void main()
 
 	vec4 albedoSpec = imageLoad(gAlbedoSpec, pixel);
 	vec4 normal = imageLoad(gNormal, pixel);
+	vec4 pbr = imageLoad(gPBR, pixel);
 
 	imageStore(outColour, pixel, albedoSpec);
 }

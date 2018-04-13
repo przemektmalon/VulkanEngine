@@ -89,6 +89,7 @@ public:
 	VkFramebuffer gBufferFramebuffer;
 	Texture gBufferColourAttachment;
 	Texture gBufferNormalAttachment;
+	Texture gBufferPBRAttachment;
 	Texture gBufferDepthAttachment;
 
 	// Render pass
