@@ -462,6 +462,7 @@ void Renderer::destroyGBufferAttachments()
 {
 	gBufferColourAttachment.destroy();
 	gBufferNormalAttachment.destroy();
+	gBufferPBRAttachment.destroy();
 	gBufferDepthAttachment.destroy();
 }
 
