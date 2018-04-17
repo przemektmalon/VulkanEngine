@@ -31,7 +31,9 @@ public:
 
 	// Top level
 	void initialise();
+	void reInitialise();
 	void cleanup();
+	void cleanupForReInit();
 	void render();
 
 	// Device, queues, swap chain

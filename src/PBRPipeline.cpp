@@ -314,6 +314,7 @@ void Renderer::destroyPBRPipeline()
 {
 	vkDestroyPipelineLayout(device, pbrPipelineLayout, 0);
 	vkDestroyPipeline(device, pbrPipeline, 0);
+	pbrShader.destroy();
 }
 
 void Renderer::destroyPBRDescriptorSets()

@@ -118,8 +118,19 @@ void Engine::start()
 				break;
 			}
 			case Event::KeyDown: {
-				if (ev.eventUnion.keyEvent.key.code == Key::KC_ESCAPE)
+				auto key = ev.eventUnion.keyEvent.key.code;
+				if (key == Key::KC_ESCAPE)
 					engineRunning = false;
+				if (key == Key::KC_1)
+				{
+					window->resize(1920, 1080);
+					renderer->reInitialise();
+				}
+				if (key == Key::KC_2)
+				{
+					window->resize(1280, 720);
+					renderer->reInitialise();
+				}
 				break;
 			}
 			case Event::KeyUp: {
@@ -270,6 +281,8 @@ void Engine::queryVulkanPhysicalDeviceDetails()
 
 	std::vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(vkInstance, &deviceCount, devices.data());
+
+	physicalDevicesDetails.clear();
 
 	for (const auto& device : devices)
 	{

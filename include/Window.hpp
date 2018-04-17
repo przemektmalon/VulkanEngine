@@ -34,6 +34,7 @@ public:
 	~Window() {}
 
 	void create(WindowCreateInfo* c);
+	void resize(u32 newResX, u32 newResY);
 	void destroy();
 	// Returns true if all messages have been processed
 	bool processMessages();

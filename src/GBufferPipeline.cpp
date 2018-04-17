@@ -481,6 +481,7 @@ void Renderer::destroyGBufferPipeline()
 {
 	vkDestroyPipelineLayout(device, gBufferPipelineLayout, 0);
 	vkDestroyPipeline(device, gBufferPipeline, 0);
+	gBufferShader.destroy();
 }
 
 void Renderer::destroyGBufferFramebuffers()

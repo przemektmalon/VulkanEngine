@@ -103,6 +103,13 @@ void Window::create(WindowCreateInfo * c)
 	resY = c->height;
 }
 
+void Window::resize(u32 newResX, u32 newResY)
+{
+#ifdef _WIN32
+	SetWindowPos(win32WindowHandle, 0, 0, 0, newResX, newResY, SWP_NOOWNERZORDER | SWP_NOZORDER);
+#endif
+}
+
 /*
 	@brief	Destroy the window
 */

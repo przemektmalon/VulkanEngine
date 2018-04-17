@@ -9,6 +9,7 @@
 */
 void Renderer::createScreenSwapChain()
 {
+	Engine::queryVulkanPhysicalDeviceDetails();
 	auto& deviceDets = Engine::getPhysicalDeviceDetails();
 
 	VkSurfaceFormatKHR surfaceFormat;
@@ -460,6 +461,7 @@ void Renderer::destroyScreenPipeline()
 {
 	vkDestroyPipelineLayout(device, screenPipelineLayout, 0);
 	vkDestroyPipeline(device, screenPipeline, 0);
+	screenShader.destroy();
 }
 
 void Renderer::destroyScreenFramebuffers()

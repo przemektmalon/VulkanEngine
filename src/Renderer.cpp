@@ -21,13 +21,13 @@ void Renderer::initialise()
 	lightManager.init();
 	PointLight::GPUData light;
 	light.setPosition(glm::fvec3(0, 5, 0));
-	light.setColour(glm::fvec3(1, 0.5, 1));
+	light.setColour(glm::fvec3(1, 0.8, 1));
 	light.setLinear(0.00001f);
 	light.setQuadratic(0.005f);
 
 	PointLight::GPUData light2;
 	light2.setPosition(glm::fvec3(-5, 5, 0));
-	light2.setColour(glm::fvec3(1, 1, 0.5));
+	light2.setColour(glm::fvec3(1, 1, 0.8));
 	light2.setLinear(0.00001f);
 	light2.setQuadratic(0.005f);
 
@@ -76,6 +76,49 @@ void Renderer::initialise()
 	lightManager.updateAllPointLights();
 }
 
+void Renderer::reInitialise()
+{
+	vkDeviceWaitIdle(device);
+
+	cleanupForReInit();
+
+	// Swap chain
+	createScreenSwapChain();
+
+	// Pipeline attachments
+	createGBufferAttachments();
+	createPBRAttachments();
+	createScreenAttachments();
+
+	// Pipeline render passes
+	createGBufferRenderPass();
+	createScreenRenderPass();
+
+	// Pipeline objects
+	createGBufferPipeline();
+	createPBRPipeline();
+	createScreenPipeline();
+
+	// Pipeline framebuffers
+	createGBufferFramebuffers();
+	createScreenFramebuffers();
+
+	// Pipeline commands
+	createGBufferCommands();
+	createPBRCommands();
+	createScreenCommands();
+
+	// Pipeline descriptor sets
+	updateGBufferDescriptorSets();
+	updatePBRDescriptorSets();
+	updateScreenDescriptorSets();
+
+	// Pipeline commands
+	updateGBufferCommands();
+	updatePBRCommands();
+	updateScreenCommands();
+}
+
 /*
 	@brief	Cleanup Vulkan objects
 */
@@ -113,10 +156,6 @@ void Renderer::cleanup()
 		destroyScreenSwapChain();
 	}
 
-	gBufferShader.destroy();
-	pbrShader.destroy();
-	screenShader.destroy();
-
 	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 	vkDestroyCommandPool(device, commandPool, 0);
 
@@ -136,6 +175,26 @@ void Renderer::cleanup()
 	lightManager.cleanup();
 
 	vkDestroyDevice(device, 0);
+}
+
+void Renderer::cleanupForReInit()
+{
+	destroyGBufferAttachments();
+	destroyGBufferRenderPass();
+	destroyGBufferPipeline();
+	destroyGBufferFramebuffers();
+	destroyGBufferCommands();
+
+	destroyPBRAttachments();
+	destroyPBRPipeline();
+	destroyPBRCommands();
+
+	destroyScreenAttachments();
+	destroyScreenRenderPass();
+	destroyScreenPipeline();
+	destroyScreenFramebuffers();
+	destroyScreenCommands();
+	destroyScreenSwapChain();
 }
 
 /*
@@ -334,7 +393,7 @@ void Renderer::createLogicalDevice()
 		dci.ppEnabledLayerNames = 0;
 	#endif
 	dci.enabledExtensionCount = 1;
-	auto deviceExtension = VK_KHR_SWAPCHAIN_EXTENSION_NAME; /// Todo: check support function
+	auto deviceExtension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 	dci.ppEnabledExtensionNames = &deviceExtension;
 	dci.pEnabledFeatures = &pdf;
 
