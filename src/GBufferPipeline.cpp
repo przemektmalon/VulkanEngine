@@ -9,7 +9,7 @@ void Renderer::createGBufferAttachments()
 	tci.bpp = 32;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_R8G8B8A8_UNORM;
-	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
+	tci.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 
 	gBufferColourAttachment.loadStream(&tci);
@@ -23,7 +23,7 @@ void Renderer::createGBufferAttachments()
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	tci.format = findDepthFormat();
 	tci.bpp = 32;
-	tci.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+	tci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	gBufferDepthAttachment.loadStream(&tci);
@@ -38,8 +38,8 @@ void Renderer::createGBufferRenderPass()
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 	VkAttachmentReference colorAttachmentRef = {};
 	colorAttachmentRef.attachment = 0;
@@ -66,8 +66,8 @@ void Renderer::createGBufferRenderPass()
 	normalAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	normalAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	normalAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	normalAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	normalAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+	normalAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	normalAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 	VkAttachmentReference normalAttachmentRef = {};
 	normalAttachmentRef.attachment = 1;
@@ -80,8 +80,8 @@ void Renderer::createGBufferRenderPass()
 	pbrAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	pbrAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	pbrAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	pbrAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	pbrAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+	pbrAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	pbrAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 	VkAttachmentReference pbrAttachmentRef = {};
 	pbrAttachmentRef.attachment = 2;
@@ -424,7 +424,7 @@ void Renderer::updateGBufferCommands()
 	vkBeginCommandBuffer(gBufferCommandBuffer, &beginInfo);
 
 	vkCmdResetQueryPool(gBufferCommandBuffer, queryPool, 0, 4);
-	vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 0);
+	vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, 0);
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -455,6 +455,17 @@ void Renderer::updateGBufferCommands()
 	vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand));
 
 	vkCmdEndRenderPass(gBufferCommandBuffer);
+
+	//setImageLayout(gBufferCommandBuffer, gBufferColourAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	//setImageLayout(gBufferCommandBuffer, gBufferNormalAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	//setImageLayout(gBufferCommandBuffer, gBufferPBRAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	//setImageLayout(gBufferCommandBuffer, gBufferDepthAttachment, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+
+	gBufferColourAttachment.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	gBufferNormalAttachment.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	gBufferPBRAttachment.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	gBufferDepthAttachment.setLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+
 
 	auto result = vkEndCommandBuffer(gBufferCommandBuffer);
 	if (result != VK_SUCCESS) {

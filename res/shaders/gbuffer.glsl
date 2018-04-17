@@ -100,8 +100,8 @@ void main()
 
     colour.w = texture(texSampler[textureIndex+2], fragTexCoord).r; // Spec/Metal
     pbr.x = texture(texSampler[textureIndex+3], fragTexCoord).r; // Roughness
-    pbr.y = texture(texSampler[textureIndex+4], fragTexCoord).r; // AO
-    pbr.z = texture(texSampler[textureIndex+5], fragTexCoord).r; // height
+    //pbr.y = texture(texSampler[textureIndex+4], fragTexCoord).r; // AO
+    //pbr.z = texture(texSampler[textureIndex+5], fragTexCoord).r; // height
 }
 
 #endif

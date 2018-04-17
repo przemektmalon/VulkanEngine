@@ -26,6 +26,10 @@ public:
 	VkImage getImageHandle() { return vkImage; }
 	VkDeviceMemory getMemoryHandle() { return vkMemory; }
 	VkImageView getImageViewHandle() { return vkImageView; }
+	VkImageLayout getLayout() { return vkLayout; }
+	VkImageAspectFlags getAspect() { return vkAspect; }
+
+	void setLayout(VkImageLayout set) { vkLayout = set; }
 
 	void loadFile(std::string pPath, bool genMipMaps = true);
 	void loadImage(Image* pImage, bool genMipMaps = true);
@@ -44,5 +48,7 @@ private:
 	VkImageView vkImageView;
 	VkFormat vkFormat;
 	VkImageLayout vkLayout;
+	VkImageAspectFlags vkAspect;
+	VkImageUsageFlags vkUsage;
 	u32 gpuIndex;
 };

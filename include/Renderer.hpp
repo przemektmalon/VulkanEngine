@@ -240,6 +240,7 @@ public:
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel);
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels);
 	
+	void setImageLayout(VkCommandBuffer cmdBuffer, Texture& tex, VkImageLayout newLayout);
 
 	void createUBOs();
 

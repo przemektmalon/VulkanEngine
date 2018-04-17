@@ -77,6 +77,8 @@ void Texture::loadStream(TextureCreateInfo * ci)
 	width = ci->width; height = ci->height;
 	vkFormat = ci->format;
 	vkLayout = ci->layout;
+	vkAspect = ci->aspectFlags;
+	vkUsage = ci->usageFlags;
 	VkDeviceSize textureSize = width * height * ci->bpp;
 
 	if (ci->genMipMaps)
@@ -94,13 +96,13 @@ void Texture::loadStream(TextureCreateInfo * ci)
 
 	if (ci->pData)
 	{
-		r->createImage(width, height, vkFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | ci->usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkImage, vkMemory, maxMipLevel + 1);
-		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
+		r->createImage(width, height, vkFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | vkUsage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkImage, vkMemory, maxMipLevel + 1);
+		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
 	}
 	else
 	{
-		r->createImage(width, height, vkFormat, VK_IMAGE_TILING_OPTIMAL, ci->usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkImage, vkMemory, maxMipLevel + 1);
-		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, ci->layout, maxMipLevel + 1);
+		r->createImage(width, height, vkFormat, VK_IMAGE_TILING_OPTIMAL, vkUsage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vkImage, vkMemory, maxMipLevel + 1);
+		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, vkLayout, maxMipLevel + 1);
 	}
 
 	if (ci->pData)
@@ -140,11 +142,11 @@ void Texture::loadStream(TextureCreateInfo * ci)
 	std::swap(previousMip, currentMip);
 	}
 	}*/
-	if (ci->layout)
+	if (vkLayout)
 		if (ci->pData)
-			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ci->layout, maxMipLevel + 1);
+			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, maxMipLevel + 1);
 
-	vkImageView = r->createImageView(vkImage, vkFormat, ci->aspectFlags, maxMipLevel + 1);
+	vkImageView = r->createImageView(vkImage, vkFormat, vkAspect, maxMipLevel + 1);
 }
 
 void Texture::destroy()

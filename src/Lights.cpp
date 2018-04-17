@@ -12,7 +12,7 @@ void PointLight::updateRadius()
 
 inline float PointLight::calculateRadius(float linear, float quad)
 {
-	return (0.5 * (std::sqrt(linear*linear + (10000 * quad) - linear))) / quad;
+	return (0.5 * (std::sqrt(linear*linear + (5000 * quad) - linear))) / quad;
 }
 
 void SpotLight::updateRadius()
@@ -23,7 +23,7 @@ void SpotLight::updateRadius()
 
 inline float SpotLight::calculateRadius(float linear, float quad)
 {
-	return (0.5 * (std::sqrt(linear*linear + (10000 * quad) - linear))) / (quad * 2.f);
+	return (0.5 * (std::sqrt(linear*linear + (5000 * quad) - linear))) / (quad * 2.f);
 }
 
 PointLight & LightManager::addPointLight(PointLight::GPUData& data)
