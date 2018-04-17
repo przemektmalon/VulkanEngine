@@ -280,6 +280,35 @@ void Renderer::render()
 	vkQueueWaitIdle(presentQueue);
 }
 
+void Renderer::reloadShaders()
+{
+	vkDeviceWaitIdle(device);
+
+	destroyGBufferPipeline();
+	destroyPBRPipeline();
+	destroyScreenPipeline();
+
+	destroyGBufferCommands();
+	destroyPBRCommands();
+	destroyScreenCommands();
+
+	gBufferShader.reload();
+	pbrShader.reload();
+	screenShader.reload();
+
+	createGBufferPipeline();
+	createPBRPipeline();
+	createScreenPipeline();
+
+	createGBufferCommands();
+	createPBRCommands();
+	createScreenCommands();
+
+	updateGBufferCommands();
+	updatePBRCommands();
+	updateScreenCommands();
+}
+
 void Renderer::populateDrawCmdBuffer()
 {
 	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)drawCmdBuffer.map();

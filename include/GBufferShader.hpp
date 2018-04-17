@@ -31,6 +31,12 @@ public:
 		inf2.pSpecializationInfo = 0;
 	}
 
+	void reload()
+	{
+		vertexModule.reload();
+		fragmentModule.reload();
+	}
+
 	void destroy()
 	{
 		vertexModule.destroy();

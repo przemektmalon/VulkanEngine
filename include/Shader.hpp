@@ -31,6 +31,7 @@ public:
 	VkShaderModule getVkModule() { return vkModule; }
 
 	void load(std::string path);
+	void reload();
 	void compile();
 	void destroy();
 

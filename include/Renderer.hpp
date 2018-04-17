@@ -36,6 +36,8 @@ public:
 	void cleanupForReInit();
 	void render();
 
+	void reloadShaders();
+
 	// Device, queues, swap chain
 	VkDevice device;
 	VkQueue graphicsQueue;

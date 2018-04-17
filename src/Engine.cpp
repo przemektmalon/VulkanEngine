@@ -131,6 +131,10 @@ void Engine::start()
 					window->resize(1280, 720);
 					renderer->reInitialise();
 				}
+				if (key == Key::KC_P)
+				{
+					renderer->reloadShaders();
+				}
 				break;
 			}
 			case Event::KeyUp: {

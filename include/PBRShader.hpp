@@ -21,6 +21,11 @@ public:
 		inf1.pSpecializationInfo = 0;
 	}
 
+	void reload()
+	{
+		computeModule.reload();
+	}
+
 	void destroy()
 	{
 		computeModule.destroy();

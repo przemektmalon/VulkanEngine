@@ -21,6 +21,9 @@ void ShaderModule::load(std::string pPath)
 	File file;
 	if (!file.open(path))
 		DBG_WARNING("Failed to open GLSL shader file: " << path);
+
+	glslSource.clear();
+	spirvSource.clear();
 	if (language == GLSL)
 	{
 		glslSource.resize(file.getSize());
@@ -31,6 +34,11 @@ void ShaderModule::load(std::string pPath)
 		spirvSource.resize(file.getSize());
 		file.readFile(&spirvSource[0]);
 	}
+}
+
+void ShaderModule::reload()
+{
+	load(path);
 }
 
 void ShaderModule::compile()
