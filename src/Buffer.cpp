@@ -18,7 +18,7 @@ void Buffer::create(VkDeviceSize pSize, VkBufferUsageFlags pUsage, VkMemoryPrope
 	VK_CHECK_RESULT(vkCreateBuffer(Engine::renderer->device, &bufferInfo, nullptr, &buffer));
 
 	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(Engine::renderer->device, buffer, &memRequirements);
+	VK_VALIDATE(vkGetBufferMemoryRequirements(Engine::renderer->device, buffer, &memRequirements));
 
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -32,8 +32,8 @@ void Buffer::create(VkDeviceSize pSize, VkBufferUsageFlags pUsage, VkMemoryPrope
 
 void Buffer::destroy()
 {
-	vkDestroyBuffer(Engine::renderer->device, buffer, 0);
-	vkFreeMemory(Engine::renderer->device, memory, 0);
+	VK_VALIDATE(vkDestroyBuffer(Engine::renderer->device, buffer, 0));
+	VK_VALIDATE(vkFreeMemory(Engine::renderer->device, memory, 0));
 }
 
 void * Buffer::map()
@@ -45,5 +45,5 @@ void * Buffer::map()
 
 void Buffer::unmap()
 {
-	vkUnmapMemory(Engine::renderer->device, memory);
+	VK_VALIDATE(vkUnmapMemory(Engine::renderer->device, memory));
 }

@@ -354,7 +354,7 @@ void Renderer::updateScreenDescriptorSets()
 	descriptorWrites[0].descriptorCount = 1;
 	descriptorWrites[0].pImageInfo = &colInfoScreen;
 
-	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }
 
 void Renderer::createScreenCommands()
@@ -381,7 +381,7 @@ void Renderer::updateScreenCommands()
 
 		VK_CHECK_RESULT(vkBeginCommandBuffer(screenCommandBuffers[i], &beginInfo));
 
-		vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 2);
+		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 2));
 
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -395,21 +395,21 @@ void Renderer::updateScreenCommands()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		vkCmdBeginRenderPass(screenCommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		VK_VALIDATE(vkCmdBeginRenderPass(screenCommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		vkCmdBindPipeline(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline);
+		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline));
 
-		vkCmdBindDescriptorSets(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet, 0, nullptr);
+		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet, 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { screenQuadBuffer.getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(screenCommandBuffers[i], 0, 1, vertexBuffers, offsets);
+		VK_VALIDATE(vkCmdBindVertexBuffers(screenCommandBuffers[i], 0, 1, vertexBuffers, offsets));
 
-		vkCmdDraw(screenCommandBuffers[i], 6, 1, 0, 0);
+		VK_VALIDATE(vkCmdDraw(screenCommandBuffers[i], 6, 1, 0, 0));
 
-		vkCmdEndRenderPass(screenCommandBuffers[i]);
+		VK_VALIDATE(vkCmdEndRenderPass(screenCommandBuffers[i]));
 
-		vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 3);
+		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 3));
 
 		VK_CHECK_RESULT(vkEndCommandBuffer(screenCommandBuffers[i]));
 	}
@@ -417,7 +417,7 @@ void Renderer::updateScreenCommands()
 
 void Renderer::destroyScreenSwapChain()
 {
-	vkDestroySwapchainKHR(device, swapChain, 0);
+	VK_VALIDATE(vkDestroySwapchainKHR(device, swapChain, 0));
 }
 
 void Renderer::destroyScreenAttachments()
@@ -426,31 +426,31 @@ void Renderer::destroyScreenAttachments()
 	{
 		// Gives error, maybe because these images are created from the swap chain by KHR extension
 		//vkDestroyImage(device, swapChainImages[i], 0);
-		vkDestroyImageView(device, swapChainImageViews[i], 0);
+		VK_VALIDATE(vkDestroyImageView(device, swapChainImageViews[i], 0));
 	}
 }
 
 void Renderer::destroyScreenRenderPass()
 {
-	vkDestroyRenderPass(device, screenRenderPass, 0);
+	VK_VALIDATE(vkDestroyRenderPass(device, screenRenderPass, 0));
 }
 
 void Renderer::destroyScreenDescriptorSetLayouts()
 {
-	vkDestroyDescriptorSetLayout(device, screenDescriptorSetLayout, 0);
+	VK_VALIDATE(vkDestroyDescriptorSetLayout(device, screenDescriptorSetLayout, 0));
 }
 
 void Renderer::destroyScreenPipeline()
 {
-	vkDestroyPipelineLayout(device, screenPipelineLayout, 0);
-	vkDestroyPipeline(device, screenPipeline, 0);
+	VK_VALIDATE(vkDestroyPipelineLayout(device, screenPipelineLayout, 0));
+	VK_VALIDATE(vkDestroyPipeline(device, screenPipeline, 0));
 	screenShader.destroy();
 }
 
 void Renderer::destroyScreenFramebuffers()
 {
 	for (auto fb : screenFramebuffers)
-		vkDestroyFramebuffer(device, fb, 0);
+		VK_VALIDATE(vkDestroyFramebuffer(device, fb, 0));
 }
 
 void Renderer::destroyScreenDescriptorSets()
@@ -460,5 +460,5 @@ void Renderer::destroyScreenDescriptorSets()
 
 void Renderer::destroyScreenCommands()
 {
-	vkFreeCommandBuffers(device, commandPool, screenCommandBuffers.size(), &screenCommandBuffers[0]);
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, screenCommandBuffers.size(), &screenCommandBuffers[0]));
 }

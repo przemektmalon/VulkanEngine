@@ -71,7 +71,7 @@ void ShaderModule::compile()
 
 void ShaderModule::destroy()
 {
-	vkDestroyShaderModule(Engine::renderer->device, vkModule, 0);
+	VK_VALIDATE(vkDestroyShaderModule(Engine::renderer->device, vkModule, 0));
 }
 
 void ShaderModule::setIntStage()

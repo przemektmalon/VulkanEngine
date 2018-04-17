@@ -182,16 +182,16 @@ void Renderer::cleanup()
 		destroyScreenSwapChain();
 	}
 
-	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-	vkDestroyCommandPool(device, commandPool, 0);
-	vkDestroyQueryPool(device, queryPool, 0);
+	VK_VALIDATE(vkDestroyDescriptorPool(device, descriptorPool, nullptr));
+	VK_VALIDATE(vkDestroyCommandPool(device, commandPool, 0));
+	VK_VALIDATE(vkDestroyQueryPool(device, queryPool, 0));
 
-	vkDestroySampler(device, textureSampler, nullptr);
+	VK_VALIDATE(vkDestroySampler(device, textureSampler, nullptr));
 
-	vkDestroySemaphore(device, renderFinishedSemaphore, 0);
-	vkDestroySemaphore(device, imageAvailableSemaphore, 0);
-	vkDestroySemaphore(device, pbrFinishedSemaphore, 0);
-	vkDestroySemaphore(device, screenFinishedSemaphore, 0);
+	VK_VALIDATE(vkDestroySemaphore(device, renderFinishedSemaphore, 0));
+	VK_VALIDATE(vkDestroySemaphore(device, imageAvailableSemaphore, 0));
+	VK_VALIDATE(vkDestroySemaphore(device, pbrFinishedSemaphore, 0));
+	VK_VALIDATE(vkDestroySemaphore(device, screenFinishedSemaphore, 0));
 
 	cameraUBO.destroy();
 	transformUBO.destroy();
@@ -201,7 +201,7 @@ void Renderer::cleanup()
 
 	lightManager.cleanup();
 
-	vkDestroyDevice(device, 0);
+	VK_VALIDATE(vkDestroyDevice(device, 0));
 }
 
 void Renderer::cleanupForReInit()
@@ -439,11 +439,11 @@ void Renderer::createLogicalDevice()
 	dci.ppEnabledExtensionNames = &deviceExtension;
 	dci.pEnabledFeatures = &pdf;
 
-	VK_CHECK_RESULT(vkCreateDevice(Engine::vkPhysicalDevice, &dci, 0, &device))
+	VK_CHECK_RESULT(vkCreateDevice(Engine::vkPhysicalDevice, &dci, 0, &device));
 
-	vkGetDeviceQueue(device, 0, 0, &graphicsQueue);
-	vkGetDeviceQueue(device, 0, 0, &presentQueue); /// Todo: Support for AMD gpus which have non-universal queues
-	vkGetDeviceQueue(device, 0, 0, &computeQueue);
+	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &graphicsQueue));
+	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &presentQueue)); /// Todo: Support for AMD gpus which have non-universal queues
+	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &computeQueue));
 }
 
 /*
@@ -608,7 +608,7 @@ void Renderer::createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, V
 	VK_CHECK_RESULT(vkCreateBuffer(device, &bufferInfo, nullptr, &buffer));
 
 	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+	VK_VALIDATE(vkGetBufferMemoryRequirements(device, buffer, &memRequirements));
 
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -651,7 +651,7 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 	VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue));
 
-    vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer));
 }
 
 /*
@@ -665,7 +665,7 @@ void Renderer::copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, V
 	copyRegion.srcOffset = srcOffset;
 	copyRegion.dstOffset = dstOffset;
 	copyRegion.size = size;
-	vkCmdCopyBuffer(commandBuffer, src, dst, 1, &copyRegion);
+	VK_VALIDATE(vkCmdCopyBuffer(commandBuffer, src, dst, 1, &copyRegion));
 
 	endSingleTimeCommands(commandBuffer);
 }
@@ -702,7 +702,7 @@ void Renderer::updateUniformBuffer()
 VkFormat Renderer::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
 	for (VkFormat format : candidates) {
 		VkFormatProperties props;
-		vkGetPhysicalDeviceFormatProperties(Engine::getPhysicalDevice(), format, &props);
+		VK_VALIDATE(vkGetPhysicalDeviceFormatProperties(Engine::getPhysicalDevice(), format, &props));
 
 		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
 			return format;
@@ -747,7 +747,7 @@ void Renderer::createImage(uint32_t width, uint32_t height, VkFormat format, VkI
 	VK_CHECK_RESULT(vkCreateImage(device, &imageInfo, nullptr, &image));
 
 	VkMemoryRequirements memRequirements;
-	vkGetImageMemoryRequirements(device, image, &memRequirements);
+	VK_VALIDATE(vkGetImageMemoryRequirements(device, image, &memRequirements));
 
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -832,14 +832,14 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 
 	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
-	vkCmdPipelineBarrier(
+	VK_VALIDATE(vkCmdPipelineBarrier(
 		commandBuffer,
 		sourceStage, destinationStage,
 		0,
 		0, nullptr,
 		0, nullptr,
 		1, &barrier
-	);
+	));
 
 	endSingleTimeCommands(commandBuffer);
 }
@@ -863,7 +863,7 @@ void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
 		1
 	};
 
-	vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	VK_VALIDATE(vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region));
 
 	endSingleTimeCommands(commandBuffer);
 }
@@ -922,6 +922,6 @@ void Renderer::setImageLayout(VkCommandBuffer cmdBuffer, Texture & tex, VkImageL
 	}
 
 	
-	vkCmdPipelineBarrier(cmdBuffer, srcFlags, dstFlags, 0, 0, NULL, 0, NULL, 1, &imageBarrier);
+	VK_VALIDATE(vkCmdPipelineBarrier(cmdBuffer, srcFlags, dstFlags, 0, 0, NULL, 0, NULL, 1, &imageBarrier));
 }
 

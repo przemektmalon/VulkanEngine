@@ -33,8 +33,25 @@
 
 #define ENABLE_VULKAN_VALIDATION
 
-#define VK_CHECK_RESULT(f) { \
+#define VK_VALIDATE(f) { \
+	f; \
+	if (Engine::validationWarning) { \
+		DBG_WARNING(Engine::validationMessage); \
+		Engine::validationWarning = false; \
+		Engine::validationMessage.clear(); \
+	} \
+}
+
+#define VK_VALIDATE_W_RESULT(f) \
 	auto result = f; \
+	if (Engine::validationWarning) { \
+			DBG_WARNING(Engine::validationMessage); \
+			Engine::validationWarning = false; \
+			Engine::validationMessage.clear(); \
+	}
+
+#define VK_CHECK_RESULT(f) { \
+	VK_VALIDATE_W_RESULT(f); \
 	if (result != VK_SUCCESS) { \
 		switch(result){ \
 			case(VK_ERROR_OUT_OF_HOST_MEMORY): \
@@ -66,7 +83,6 @@
 		} \
 	} \
 }
-
 
 // Debugging output macros
 #ifdef _WIN32

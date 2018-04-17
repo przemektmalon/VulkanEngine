@@ -158,7 +158,7 @@ void Texture::destroy()
 	else {
 		DBG_INFO("Destroying texture: " << name);
 	}
-	vkDestroyImageView(r->device, vkImageView, nullptr);
-	vkDestroyImage(r->device, vkImage, nullptr);
-	vkFreeMemory(r->device, vkMemory, nullptr);
+	VK_VALIDATE(vkDestroyImageView(r->device, vkImageView, nullptr));
+	VK_VALIDATE(vkDestroyImage(r->device, vkImage, nullptr));
+	VK_VALIDATE(vkFreeMemory(r->device, vkMemory, nullptr));
 }

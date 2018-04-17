@@ -327,7 +327,7 @@ void Engine::quit()
 #ifdef ENABLE_VULKAN_VALIDATION
 	PFN_vkDestroyDebugReportCallbackEXT(vkGetInstanceProcAddr(vkInstance, "vkDestroyDebugReportCallbackEXT"))(vkInstance, debugCallbackInfo, 0);
 #endif
-	vkDestroyInstance(vkInstance, nullptr);
+	VK_VALIDATE(vkDestroyInstance(vkInstance, nullptr));
 }
 
 
@@ -345,7 +345,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Engine::debugCallbackFunc(VkDebugReportFlagsEXT f
 													const char* msg,
 													void* userData)
 {
-	DBG_WARNING(msg << "\n" << "        NOTE: The line numbers are incorrect for Vulkan warnings");
+	validationWarning = true;
+	validationMessage = msg;
 	return VK_FALSE;
 }
 VkDebugReportCallbackEXT Engine::debugCallbackInfo;
@@ -373,3 +374,4 @@ float Engine::maxDepth;
 std::mt19937_64 Engine::rand;
 u64 Engine::gpuTimeStamps[4];
 bool Engine::validationWarning;
+std::string Engine::validationMessage;

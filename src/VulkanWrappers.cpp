@@ -10,8 +10,8 @@ void PhysicalDeviceDetails::queryDetails()
 {
 	// Query device properties and features
 	{
-		vkGetPhysicalDeviceProperties(vkPhysicalDevice, &deviceProperties);
-		vkGetPhysicalDeviceFeatures(vkPhysicalDevice, &deviceFeatures);
+		VK_VALIDATE(vkGetPhysicalDeviceProperties(vkPhysicalDevice, &deviceProperties));
+		VK_VALIDATE(vkGetPhysicalDeviceFeatures(vkPhysicalDevice, &deviceFeatures));
 
 		switch (deviceProperties.deviceType)
 		{
@@ -35,9 +35,9 @@ void PhysicalDeviceDetails::queryDetails()
 	// Query queue family properties
 	{
 		uint32_t queueFamilyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, &queueFamilyCount, nullptr);
+		VK_VALIDATE(vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, &queueFamilyCount, nullptr));
 		queueFamilies.resize(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, &queueFamilyCount, queueFamilies.data());
+		VK_VALIDATE(vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, &queueFamilyCount, queueFamilies.data()));
 	}
 
 	// Choose queue families
@@ -100,7 +100,7 @@ void PhysicalDeviceDetails::queryDetails()
 
 	// Query device memory properties
 	{
-		vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, &memoryProperties);
+		VK_VALIDATE(vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, &memoryProperties));
 	}
 }
 

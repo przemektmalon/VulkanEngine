@@ -386,7 +386,7 @@ void Renderer::updateGBufferDescriptorSets()
 	descriptorWrites[2].descriptorCount = 1000;
 	descriptorWrites[2].pImageInfo = imageInfo;
 
-	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }
 
 void Renderer::createGBufferCommands()
@@ -408,8 +408,8 @@ void Renderer::updateGBufferCommands()
 
 	VK_CHECK_RESULT(vkBeginCommandBuffer(gBufferCommandBuffer, &beginInfo));
 
-	vkCmdResetQueryPool(gBufferCommandBuffer, queryPool, 0, 4);
-	vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, 0);
+	VK_VALIDATE(vkCmdResetQueryPool(gBufferCommandBuffer, queryPool, 0, 4));
+	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, 0));
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -426,20 +426,20 @@ void Renderer::updateGBufferCommands()
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
-	vkCmdBeginRenderPass(gBufferCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	VK_VALIDATE(vkCmdBeginRenderPass(gBufferCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-	vkCmdBindPipeline(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline);
+	VK_VALIDATE(vkCmdBindPipeline(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline));
 
-	vkCmdBindDescriptorSets(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet, 0, nullptr);
+	VK_VALIDATE(vkCmdBindDescriptorSets(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet, 0, nullptr));
 
 	VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
 	VkDeviceSize offsets[] = { 0 };
-	vkCmdBindVertexBuffers(gBufferCommandBuffer, 0, 1, vertexBuffers, offsets);
-	vkCmdBindIndexBuffer(gBufferCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
+	VK_VALIDATE(vkCmdBindVertexBuffers(gBufferCommandBuffer, 0, 1, vertexBuffers, offsets));
+	VK_VALIDATE(vkCmdBindIndexBuffer(gBufferCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
 
-	vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand));
+	VK_VALIDATE(vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
-	vkCmdEndRenderPass(gBufferCommandBuffer);
+	VK_VALIDATE(vkCmdEndRenderPass(gBufferCommandBuffer));
 
 	//setImageLayout(gBufferCommandBuffer, gBufferColourAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	//setImageLayout(gBufferCommandBuffer, gBufferNormalAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -465,24 +465,24 @@ void Renderer::destroyGBufferAttachments()
 
 void Renderer::destroyGBufferRenderPass()
 {
-	vkDestroyRenderPass(device, gBufferRenderPass, 0);
+	VK_VALIDATE(vkDestroyRenderPass(device, gBufferRenderPass, 0));
 }
 
 void Renderer::destroyGBufferDescriptorSetLayouts()
 {
-	vkDestroyDescriptorSetLayout(device, gBufferDescriptorSetLayout, 0);
+	VK_VALIDATE(vkDestroyDescriptorSetLayout(device, gBufferDescriptorSetLayout, 0));
 }
 
 void Renderer::destroyGBufferPipeline()
 {
-	vkDestroyPipelineLayout(device, gBufferPipelineLayout, 0);
-	vkDestroyPipeline(device, gBufferPipeline, 0);
+	VK_VALIDATE(vkDestroyPipelineLayout(device, gBufferPipelineLayout, 0));
+	VK_VALIDATE(vkDestroyPipeline(device, gBufferPipeline, 0));
 	gBufferShader.destroy();
 }
 
 void Renderer::destroyGBufferFramebuffers()
 {
-	vkDestroyFramebuffer(device, gBufferFramebuffer, 0);
+	VK_VALIDATE(vkDestroyFramebuffer(device, gBufferFramebuffer, 0));
 }
 
 void Renderer::destroyGBufferDescriptorSets()
@@ -492,5 +492,5 @@ void Renderer::destroyGBufferDescriptorSets()
 
 void Renderer::destroyGBufferCommands()
 {
-	vkFreeCommandBuffers(device, commandPool, 1, &gBufferCommandBuffer);
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &gBufferCommandBuffer));
 }

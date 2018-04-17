@@ -58,4 +58,5 @@ public:
 	static float maxDepth;
 	static u64 gpuTimeStamps[4];
 	static bool validationWarning;
+	static std::string validationMessage;
 };

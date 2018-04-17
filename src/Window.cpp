@@ -115,7 +115,7 @@ void Window::resize(u32 newResX, u32 newResY)
 */
 void Window::destroy()
 {
-	vkDestroySurfaceKHR(Engine::vkInstance, vkSurface, 0);
+	VK_VALIDATE(vkDestroySurfaceKHR(Engine::vkInstance, vkSurface, 0));
 #ifdef _WIN32
 	UnregisterClass(windowName.c_str(), Engine::win32InstanceHandle);
 #endif

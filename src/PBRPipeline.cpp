@@ -256,7 +256,7 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[8].descriptorCount = 1;
 	descriptorWrites[8].pBufferInfo = &lightCountsInfo;
 
-	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }
 
 void Renderer::createPBRCommands()
@@ -278,11 +278,11 @@ void Renderer::updatePBRCommands()
 
 	VK_CHECK_RESULT(vkBeginCommandBuffer(pbrCommandBuffer, &beginInfo));
 
-	vkCmdWriteTimestamp(pbrCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, queryPool, 1);
+	VK_VALIDATE(vkCmdWriteTimestamp(pbrCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, queryPool, 1));
 
-	vkCmdBindPipeline(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipeline);
-	vkCmdBindDescriptorSets(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipelineLayout, 0, 1, &pbrDescriptorSet, 0, 0);
-	vkCmdDispatch(pbrCommandBuffer, renderResolution.width / 16, renderResolution.height / 16, 1);
+	VK_VALIDATE(vkCmdBindPipeline(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipeline));
+	VK_VALIDATE(vkCmdBindDescriptorSets(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipelineLayout, 0, 1, &pbrDescriptorSet, 0, 0));
+	VK_VALIDATE(vkCmdDispatch(pbrCommandBuffer, renderResolution.width / 16, renderResolution.height / 16, 1));
 
 	setImageLayout(pbrCommandBuffer, gBufferColourAttachment, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	setImageLayout(pbrCommandBuffer, gBufferNormalAttachment, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -299,13 +299,13 @@ void Renderer::destroyPBRAttachments()
 
 void Renderer::destroyPBRDescriptorSetLayouts()
 {
-	vkDestroyDescriptorSetLayout(device, pbrDescriptorSetLayout, 0);
+	VK_VALIDATE(vkDestroyDescriptorSetLayout(device, pbrDescriptorSetLayout, 0));
 }
 
 void Renderer::destroyPBRPipeline()
 {
-	vkDestroyPipelineLayout(device, pbrPipelineLayout, 0);
-	vkDestroyPipeline(device, pbrPipeline, 0);
+	VK_VALIDATE(vkDestroyPipelineLayout(device, pbrPipelineLayout, 0));
+	VK_VALIDATE(vkDestroyPipeline(device, pbrPipeline, 0));
 	pbrShader.destroy();
 }
 
@@ -316,5 +316,5 @@ void Renderer::destroyPBRDescriptorSets()
 
 void Renderer::destroyPBRCommands()
 {
-	vkFreeCommandBuffers(device, commandPool, 1, &pbrCommandBuffer);
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &pbrCommandBuffer));
 }
