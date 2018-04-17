@@ -241,15 +241,19 @@ void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for
 
 void AssetStore::addMaterial(std::string name, std::string albedo, std::string normal, std::string specMetal, std::string roughness, std::string ao, std::string height)
 {
-	auto find = materials.find(name);
-	if (find != materials.end())
+	auto find = materialIndices.find(name);
+	if (find != materialIndices.end())
 		return;
 
-	materials[name].albedo = getTexture(albedo);
-	materials[name].normal = getTexture(normal);
-	materials[name].specularMetallic = getTexture(specMetal);
-	materials[name].roughness = getTexture(roughness);
-	materials[name].ao = getTexture(ao);
-	materials[name].height = getTexture(height);
-	materials[name].gpuIndexBase = (materials.size() - 1) * 6;
+	u32 matIndex = materials.size();
+	materialIndices[name] = matIndex;
+
+
+	materials[matIndex].albedo = getTexture(albedo);
+	materials[matIndex].normal = getTexture(normal);
+	materials[matIndex].specularMetallic = getTexture(specMetal);
+	materials[matIndex].roughness = getTexture(roughness);
+	materials[matIndex].ao = getTexture(ao);
+	materials[matIndex].height = getTexture(height);
+	materials[matIndex].gpuIndexBase = (materials.size() - 1) * 6;
 }

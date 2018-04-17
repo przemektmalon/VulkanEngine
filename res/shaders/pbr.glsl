@@ -384,9 +384,6 @@ void main()
 			litPixel += ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
 	}
-
-	//vec4 albedoSpec = imageLoad(gAlbedoSpec, pixel);
-
-
+	
 	imageStore(outColour, pixel, vec4(litPixel,1.f));
 }

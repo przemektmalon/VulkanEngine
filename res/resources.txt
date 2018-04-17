@@ -166,3 +166,9 @@ path=res/models/hollowbox.obj
 name=hollowbox
 material=bamboo
 physics=res/models/hollowboxphysics.xml
+
+[Model]
+path=res/models/ground.obj
+name=ground
+material=dirt
+physics=p.xml
