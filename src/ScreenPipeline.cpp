@@ -105,13 +105,11 @@ void Renderer::createScreenSwapChain()
 	createInfo.clipped = VK_TRUE;
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-	if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan swap chain!");
-	}
+	VK_CHECK_RESULT(vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain));
 
-	vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+	VK_CHECK_RESULT(vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr));
 	swapChainImages.resize(imageCount);
-	vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+	VK_CHECK_RESULT(vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data()));
 
 	swapChainImageFormat = surfaceFormat.format;
 	renderResolution = extent;
@@ -166,9 +164,7 @@ void Renderer::createScreenRenderPass()
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &screenRenderPass) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create render pass");
-	}
+	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &screenRenderPass));
 }
 
 void Renderer::createScreenDescriptorSetLayouts()
@@ -186,9 +182,7 @@ void Renderer::createScreenDescriptorSetLayouts()
 	layoutInfo.bindingCount = 1;
 	layoutInfo.pBindings = bindings;
 
-	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &screenDescriptorSetLayout) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan descriptor set layout");
-	}
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &screenDescriptorSetLayout));
 }
 
 void Renderer::createScreenPipeline()
@@ -288,9 +282,7 @@ void Renderer::createScreenPipeline()
 	pipelineLayoutInfo.pSetLayouts = &screenDescriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &screenPipelineLayout) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan pipeline layout");
-	}
+	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &screenPipelineLayout));
 
 	// Collate all the data necessary to create pipeline
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
@@ -310,11 +302,7 @@ void Renderer::createScreenPipeline()
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.flags = 0;
 
-	VkResult result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &screenPipeline);
-
-	if (result != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan graphics pipeline");
-	}
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &screenPipeline));
 }
 
 void Renderer::createScreenFramebuffers()
@@ -334,9 +322,7 @@ void Renderer::createScreenFramebuffers()
 		framebufferInfo.height = renderResolution.height;
 		framebufferInfo.layers = 1;
 
-		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &screenFramebuffers[i]) != VK_SUCCESS) {
-			DBG_SEVERE("Failed to create Vulkan framebuffers");
-		}
+		VK_CHECK_RESULT(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &screenFramebuffers[i]));
 	}
 }
 
@@ -349,9 +335,7 @@ void Renderer::createScreenDescriptorSets()
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
-	if (vkAllocateDescriptorSets(device, &allocInfo, &screenDescriptorSet) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to allocate descriptor set");
-	}
+	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &screenDescriptorSet));
 }
 
 void Renderer::updateScreenDescriptorSets()
@@ -384,9 +368,7 @@ void Renderer::createScreenCommands()
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = (uint32_t)screenCommandBuffers.size();
 
-	if (vkAllocateCommandBuffers(device, &allocInfo, screenCommandBuffers.data()) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to allocate Vulkan command buffers");
-	}
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, screenCommandBuffers.data()));
 }
 
 void Renderer::updateScreenCommands()
@@ -397,7 +379,7 @@ void Renderer::updateScreenCommands()
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-		vkBeginCommandBuffer(screenCommandBuffers[i], &beginInfo);
+		VK_CHECK_RESULT(vkBeginCommandBuffer(screenCommandBuffers[i], &beginInfo));
 
 		vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 2);
 
@@ -429,10 +411,7 @@ void Renderer::updateScreenCommands()
 
 		vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 3);
 
-		auto result = vkEndCommandBuffer(screenCommandBuffers[i]);
-		if (result != VK_SUCCESS) {
-			DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
-		}
+		VK_CHECK_RESULT(vkEndCommandBuffer(screenCommandBuffers[i]));
 	}
 }
 
@@ -476,7 +455,7 @@ void Renderer::destroyScreenFramebuffers()
 
 void Renderer::destroyScreenDescriptorSets()
 {
-	vkFreeDescriptorSets(device, descriptorPool, 1, &screenDescriptorSet);
+	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool, 1, &screenDescriptorSet));
 }
 
 void Renderer::destroyScreenCommands()

@@ -261,7 +261,4 @@ public:
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void updateUniformBuffer();
-
-	//void cleanupVulkanSwapChain();
-	void recreateVulkanSwapChain();
 };

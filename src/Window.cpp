@@ -56,7 +56,7 @@ void Window::create(WindowCreateInfo * c)
 	sci.hinstance = Engine::win32InstanceHandle;
 	sci.hwnd = win32WindowHandle;
 
-	vkCreateWin32SurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface);
+	VK_CHECK_RESULT(vkCreateWin32SurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface));
 
 	registerRawMouseDevice();
 #endif
@@ -96,7 +96,7 @@ void Window::create(WindowCreateInfo * c)
 	sci.flags = 0;
 	sci.connection = Window::connection;
 	sci.window = Window::window;
-	VkResult result = vkCreateXcbSurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface);
+	VK_CHECK_RESULT(vkCreateXcbSurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface));
 #endif
 
 	resX = c->width;

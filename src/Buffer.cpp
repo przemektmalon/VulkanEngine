@@ -15,9 +15,7 @@ void Buffer::create(VkDeviceSize pSize, VkBufferUsageFlags pUsage, VkMemoryPrope
 	bufferInfo.usage = usage;
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	if (vkCreateBuffer(Engine::renderer->device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan buffer");
-	}
+	VK_CHECK_RESULT(vkCreateBuffer(Engine::renderer->device, &bufferInfo, nullptr, &buffer));
 
 	VkMemoryRequirements memRequirements;
 	vkGetBufferMemoryRequirements(Engine::renderer->device, buffer, &memRequirements);
@@ -27,11 +25,9 @@ void Buffer::create(VkDeviceSize pSize, VkBufferUsageFlags pUsage, VkMemoryPrope
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = Engine::getPhysicalDeviceDetails().getMemoryType(memRequirements.memoryTypeBits, memFlags);
 
-	if (vkAllocateMemory(Engine::renderer->device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to allocate Vulkan buffer memory");
-	}
+	VK_CHECK_RESULT(vkAllocateMemory(Engine::renderer->device, &allocInfo, nullptr, &memory));
 
-	vkBindBufferMemory(Engine::renderer->device, buffer, memory, 0);
+	VK_CHECK_RESULT(vkBindBufferMemory(Engine::renderer->device, buffer, memory, 0));
 }
 
 void Buffer::destroy()
@@ -43,7 +39,7 @@ void Buffer::destroy()
 void * Buffer::map()
 {
 	void* data;
-	vkMapMemory(Engine::renderer->device, memory, 0, size, 0, &data);
+	VK_CHECK_RESULT(vkMapMemory(Engine::renderer->device, memory, 0, size, 0, &data));
 	return data;
 }
 

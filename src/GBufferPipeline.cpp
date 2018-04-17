@@ -112,9 +112,8 @@ void Renderer::createGBufferRenderPass()
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &gBufferRenderPass) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create render pass");
-	}
+
+	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &gBufferRenderPass));
 }
 
 void Renderer::createGBufferDescriptorSetLayouts()
@@ -144,9 +143,7 @@ void Renderer::createGBufferDescriptorSetLayouts()
 	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 	layoutInfo.pBindings = bindings.data();
 
-	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &gBufferDescriptorSetLayout) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan descriptor set layout");
-	}
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &gBufferDescriptorSetLayout));
 }
 
 void Renderer::createGBufferPipeline()
@@ -256,9 +253,7 @@ void Renderer::createGBufferPipeline()
 	pipelineLayoutInfo.pSetLayouts = &gBufferDescriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &gBufferPipelineLayout) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan pipeline layout");
-	}
+	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &gBufferPipelineLayout));
 
 	// Collate all the data necessary to create pipeline
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
@@ -277,11 +272,7 @@ void Renderer::createGBufferPipeline()
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-	VkResult result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gBufferPipeline);
-
-	if (result != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan graphics pipeline");
-	}
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gBufferPipeline));
 }
 
 void Renderer::createGBufferFramebuffers()
@@ -302,9 +293,7 @@ void Renderer::createGBufferFramebuffers()
 	framebufferInfo.height = renderResolution.height;
 	framebufferInfo.layers = 1;
 
-	if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &gBufferFramebuffer) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan framebuffers");
-	}
+	VK_CHECK_RESULT(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &gBufferFramebuffer));
 }
 
 void Renderer::createGBufferDescriptorSets()
@@ -316,9 +305,7 @@ void Renderer::createGBufferDescriptorSets()
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
-	if (vkAllocateDescriptorSets(device, &allocInfo, &gBufferDescriptorSet) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to allocate descriptor set");
-	}
+	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &gBufferDescriptorSet));
 }
 
 void Renderer::updateGBufferDescriptorSets()
@@ -410,9 +397,7 @@ void Renderer::createGBufferCommands()
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
-	if (vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommandBuffer) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to allocate Vulkan command buffers");
-	}
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommandBuffer));
 }
 
 void Renderer::updateGBufferCommands()
@@ -421,7 +406,7 @@ void Renderer::updateGBufferCommands()
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-	vkBeginCommandBuffer(gBufferCommandBuffer, &beginInfo);
+	VK_CHECK_RESULT(vkBeginCommandBuffer(gBufferCommandBuffer, &beginInfo));
 
 	vkCmdResetQueryPool(gBufferCommandBuffer, queryPool, 0, 4);
 	vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, 0);
@@ -467,10 +452,7 @@ void Renderer::updateGBufferCommands()
 	gBufferDepthAttachment.setLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
 
-	auto result = vkEndCommandBuffer(gBufferCommandBuffer);
-	if (result != VK_SUCCESS) {
-		DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
-	}
+	VK_CHECK_RESULT(vkEndCommandBuffer(gBufferCommandBuffer));
 }
 
 void Renderer::destroyGBufferAttachments()
@@ -505,7 +487,7 @@ void Renderer::destroyGBufferFramebuffers()
 
 void Renderer::destroyGBufferDescriptorSets()
 {
-	vkFreeDescriptorSets(device, descriptorPool, 1, &gBufferDescriptorSet);
+	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool, 1, &gBufferDescriptorSet));
 }
 
 void Renderer::destroyGBufferCommands()

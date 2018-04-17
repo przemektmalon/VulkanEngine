@@ -104,7 +104,7 @@ void Renderer::initialise()
 
 void Renderer::reInitialise()
 {
-	vkDeviceWaitIdle(device);
+	VK_CHECK_RESULT(vkDeviceWaitIdle(device));
 
 	cleanupForReInit();
 
@@ -254,12 +254,7 @@ void Renderer::render()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 
-	auto submitResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-
-	if (submitResult != VK_SUCCESS) {
-		DBG_SEVERE("Failed to submit Vulkan draw command buffer. Error: " << submitResult);
-	}
-
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
 
 	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
@@ -268,12 +263,7 @@ void Renderer::render()
 	submitInfo.pCommandBuffers = &pbrCommandBuffer;
 	submitInfo.pSignalSemaphores = &pbrFinishedSemaphore;
 
-	submitResult = vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE);
-
-	if (submitResult != VK_SUCCESS) {
-		DBG_SEVERE("Failed to submit Vulkan draw command buffer. Error: " << submitResult);
-	}
-
+	VK_CHECK_RESULT(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
 	
 	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -282,13 +272,8 @@ void Renderer::render()
 	submitInfo.pCommandBuffers = &screenCommandBuffers[imageIndex];
 	submitInfo.pSignalSemaphores = &screenFinishedSemaphore;
 
-	submitResult = vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
-	if (submitResult != VK_SUCCESS) {
-		DBG_SEVERE("Failed to submit Vulkan draw command buffer. Error: " << submitResult);
-	}
-
-	
 
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -302,16 +287,16 @@ void Renderer::render()
 
 	presentInfo.pImageIndices = &imageIndex;
 
-	vkQueuePresentKHR(presentQueue, &presentInfo);
+	VK_CHECK_RESULT(vkQueuePresentKHR(presentQueue, &presentInfo));
 
-	vkQueueWaitIdle(presentQueue);
+	VK_CHECK_RESULT(vkQueueWaitIdle(presentQueue));
 
-	vkGetQueryPoolResults(device, queryPool, 0, 4, sizeof(u64) * 4, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT);
+	VK_CHECK_RESULT(vkGetQueryPoolResults(device, queryPool, 0, 4, sizeof(u64) * 4, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT));
 }
 
 void Renderer::reloadShaders()
 {
-	vkDeviceWaitIdle(device);
+	VK_CHECK_RESULT(vkDeviceWaitIdle(device));
 
 	destroyGBufferPipeline();
 	destroyPBRPipeline();
@@ -454,8 +439,7 @@ void Renderer::createLogicalDevice()
 	dci.ppEnabledExtensionNames = &deviceExtension;
 	dci.pEnabledFeatures = &pdf;
 
-	if (vkCreateDevice(Engine::vkPhysicalDevice, &dci, 0, &device) != VK_SUCCESS)
-		DBG_SEVERE("Could not create Vulkan logical device");
+	VK_CHECK_RESULT(vkCreateDevice(Engine::vkPhysicalDevice, &dci, 0, &device))
 
 	vkGetDeviceQueue(device, 0, 0, &graphicsQueue);
 	vkGetDeviceQueue(device, 0, 0, &presentQueue); /// Todo: Support for AMD gpus which have non-universal queues
@@ -473,9 +457,7 @@ void Renderer::createCommandPool()
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = 0;
 
-	if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan command pool");
-	}
+	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool));
 }
 
 void Renderer::createQueryPool()
@@ -485,7 +467,7 @@ void Renderer::createQueryPool()
 	ci.queryType = VK_QUERY_TYPE_TIMESTAMP;
 	ci.queryCount = 4;
 
-	vkCreateQueryPool(device, &ci, 0, &queryPool);
+	VK_CHECK_RESULT(vkCreateQueryPool(device, &ci, 0, &queryPool));
 }
 
 void Renderer::createTextureSampler()
@@ -508,9 +490,7 @@ void Renderer::createTextureSampler()
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 11.0f;
 
-	if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture sampler!");
-    }
+	VK_CHECK_RESULT(vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler));
 }
 
 /*
@@ -551,9 +531,7 @@ void Renderer::createDescriptorPool()
 	poolInfo.pPoolSizes = poolSizes.data();
 	poolInfo.maxSets = 3;
 
-	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan descriptor pool");
-	}
+	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool));
 }
 
 /*
@@ -565,13 +543,10 @@ void Renderer::createSemaphores()
 	VkSemaphoreCreateInfo semaphoreInfo = {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &pbrFinishedSemaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &screenFinishedSemaphore) != VK_SUCCESS) {
-
-		DBG_SEVERE("Failed to create Vulkan semaphores");
-	}
+	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore));
+	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore));
+	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &pbrFinishedSemaphore));
+	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &screenFinishedSemaphore));
 }
 
 /*
@@ -630,9 +605,7 @@ void Renderer::createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, V
 	bufferInfo.usage = usage;
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan buffer");
-	}
+	VK_CHECK_RESULT(vkCreateBuffer(device, &bufferInfo, nullptr, &buffer));
 
 	VkMemoryRequirements memRequirements;
 	vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
@@ -642,11 +615,9 @@ void Renderer::createVulkanBuffer(VkDeviceSize size, VkBufferUsageFlags usage, V
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = Engine::getPhysicalDeviceDetails().getMemoryType(memRequirements.memoryTypeBits, properties);
 
-	if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to allocate Vulkan buffer memory");
-	}
+	VK_CHECK_RESULT(vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory));
 
-	vkBindBufferMemory(device, buffer, bufferMemory, 0);
+	VK_CHECK_RESULT(vkBindBufferMemory(device, buffer, bufferMemory, 0));
 }
 
 VkCommandBuffer Renderer::beginSingleTimeCommands() 
@@ -658,27 +629,27 @@ VkCommandBuffer Renderer::beginSingleTimeCommands()
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer));
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+	VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
     return commandBuffer;
 }
 
 void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
-    vkEndCommandBuffer(commandBuffer);
+	VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(graphicsQueue);
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue));
 
     vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 }
@@ -728,18 +699,6 @@ void Renderer::updateUniformBuffer()
 	transformUBO.unmap();
 }
 
-/*
-	@brief	Recreate Vulkan swap chain
-*/
-void Renderer::recreateVulkanSwapChain()
-{
-	DBG_SEVERE("UNIMPLEMENTED");
-	//cleanupVulkanSwapChain();
-	//vkDeviceWaitIdle(device);
-
-	//createScreenSwapChain();
-}
-
 VkFormat Renderer::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
 	for (VkFormat format : candidates) {
 		VkFormatProperties props;
@@ -785,9 +744,7 @@ void Renderer::createImage(uint32_t width, uint32_t height, VkFormat format, VkI
 	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create image!");
-	}
+	VK_CHECK_RESULT(vkCreateImage(device, &imageInfo, nullptr, &image));
 
 	VkMemoryRequirements memRequirements;
 	vkGetImageMemoryRequirements(device, image, &memRequirements);
@@ -797,11 +754,9 @@ void Renderer::createImage(uint32_t width, uint32_t height, VkFormat format, VkI
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = Engine::getPhysicalDeviceDetails().getMemoryType(memRequirements.memoryTypeBits, properties);
 
-	if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-		throw std::runtime_error("failed to allocate image memory!");
-	}
+	VK_CHECK_RESULT(vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory));
 
-	vkBindImageMemory(device, image, imageMemory, 0);
+	VK_CHECK_RESULT(vkBindImageMemory(device, image, imageMemory, 0));
 }
 
 void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels)
@@ -926,10 +881,7 @@ VkImageView Renderer::createImageView(VkImage image, VkFormat format, VkImageAsp
 	viewInfo.subresourceRange.layerCount = 1;
 
 	VkImageView imageView;
-	if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-		DBG_SEVERE("failed to create texture image view!");
-	}
-
+	VK_CHECK_RESULT(vkCreateImageView(device, &viewInfo, nullptr, &imageView));
 	return imageView;
 }
 

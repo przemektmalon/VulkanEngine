@@ -86,9 +86,7 @@ void Renderer::createPBRDescriptorSetLayouts()
 	layoutInfo.bindingCount = 10;
 	layoutInfo.pBindings = bindings;
 
-	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan descriptor set layout");
-	}
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout));
 }
 
 void Renderer::createPBRPipeline()
@@ -104,9 +102,7 @@ void Renderer::createPBRPipeline()
 	pipelineLayoutInfo.pSetLayouts = &pbrDescriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pbrPipelineLayout) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan pipeline layout");
-	}
+	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pbrPipelineLayout));
 
 	// Collate all the data necessary to create pipeline
 	VkComputePipelineCreateInfo pipelineInfo = {};
@@ -114,11 +110,7 @@ void Renderer::createPBRPipeline()
 	pipelineInfo.stage = *pbrShader.getShaderStageCreateInfos();
 	pipelineInfo.layout = pbrPipelineLayout;
 
-	VkResult result = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pbrPipeline);
-
-	if (result != VK_SUCCESS) {
-		DBG_SEVERE("Failed to create Vulkan graphics pipeline");
-	}
+	VK_CHECK_RESULT(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pbrPipeline));
 }
 
 void Renderer::createPBRDescriptorSets()
@@ -130,9 +122,7 @@ void Renderer::createPBRDescriptorSets()
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
-	if (vkAllocateDescriptorSets(device, &allocInfo, &pbrDescriptorSet) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to allocate descriptor set");
-	}
+	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &pbrDescriptorSet));
 }
 
 void Renderer::updatePBRDescriptorSets()
@@ -277,9 +267,7 @@ void Renderer::createPBRCommands()
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
-	if (vkAllocateCommandBuffers(device, &allocInfo, &pbrCommandBuffer) != VK_SUCCESS) {
-		DBG_SEVERE("Failed to allocate Vulkan command buffers");
-	}
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &pbrCommandBuffer));
 }
 
 void Renderer::updatePBRCommands()
@@ -288,7 +276,7 @@ void Renderer::updatePBRCommands()
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-	vkBeginCommandBuffer(pbrCommandBuffer, &beginInfo);
+	VK_CHECK_RESULT(vkBeginCommandBuffer(pbrCommandBuffer, &beginInfo));
 
 	vkCmdWriteTimestamp(pbrCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, queryPool, 1);
 
@@ -301,10 +289,7 @@ void Renderer::updatePBRCommands()
 	setImageLayout(pbrCommandBuffer, gBufferPBRAttachment, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	setImageLayout(pbrCommandBuffer, gBufferDepthAttachment, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	auto result = vkEndCommandBuffer(pbrCommandBuffer);
-	if (result != VK_SUCCESS) {
-		DBG_SEVERE("Failed to record Vulkan command buffer. Error: " << result);
-	}
+	VK_CHECK_RESULT(vkEndCommandBuffer(pbrCommandBuffer));
 }
 
 void Renderer::destroyPBRAttachments()
@@ -326,7 +311,7 @@ void Renderer::destroyPBRPipeline()
 
 void Renderer::destroyPBRDescriptorSets()
 {
-	vkFreeDescriptorSets(device, descriptorPool, 1, &pbrDescriptorSet);
+	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool, 1, &pbrDescriptorSet));
 }
 
 void Renderer::destroyPBRCommands()

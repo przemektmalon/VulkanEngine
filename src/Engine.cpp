@@ -10,6 +10,7 @@
 */
 void Engine::start()
 {
+	validationWarning = false;
 	DBG_INFO("Launching engine");
 	engineStartTime = clock.time();
 #ifdef _WIN32
@@ -62,8 +63,6 @@ void Engine::start()
 			world.addModelInstance("hollowbox", "hollowbox" + std::to_string(i));
 			world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 30) * 2), std::floor(int(i / (int)30) * 2), 0));
 			world.modelMap["hollowbox" + std::to_string(i)]->setMaterial(0, 0, assets.getMaterial(materialList[i % 6]));
-			//if (i == 0)
-				//world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::scale(glm::fmat4(1), glm::fvec3(500, 500, 500));
 		}
 
 		world.addModelInstance("pbrsphere");
@@ -257,9 +256,8 @@ void Engine::createVulkanInstance()
 	instInfo.ppEnabledLayerNames = 0;
 #endif
 
-	if (vkCreateInstance(&instInfo, nullptr, &vkInstance) != VK_SUCCESS)
-		DBG_SEVERE("Could not create Vulkan instance");
-
+	VK_CHECK_RESULT(vkCreateInstance(&instInfo, nullptr, &vkInstance));
+	
 #ifdef ENABLE_VULKAN_VALIDATION
 	DBG_INFO("Creating validation layer debug callback");
 	VkDebugReportCallbackCreateInfoEXT createInfo = {};
@@ -269,9 +267,7 @@ void Engine::createVulkanInstance()
 
 	auto createDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(vkInstance, "vkCreateDebugReportCallbackEXT");
 
-	if (createDebugReportCallbackEXT(vkInstance, &createInfo, nullptr, &debugCallbackInfo) != VK_SUCCESS) {
-		DBG_WARNING("Failed to create debug callback");
-	}
+	VK_CHECK_RESULT(createDebugReportCallbackEXT(vkInstance, &createInfo, nullptr, &debugCallbackInfo));
 #endif
 }
 
@@ -282,13 +278,13 @@ void Engine::queryVulkanPhysicalDeviceDetails()
 {
 	DBG_INFO("Picking Vulkan device");
 		uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr);
+	VK_CHECK_RESULT(vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr));
 
 	if (deviceCount == 0)
 		DBG_SEVERE("No GPUs with Vulkan support!");
 
 	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(vkInstance, &deviceCount, devices.data());
+	VK_CHECK_RESULT(vkEnumeratePhysicalDevices(vkInstance, &deviceCount, devices.data()));
 
 	physicalDevicesDetails.clear();
 
@@ -376,3 +372,4 @@ AssetStore Engine::assets;
 float Engine::maxDepth;
 std::mt19937_64 Engine::rand;
 u64 Engine::gpuTimeStamps[4];
+bool Engine::validationWarning;

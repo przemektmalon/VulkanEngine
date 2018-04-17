@@ -46,7 +46,7 @@ void PhysicalDeviceDetails::queryDetails()
 		for (const auto& queueFamily : queueFamilies)
 		{
 			VkBool32 surfaceSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(vkPhysicalDevice, i, Engine::window->vkSurface, &surfaceSupport);
+			VK_CHECK_RESULT(vkGetPhysicalDeviceSurfaceSupportKHR(vkPhysicalDevice, i, Engine::window->vkSurface, &surfaceSupport));
 
 			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT && graphicsQueueFamily == -1)
 				graphicsQueueFamily = i;
@@ -70,16 +70,16 @@ void PhysicalDeviceDetails::queryDetails()
 	}
 
 	// Query surface capabilities
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkPhysicalDevice, Engine::window->vkSurface, &swapChainDetails.capabilities);
+	VK_CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkPhysicalDevice, Engine::window->vkSurface, &swapChainDetails.capabilities));
 
 	// Query surface formats
 	{
 		uint32_t formatCount;
-		vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice, Engine::window->vkSurface, &formatCount, nullptr);
+		VK_CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice, Engine::window->vkSurface, &formatCount, nullptr));
 
 		if (formatCount != 0) {
 			swapChainDetails.formats.resize(formatCount);
-			vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice, Engine::window->vkSurface, &formatCount, swapChainDetails.formats.data());
+			VK_CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice, Engine::window->vkSurface, &formatCount, swapChainDetails.formats.data()));
 		}
 		else
 			suitabilityScore -= 100000;
@@ -88,11 +88,11 @@ void PhysicalDeviceDetails::queryDetails()
 	// Query surface present modes
 	{
 		uint32_t presentModeCount;
-		vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice, Engine::window->vkSurface, &presentModeCount, nullptr);
+		VK_CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice, Engine::window->vkSurface, &presentModeCount, nullptr));
 
 		if (presentModeCount != 0) {
 			swapChainDetails.presentModes.resize(presentModeCount);
-			vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice, Engine::window->vkSurface, &presentModeCount, swapChainDetails.presentModes.data());
+			VK_CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysicalDevice, Engine::window->vkSurface, &presentModeCount, swapChainDetails.presentModes.data()));
 		}
 		else
 			suitabilityScore -= 100000;
