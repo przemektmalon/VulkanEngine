@@ -15,6 +15,7 @@ void Renderer::initialise()
 	createLogicalDevice();
 	createDescriptorPool();
 	createCommandPool();
+	createQueryPool();
 	createTextureSampler();
 	createSemaphores();
 
@@ -59,11 +60,11 @@ void Renderer::initialise()
 	createPBRCommands();
 	createScreenCommands();
 
-	for (int i = 0; i < 150; ++i)
+	for (int i = 0; i < 50; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
-		int s = 200;
+		int s = 90;
 		int sh = s / 2;
 		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 10) + 5, s64(r() % s) - sh));
 		glm::fvec3 col;
@@ -92,8 +93,8 @@ void Renderer::initialise()
 			break; }
 		}
 		pl.setColour(col);
-		pl.setLinear(0.00001);
-		pl.setQuadratic(0.005);
+		pl.setLinear(0.0001);
+		pl.setQuadratic(0.01);
 	}
 
 	lightManager.updateLightCounts();
@@ -183,6 +184,7 @@ void Renderer::cleanup()
 
 	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 	vkDestroyCommandPool(device, commandPool, 0);
+	vkDestroyQueryPool(device, queryPool, 0);
 
 	vkDestroySampler(device, textureSampler, nullptr);
 
@@ -303,6 +305,8 @@ void Renderer::render()
 	vkQueuePresentKHR(presentQueue, &presentInfo);
 
 	vkQueueWaitIdle(presentQueue);
+
+	vkGetQueryPoolResults(device, queryPool, 0, 4, sizeof(u64) * 4, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT);
 }
 
 void Renderer::reloadShaders()
@@ -472,6 +476,16 @@ void Renderer::createCommandPool()
 	if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
 		DBG_SEVERE("Failed to create Vulkan command pool");
 	}
+}
+
+void Renderer::createQueryPool()
+{
+	VkQueryPoolCreateInfo ci = {};
+	ci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	ci.queryType = VK_QUERY_TYPE_TIMESTAMP;
+	ci.queryCount = 4;
+
+	vkCreateQueryPool(device, &ci, 0, &queryPool);
 }
 
 void Renderer::createTextureSampler()

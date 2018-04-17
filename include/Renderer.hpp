@@ -50,10 +50,12 @@ public:
 	// Memory pools
 	VkDescriptorPool descriptorPool;
 	VkCommandPool commandPool;
+	VkQueryPool queryPool;
 
 	void createLogicalDevice();
 	void createDescriptorPool();
 	void createCommandPool();
+	void createQueryPool();
 	void createTextureSampler();
 
 	// Shaders

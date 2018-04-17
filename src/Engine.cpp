@@ -175,7 +175,10 @@ void Engine::start()
 		fpsDisplay += frameTime.getSeconds();
 		if (fpsDisplay > 1.f)
 		{
-			printf("%f\n", double(frames) / fpsDisplay);
+			printf("GBuffer pass: %f\n", double(Engine::gpuTimeStamps[1] - Engine::gpuTimeStamps[0]) * 0.000001);
+			printf("PBR pass    : %f\n", double(Engine::gpuTimeStamps[2] - Engine::gpuTimeStamps[1]) * 0.000001);
+			printf("Screen pass : %f\n", double(Engine::gpuTimeStamps[3] - Engine::gpuTimeStamps[2]) * 0.000001);
+			printf("FPS         : %f\n", double(frames) / fpsDisplay);
 			fpsDisplay = 0.f;
 			frames = 0;
 		}
@@ -372,3 +375,4 @@ World Engine::world;
 AssetStore Engine::assets;
 float Engine::maxDepth;
 std::mt19937_64 Engine::rand;
+u64 Engine::gpuTimeStamps[4];

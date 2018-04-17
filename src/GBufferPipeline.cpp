@@ -423,6 +423,9 @@ void Renderer::updateGBufferCommands()
 
 	vkBeginCommandBuffer(gBufferCommandBuffer, &beginInfo);
 
+	vkCmdResetQueryPool(gBufferCommandBuffer, queryPool, 0, 4);
+	vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 0);
+
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = gBufferRenderPass;

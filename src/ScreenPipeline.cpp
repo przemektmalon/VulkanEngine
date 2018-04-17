@@ -399,6 +399,8 @@ void Renderer::updateScreenCommands()
 
 		vkBeginCommandBuffer(screenCommandBuffers[i], &beginInfo);
 
+		vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 2);
+
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = screenRenderPass;
@@ -424,6 +426,8 @@ void Renderer::updateScreenCommands()
 		vkCmdDraw(screenCommandBuffers[i], 6, 1, 0, 0);
 
 		vkCmdEndRenderPass(screenCommandBuffers[i]);
+
+		vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 3);
 
 		auto result = vkEndCommandBuffer(screenCommandBuffers[i]);
 		if (result != VK_SUCCESS) {

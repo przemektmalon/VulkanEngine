@@ -56,4 +56,5 @@ public:
 	static Time engineStartTime;
 	static std::mt19937_64 rand;
 	static float maxDepth;
+	static u64 gpuTimeStamps[4];
 };
