@@ -436,6 +436,7 @@ public: ///TODO: Max light count is 150, add setters etc
 
 	void cleanup()
 	{
+		lightCountsBuffer.destroy();
 		spotLightsBuffer.destroy();
 		pointLightsBuffer.destroy();
 		sunLightBuffer.destroy();
