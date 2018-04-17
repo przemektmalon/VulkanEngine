@@ -26,8 +26,10 @@ void Engine::start()
 	createVulkanInstance();
 	createWindow();
 	queryVulkanPhysicalDeviceDetails();
+
+	maxDepth = 5000.f;
 	
-	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 3.5f, 0.1, 50000.f);
+	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 2.f, 0.1, maxDepth);
 
 	renderer = new Renderer();
 	renderer->initialise();
@@ -59,6 +61,8 @@ void Engine::start()
 			world.addModelInstance("hollowbox", "hollowbox" + std::to_string(i));
 			world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 5) * 2), std::floor(int(i / (int)5) * 2), 0));
 			world.modelMap["hollowbox" + std::to_string(i)]->setMaterial(0, 0, assets.getMaterial(materialList[i % 6]));
+			//if (i == 0)
+				//world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::scale(glm::fmat4(1), glm::fvec3(500, 500, 500));
 		}
 
 		world.addModelInstance("pbrsphere");
@@ -344,3 +348,4 @@ Time Engine::engineStartTime;
 Camera Engine::camera;
 World Engine::world;
 AssetStore Engine::assets;
+float Engine::maxDepth;

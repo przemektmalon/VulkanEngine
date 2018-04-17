@@ -54,4 +54,5 @@ public:
 	
 	static bool engineRunning;
 	static Time engineStartTime;
+	static float maxDepth;
 };

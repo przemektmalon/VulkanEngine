@@ -9,6 +9,7 @@ layout(binding=0, rgba32f) uniform writeonly image2D outColour;
 layout(binding=1, rgba8) uniform readonly image2D gAlbedoSpec;
 layout(binding=2, rg32f) uniform readonly image2D gNormal;
 layout(binding=3, rgba8) uniform readonly image2D gPBR;
+layout(binding=5, rgba32f) uniform readonly image2D gWSD;
 layout(binding=4) uniform sampler2D gDepth;
 
 #define MAX_LIGHTS_PER_TILE 128
@@ -44,19 +45,22 @@ struct SpotLight
 };
 
 layout(binding = 10) uniform PointLightBuffer {
-	uint count;
 	PointLight data[150];
 } pointLights;
 
 layout(binding = 11) uniform SpotLightBuffer {
-	uint count;
 	SpotLight data[150];
 } spotLights;
+
+layout(binding = 12) uniform LightCounts {
+	uint point;
+	uint spot;
+} lightCounts;
 
 layout(binding = 9) uniform CameraUBO {
     mat4 view;
     mat4 proj;
-    vec3 position;
+    vec4 position;
     vec4 viewRays;
 } camera;
 
@@ -131,7 +135,7 @@ void main()
 
 	float depth = texelFetch(gDepth, pixel, 0).r;
 
-	vec3 viewPos = camera.position;
+	vec3 viewPos = camera.position.xyz;
 
 	uint z = floatBitsToInt(depth);
 
@@ -184,32 +188,28 @@ void main()
 	float farZMinf = uintBitsToFloat(farZMin);
 	float nearZMaxf = uintBitsToFloat(nearZMax);
 
-	/*float minZView = exp2(minZf * log2(FAR + 1.0)) - 1.f;
-	float maxZView = exp2(maxZf * log2(FAR + 1.0)) - 1.f;
+	float zNear = 0.1;
+	float zFar = 5000.f;
 
-	float farZMinView = exp2(farZMinf * log2(FAR + 1.0)) - 1.f;
-	float nearZMaxView = exp2(nearZMaxf * log2(FAR + 1.0)) - 1.f;*/
+    float realDepth = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
+
+    float minZView = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * minZf - 1.0) * (zFar - zNear));
+    float maxZView = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * maxZf - 1.0) * (zFar - zNear));
+    float farZMinView = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * farZMinf - 1.0) * (zFar - zNear));
+    float nearZMaxView = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * nearZMaxf - 1.0) * (zFar - zNear));
 
 	vec4 viewRays = camera.viewRays;
-
-	float minZView = minZf;
-	float maxZView = maxZf;
-	float farZMinView = farZMinf;
-	float nearZMaxView = nearZMaxf;
 
 	vec3 viewRay;
 	viewRay.x = mix(viewRays.z, viewRays.x, float(pixel.x)/renderSize.x);
 	viewRay.y = mix(viewRays.w, viewRays.y, float(pixel.y)/renderSize.y);
 
-	viewRay = vec3(camera.view * vec4(viewRay.xy,1.f,1.f));
+	mat4 vwt = camera.view;
+	vwt[3] = vec4(0,0,0,vwt[3][3]);
+	vwt = transpose(vwt);
+	viewRay = vec3(vwt * vec4(viewRay.xy,1.f,1.f));
 
-	//float zView = exp2(depth * log2(FAR + 1.0)) - 1.f;
-	float zView = depth;
-
-	vec3 worldPos = viewPos + (viewRay * -zView);
-
-	//vec3 oCol = worldPos;
-	//imageStore(outColour, pixel, vec4(oCol,1.f));
+	vec3 worldPos = viewPos + (viewRay * -realDepth);
 
 	const uvec3 groupID = gl_WorkGroupID;
 
@@ -227,7 +227,7 @@ void main()
 	viewRayTLFar.y = mix(viewRays.w, viewRays.y, yMixRatio1);
 	viewRayTLFar.z = 1.f;
 
-	mat3 m3View = mat3(camera.view);
+	mat3 m3View = mat3(vwt);
 
 	//viewRayTLFar = vec3(mat3(view) * vec3(viewRayTLFar.xy,1.f));
 	viewRayTLFar = m3View * vec3(viewRayTLFar);
@@ -272,13 +272,15 @@ void main()
 	//NEAR LIGHTS
 
 	uint threadCount = gl_WorkGroupSize.x*gl_WorkGroupSize.y;
-	uint passCount = (pointLights.count + threadCount - 1) / threadCount;
+	uint passCount = (lightCounts.point + threadCount - 1) / threadCount;
+
+	vec3 lightIn = vec3(0,0,0);
 
 	for(uint i = 0; i < passCount; ++i)
 	{	
 		uint lightIndex =  (i * threadCount) + gl_LocalInvocationIndex;
 
-		if(lightIndex > pointLights.count)
+		if(lightIndex > lightCounts.point)
 			continue;
 
 		vec4 lightPos = pointLights.data[lightIndex].posRad;
@@ -286,20 +288,23 @@ void main()
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
 
+
 		if(inFrustum)
 		{
+			lightIn = lightIn + pointLights.data[lightIndex].colQuad.xyz;
 			uint nextTileLightIndex = atomicAdd(currentTilePointLightIndex,1);
 			tilePointLightIndices[nextTileLightIndex] = lightIndex;
+			
 		}
 	}
 
-	passCount = (spotLights.count + threadCount - 1) / threadCount;
+	passCount = (lightCounts.spot + threadCount - 1) / threadCount;
 	
 	for(uint i = 0; i < passCount; ++i)
 	{
 		uint lightIndex =  (i * threadCount) + gl_LocalInvocationIndex;
 
-		if (lightIndex > spotLights.count)
+		if (lightIndex > lightCounts.spot)
 			continue;
 
 		vec4 lightPos = spotLights.data[lightIndex].posRad;
@@ -308,7 +313,7 @@ void main()
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
 
-		//if (inFrustum)
+		if (inFrustum)
 		{
 			uint nextTileLightIndex = atomicAdd(currentTileSpotLightIndex,1);
 			tileSpotLightIndices[nextTileLightIndex] = lightIndex;
@@ -321,5 +326,5 @@ void main()
 	vec3 normal = decodeNormal(imageLoad(gNormal, pixel).xy);
 	vec4 pbr = imageLoad(gPBR, pixel);
 
-	imageStore(outColour, pixel, vec4(vec3(minZView),1.f));
+	imageStore(outColour, pixel, vec4(albedoSpec));
 }

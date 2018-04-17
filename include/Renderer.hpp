@@ -13,6 +13,7 @@ struct CameraUBOData {
 	glm::fmat4 view;
 	glm::fmat4 proj;
 	glm::fvec3 pos;
+	float unused;
 	glm::fvec4 viewRays;
 };
 
@@ -94,6 +95,7 @@ public:
 	Texture gBufferNormalAttachment;
 	Texture gBufferPBRAttachment;
 	Texture gBufferDepthAttachment;
+	Texture gBufferWSDAttachment;
 
 	// Render pass
 	VkRenderPass gBufferRenderPass;

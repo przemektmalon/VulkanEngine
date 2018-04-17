@@ -26,6 +26,12 @@ void Camera::initialiseProj(float pAspect, float pFOV, float pNear, float pFar)
 void Camera::recalculateProj()
 {
 	proj = glm::perspective(fov, aspect, nearClip, farClip);
+	glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f,
+		+0.0f, -1.0f, 0.0f, 0.0f,
+		+0.0f, 0.0f, 0.5f, 0.0f,
+		+0.0f, 0.0f, 0.5f, 1.0f);
+	//clip = glm::transpose(clip);
+	proj = clip * proj;
 	inverseProj = glm::inverse(proj);
 }
 

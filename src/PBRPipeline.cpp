@@ -59,17 +59,31 @@ void Renderer::createPBRDescriptorSetLayouts()
 	spotLightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	spotLightsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+	VkDescriptorSetLayoutBinding lightCountsLayoutBinding = {};
+	lightCountsLayoutBinding.binding = 12;
+	lightCountsLayoutBinding.descriptorCount = 1;
+	lightCountsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	lightCountsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
 	VkDescriptorSetLayoutBinding cameraLayoutBinding = {};
 	cameraLayoutBinding.binding = 9;
 	cameraLayoutBinding.descriptorCount = 1;
 	cameraLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	cameraLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding };
+
+	VkDescriptorSetLayoutBinding wsdLayoutBinding = {};
+	wsdLayoutBinding.binding = 5;
+	wsdLayoutBinding.descriptorCount = 1;
+	wsdLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	wsdLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, wsdLayoutBinding, lightCountsLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 8;
+	layoutInfo.bindingCount = 10;
 	layoutInfo.pBindings = bindings;
 
 	if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout) != VK_SUCCESS) {
@@ -148,6 +162,11 @@ void Renderer::updatePBRDescriptorSets()
 	depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	depthImageInfo.imageView = gBufferDepthAttachment.getImageViewHandle();
 
+	VkDescriptorImageInfo wsdImageInfo;
+	wsdImageInfo.sampler = textureSampler;
+	wsdImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	wsdImageInfo.imageView = gBufferWSDAttachment.getImageViewHandle();
+
 	VkDescriptorBufferInfo pointLightsInfo;
 	pointLightsInfo.buffer = lightManager.pointLightsBuffer.getBuffer();
 	pointLightsInfo.offset = 0;
@@ -158,12 +177,17 @@ void Renderer::updatePBRDescriptorSets()
 	spotLightsInfo.offset = 0;
 	spotLightsInfo.range = 150 * sizeof(SpotLight::GPUData);
 
+	VkDescriptorBufferInfo lightCountsInfo;
+	lightCountsInfo.buffer = lightManager.lightCountsBuffer.getBuffer();
+	lightCountsInfo.offset = 0;
+	lightCountsInfo.range = 2 * sizeof(u32);
+
 	VkDescriptorBufferInfo cameraInfo;
 	cameraInfo.buffer = cameraUBO.getBuffer();
 	cameraInfo.offset = 0;
 	cameraInfo.range = sizeof(CameraUBOData);
 
-	std::array<VkWriteDescriptorSet, 8> descriptorWrites = {};
+	std::array<VkWriteDescriptorSet, 10> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -238,6 +262,22 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[7].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	descriptorWrites[7].descriptorCount = 1;
 	descriptorWrites[7].pBufferInfo = &cameraInfo;
+
+	descriptorWrites[8].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[8].dstSet = pbrDescriptorSet;
+	descriptorWrites[8].dstBinding = 5;
+	descriptorWrites[8].dstArrayElement = 0;
+	descriptorWrites[8].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	descriptorWrites[8].descriptorCount = 1;
+	descriptorWrites[8].pImageInfo = &wsdImageInfo;
+
+	descriptorWrites[9].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[9].dstSet = pbrDescriptorSet;
+	descriptorWrites[9].dstBinding = 12;
+	descriptorWrites[9].dstArrayElement = 0;
+	descriptorWrites[9].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrites[9].descriptorCount = 1;
+	descriptorWrites[9].pBufferInfo = &lightCountsInfo;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

@@ -424,11 +424,12 @@ public: ///TODO: Max light count is 150, add setters etc
 	void init()
 	{
 		/// TODO: Memory flags, change to device local for performance, then we can't map and have to use staging buffer
-		spotLightsBuffer.create(sizeof(SpotLight::GPUData) * 500, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		pointLightsBuffer.create(sizeof(PointLight::GPUData) * 500, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		lightCountsBuffer.create(sizeof(u32) * 2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		spotLightsBuffer.create(sizeof(SpotLight::GPUData) * 150, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		pointLightsBuffer.create(sizeof(PointLight::GPUData) * 150, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		spotLightsGPUData.reserve(500);
-		pointLightsGPUData.reserve(500);
+		spotLightsGPUData.reserve(150);
+		pointLightsGPUData.reserve(150);
 
 		sunLightBuffer.create(sizeof(SunLight::GPUData) * 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	}
@@ -453,14 +454,27 @@ public: ///TODO: Max light count is 150, add setters etc
 		return pointLights.data() + pIndex;
 	}
 
+	void updateLightCounts()
+	{
+		u32* lc = (u32*)lightCountsBuffer.map();
+		lc[0] = pointLights.size();
+		lc[1] = spotLights.size();
+		lightCountsBuffer.unmap();
+	}
+
 	void updateAllPointLights()
 	{
 		for (auto& l : pointLights)
 			l.update();
-		u32* data = (u32*)pointLightsBuffer.map();
-		data[0] = pointLights.size();
-		data = data + 1;
-		memcpy(data, pointLightsGPUData.data(), pointLightsGPUData.size() * sizeof(PointLight::GPUData));
+		PointLight::GPUData* d = (PointLight::GPUData*)pointLightsBuffer.map();
+		for (int i = 0; i < pointLights.size(); ++i)
+		{
+			d[i].colourQuadratic = pointLightsGPUData[i].colourQuadratic;
+			d[i].positionRadius = pointLightsGPUData[i].positionRadius;
+			d[i].linearFadesTexture = pointLightsGPUData[i].linearFadesTexture;
+			for (int j = 0; j < 5; ++j)
+				d[i].projView[j] = pointLightsGPUData[i].projView[j];
+		}
 		pointLightsBuffer.unmap();
 	}
 
@@ -482,9 +496,16 @@ public: ///TODO: Max light count is 150, add setters etc
 		for (auto& l : spotLights)
 			l.update();
 		u32* data = (u32*)spotLightsBuffer.map();
-		data[0] = spotLights.size();
-		data = data + 1;
-		memcpy(data, spotLightsGPUData.data(), spotLightsGPUData.size() * sizeof(PointLight::GPUData));
+		SpotLight::GPUData* d = (SpotLight::GPUData*)spotLightsBuffer.map();
+		for (int i = 0; i < spotLights.size(); ++i)
+		{
+			d[i].colourQuadratic = spotLightsGPUData[i].colourQuadratic;
+			d[i].positionRadius = spotLightsGPUData[i].positionRadius;
+			d[i].linearFadesTexture = spotLightsGPUData[i].linearFadesTexture;
+			d[i].directionInner = spotLightsGPUData[i].directionInner;
+			d[i].outer = spotLightsGPUData[i].outer;
+			d[i].projView = spotLightsGPUData[i].projView;
+		}
 		spotLightsBuffer.unmap();
 	}
 
@@ -492,6 +513,8 @@ public: ///TODO: Max light count is 150, add setters etc
 	{
 
 	}
+
+	Buffer lightCountsBuffer;
 
 	std::vector<PointLight> pointLights;
 	std::vector<PointLight::GPUData> pointLightsGPUData;

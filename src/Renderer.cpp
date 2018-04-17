@@ -18,6 +18,17 @@ void Renderer::initialise()
 	createTextureSampler();
 	createSemaphores();
 
+	lightManager.init();
+	PointLight::GPUData light;
+	light.setPosition(glm::fvec3(0, 0, 0));
+	light.setColour(glm::fvec3(11, 0, 0));
+	light.setRadius(5);
+
+	PointLight::GPUData light2;
+	light2.setPosition(glm::fvec3(-10, 0, 0));
+	light2.setColour(glm::fvec3(0, 0, 11));
+	light2.setRadius(5);
+
 	// Swap chain
 	createScreenSwapChain();
 
@@ -57,12 +68,9 @@ void Renderer::initialise()
 	createPBRCommands();
 	createScreenCommands();
 
-	lightManager.init();
-
-	PointLight::GPUData light;
-	light.setColour(glm::fvec3(1, 0, 1));
-
 	lightManager.addPointLight(light);
+	lightManager.addPointLight(light2);
+	lightManager.updateLightCounts();
 	lightManager.updateAllPointLights();
 }
 
@@ -403,11 +411,11 @@ void Renderer::createDescriptorPool()
 	poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[4].descriptorCount = 1;
 	poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	poolSizes[5].descriptorCount = 4;
+	poolSizes[5].descriptorCount = 5;
 	poolSizes[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[6].descriptorCount = 1;
 	poolSizes[7].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[7].descriptorCount = 3;
+	poolSizes[7].descriptorCount = 4;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -570,7 +578,7 @@ void Renderer::updateUniformBuffer()
 {
 	cameraUBOData.view = Engine::camera.getView();
 	cameraUBOData.proj = Engine::camera.getProj();
-	cameraUBOData.proj[1][1] *= -1;
+	//cameraUBOData.proj[1][1] *= -1;
 
 	cameraUBOData.pos = Engine::camera.getPosition();
 

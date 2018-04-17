@@ -20,6 +20,11 @@ void Renderer::createGBufferAttachments()
 
 	gBufferNormalAttachment.loadStream(&tci);
 
+	tci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	tci.bpp = 32 * 4;
+
+	gBufferWSDAttachment.loadStream(&tci);
+
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	tci.format = findDepthFormat();
 	tci.bpp = 32;
@@ -56,7 +61,7 @@ void Renderer::createGBufferRenderPass()
 	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
 	VkAttachmentReference depthAttachmentRef = {};
-	depthAttachmentRef.attachment = 3;
+	depthAttachmentRef.attachment = 4;
 	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription normalAttachment = {};
@@ -87,10 +92,24 @@ void Renderer::createGBufferRenderPass()
 	pbrAttachmentRef.attachment = 2;
 	pbrAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentReference refs[] = { colorAttachmentRef, normalAttachmentRef, pbrAttachmentRef };
+	VkAttachmentDescription wsdAttachment = {};
+	wsdAttachment.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	wsdAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	wsdAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	wsdAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	wsdAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	wsdAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	wsdAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	wsdAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+	VkAttachmentReference wsdAttachmentRef = {};
+	wsdAttachmentRef.attachment = 3;
+	wsdAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference refs[] = { colorAttachmentRef, normalAttachmentRef, pbrAttachmentRef, wsdAttachmentRef };
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 3;
+	subpass.colorAttachmentCount = 4;
 	subpass.pColorAttachments = refs;
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
@@ -104,7 +123,7 @@ void Renderer::createGBufferRenderPass()
 
 	VkRenderPassCreateInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	std::array<VkAttachmentDescription, 4> attachments = { colorAttachment, normalAttachment, pbrAttachment, depthAttachment };
+	std::array<VkAttachmentDescription, 5> attachments = { colorAttachment, normalAttachment, pbrAttachment, wsdAttachment, depthAttachment };
 	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 	renderPassInfo.pAttachments = attachments.data();
 	renderPassInfo.subpassCount = 1;
@@ -225,13 +244,17 @@ void Renderer::createGBufferPipeline()
 	pbrBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	pbrBlendAttachment.blendEnable = VK_FALSE;
 
-	VkPipelineColorBlendAttachmentState blendAtts[] = { colorBlendAttachment, normalBlendAttachment, pbrBlendAttachment };
+	VkPipelineColorBlendAttachmentState wsdBlendAttachment = {};
+	wsdBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	wsdBlendAttachment.blendEnable = VK_FALSE;
+
+	VkPipelineColorBlendAttachmentState blendAtts[] = { colorBlendAttachment, normalBlendAttachment, pbrBlendAttachment, wsdBlendAttachment };
 
 	VkPipelineColorBlendStateCreateInfo colorBlending = {};
 	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	colorBlending.logicOpEnable = VK_FALSE;
 	colorBlending.logicOp = VK_LOGIC_OP_COPY;
-	colorBlending.attachmentCount = 3;
+	colorBlending.attachmentCount = 4;
 	colorBlending.pAttachments = blendAtts;
 	colorBlending.blendConstants[0] = 0.0f;
 	colorBlending.blendConstants[1] = 0.0f;
@@ -246,7 +269,7 @@ void Renderer::createGBufferPipeline()
 	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 	depthStencil.depthBoundsTestEnable = VK_FALSE;
 	depthStencil.minDepthBounds = 0.0f;
-	depthStencil.maxDepthBounds = 1000.0f; /// TODO: make variable
+	depthStencil.maxDepthBounds = Engine::maxDepth; /// TODO: make variable
 
 
 	// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources indirectly)
@@ -286,10 +309,11 @@ void Renderer::createGBufferPipeline()
 
 void Renderer::createGBufferFramebuffers()
 {
-	std::array<VkImageView, 4> attachments = {
+	std::array<VkImageView, 5> attachments = {
 		gBufferColourAttachment.getImageViewHandle(),
 		gBufferNormalAttachment.getImageViewHandle(),
 		gBufferPBRAttachment.getImageViewHandle(),
+		gBufferWSDAttachment.getImageViewHandle(),
 		gBufferDepthAttachment.getImageViewHandle()
 	};
 
@@ -430,11 +454,12 @@ void Renderer::updateGBufferCommands()
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = renderResolution;
 
-	std::array<VkClearValue, 4> clearValues = {};
+	std::array<VkClearValue, 5> clearValues = {};
 	clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
 	clearValues[1].color = { 0.0f, 0.0f, 0.0f, 0.0f };
 	clearValues[2].color = { 0.0f, 0.0f, 0.0f, 0.0f };
-	clearValues[3].depthStencil = { 1.0f, 0 };
+	clearValues[3].color = { 0.0f, 0.0f, 0.0f, 0.0f };
+	clearValues[4].depthStencil = { 1.0f, 0 };
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
