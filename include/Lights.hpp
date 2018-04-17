@@ -242,6 +242,7 @@ public:
 
 	void update()
 	{
+		updateRadius();
 		if (matNeedsUpdate)
 			gpuData->updateProjView(proj);
 	}
@@ -402,6 +403,7 @@ public:
 
 	void update()
 	{
+		updateRadius();
 		if (matNeedsUpdate)
 			gpuData->updateProjView();
 	}

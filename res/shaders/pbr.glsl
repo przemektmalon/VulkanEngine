@@ -321,9 +321,72 @@ void main()
 
 	barrier();
 
-	vec4 albedoSpec = imageLoad(gAlbedoSpec, pixel);
-	vec3 normal = decodeNormal(imageLoad(gNormal, pixel).xy);
-	vec4 pbr = imageLoad(gPBR, pixel);
+	vec3 litPixel = vec3(0.0);
 
-	imageStore(outColour, pixel, vec4(albedoSpec));
+	float ambient = 0.07;
+
+	vec4 albedoSpec = vec4(0.0);
+	float ssaoVal = 1.0;
+
+	vec3 normal = decodeNormal(imageLoad(gNormal, pixel).xy);
+
+	if(depth == 1.f)
+	{
+		//litPixel += texture(skybox, -viewRay).rgb * 0.05;
+	}
+	else if (length(normal) > 0.8)
+	{
+		vec4 pbr = imageLoad(gPBR, pixel);
+		
+		float roughness = pbr.r;
+
+		albedoSpec = imageLoad(gAlbedoSpec, pixel.xy);
+
+		albedoSpec.xyz = albedoSpec.xyz * ssaoVal;
+		
+		litPixel += albedoSpec.xyz * ambient;
+
+		float metallic = albedoSpec.a;
+		vec3 V = normalize(viewPos - worldPos);
+
+		vec3 F0 = vec3(0.04);
+		F0 = mix(F0, albedoSpec.rgb, metallic);
+
+		for(uint j = 0; j < currentTilePointLightIndex; ++j)
+		{
+			uint i = tilePointLightIndices[j];
+			vec4 lightPos = pointLights.data[i].posRad;
+			vec4 lightCol = pointLights.data[i].colQuad;
+			vec4 linearFadeTexHandle = pointLights.data[i].linearFadeTexHandle;
+			float linearAtt = linearFadeTexHandle.x;
+			float quadAtt = lightCol.w;
+			vec3 lightDir = normalize(lightPos.xyz - worldPos);
+
+			vec3 H = normalize(V + lightDir);
+			float dist = length(lightPos.xyz - worldPos);
+			float attenuation = 1.f / (1.f + linearAtt * dist + quadAtt * dist * dist);
+			vec3 radiance = lightCol.rgb * attenuation;
+
+			float NDF = distributionGGX(normal, H, roughness);
+			float G = geometrySmith(normal, V, lightDir, roughness);
+			vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+			vec3 kS = F;
+			vec3 kD = vec3(1.f) - kS;
+			kD *= 1.0 - metallic;
+
+			vec3 nominator = NDF * G * F;
+			float denominator = 4.0 * max(dot(normal, V), 0.0) * max(dot(normal, lightDir), 0.0) + 0.001;
+			vec3 specular = nominator / denominator;
+
+			float NdotL  = max(dot(normal, lightDir), 0.0);
+
+			litPixel += ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
+		}
+	}
+
+	//vec4 albedoSpec = imageLoad(gAlbedoSpec, pixel);
+
+
+	imageStore(outColour, pixel, vec4(litPixel,1.f));
 }

@@ -20,14 +20,16 @@ void Renderer::initialise()
 
 	lightManager.init();
 	PointLight::GPUData light;
-	light.setPosition(glm::fvec3(0, 0, 0));
-	light.setColour(glm::fvec3(11, 0, 0));
-	light.setRadius(5);
+	light.setPosition(glm::fvec3(0, 5, 0));
+	light.setColour(glm::fvec3(1, 0.5, 1));
+	light.setLinear(0.00001f);
+	light.setQuadratic(0.005f);
 
 	PointLight::GPUData light2;
-	light2.setPosition(glm::fvec3(-10, 0, 0));
-	light2.setColour(glm::fvec3(0, 0, 11));
-	light2.setRadius(5);
+	light2.setPosition(glm::fvec3(-5, 5, 0));
+	light2.setColour(glm::fvec3(1, 1, 0.5));
+	light2.setLinear(0.00001f);
+	light2.setQuadratic(0.005f);
 
 	// Swap chain
 	createScreenSwapChain();
