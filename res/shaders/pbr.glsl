@@ -312,7 +312,7 @@ void main()
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
 
-		if (inFrustum)
+		//if (inFrustum)
 		{
 			uint nextTileLightIndex = atomicAdd(currentTileSpotLightIndex,1);
 			tileSpotLightIndices[nextTileLightIndex] = lightIndex;
@@ -366,6 +366,49 @@ void main()
 			float dist = length(lightPos.xyz - worldPos);
 			float attenuation = 1.f / (1.f + linearAtt * dist + quadAtt * dist * dist);
 			vec3 radiance = lightCol.rgb * attenuation;
+
+			float NDF = distributionGGX(normal, H, roughness);
+			float G = geometrySmith(normal, V, lightDir, roughness);
+			vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+			vec3 kS = F;
+			vec3 kD = vec3(1.f) - kS;
+			kD *= 1.0 - metallic;
+
+			vec3 nominator = NDF * G * F;
+			float denominator = 4.0 * max(dot(normal, V), 0.0) * max(dot(normal, lightDir), 0.0) + 0.001;
+			vec3 specular = nominator / denominator;
+
+			float NdotL  = max(dot(normal, lightDir), 0.0);
+
+			//litPixel += ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
+		}
+
+		for(uint j = 0; j < currentTileSpotLightIndex; ++j)
+		{
+			uint i = tileSpotLightIndices[j];
+			vec4 posRad = spotLights.data[i].posRad;
+			vec4 colQuad = spotLights.data[i].colQuad;
+			vec4 linearFadeTexHandle = spotLights.data[i].linearFadeTexHandle;
+			vec4 dirInner = spotLights.data[i].dirInner;
+			vec4 outer = spotLights.data[i].outer;
+
+			uint fadeData = floatBitsToUint(linearFadeTexHandle.y);
+
+			vec3 lightDir = normalize(posRad.xyz - worldPos);
+			float theta = dot(lightDir, normalize(-dirInner.xyz));
+			float epsilon =  dirInner.w - outer.x;
+			float intensity = clamp((theta - outer.x) / epsilon, 0.0, 1.0);
+
+			vec3 lightPos = posRad.xyz;
+
+			float linearAtt = linearFadeTexHandle.x;
+			float quadAtt = colQuad.w;
+
+			vec3 H = normalize(V + lightDir);
+			float dist = length(lightPos.xyz - worldPos);
+			float attenuation = 1.f / (1.f + linearAtt * dist + quadAtt * dist * dist);
+			vec3 radiance = colQuad.rgb * intensity * attenuation;
 
 			float NDF = distributionGGX(normal, H, roughness);
 			float G = geometrySmith(normal, V, lightDir, roughness);

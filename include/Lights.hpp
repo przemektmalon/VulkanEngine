@@ -309,7 +309,7 @@ public:
 		float getInner() { return directionInner.separate.inner; }
 		bool setInner(float set) {
 			directionInner.separate.inner = set;
-			if (getInner() > getOuter()) {
+			if (getInner() < getOuter()) {
 				outer.separate.outer = set; return true;
 			}
 			return false;
@@ -317,7 +317,7 @@ public:
 		float getOuter() { return outer.separate.outer; }
 		bool setOuter(float set) {
 			outer.separate.outer = set;
-			if (getOuter() < getInner()) {
+			if (getOuter() > getInner()) {
 				directionInner.separate.inner = set; return true;
 			}
 			return false;
@@ -362,13 +362,13 @@ public:
 
 	void setInnerSpread(float set)
 	{
-		if (gpuData->setInner(glm::cos(set)))
+		if (gpuData->setInner(glm::cos(glm::radians(set))))
 			matNeedsUpdate = true;
 	}
 
 	void setOuterSpread(float set)
 	{
-		gpuData->setOuter(glm::cos(set));
+		gpuData->setOuter(glm::cos(glm::radians(set)));
 		matNeedsUpdate = true;
 	}
 
@@ -498,7 +498,6 @@ public: ///TODO: Max light count is 150, add setters etc
 	{
 		for (auto& l : spotLights)
 			l.update();
-		u32* data = (u32*)spotLightsBuffer.map();
 		SpotLight::GPUData* d = (SpotLight::GPUData*)spotLightsBuffer.map();
 		for (int i = 0; i < spotLights.size(); ++i)
 		{

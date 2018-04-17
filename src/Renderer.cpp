@@ -19,17 +19,6 @@ void Renderer::initialise()
 	createSemaphores();
 
 	lightManager.init();
-	PointLight::GPUData light;
-	light.setPosition(glm::fvec3(0, 5, 0));
-	light.setColour(glm::fvec3(1, 0.8, 1));
-	light.setLinear(0.00001f);
-	light.setQuadratic(0.005f);
-
-	PointLight::GPUData light2;
-	light2.setPosition(glm::fvec3(-5, 5, 0));
-	light2.setColour(glm::fvec3(1, 1, 0.8));
-	light2.setLinear(0.00001f);
-	light2.setQuadratic(0.005f);
 
 	// Swap chain
 	createScreenSwapChain();
@@ -70,10 +59,32 @@ void Renderer::initialise()
 	createPBRCommands();
 	createScreenCommands();
 
+	PointLight::GPUData light;
+	light.setPosition(glm::fvec3(0, 5, 0));
+	light.setColour(glm::fvec3(1, 0.8, 1));
+	light.setLinear(0.00001f);
+	light.setQuadratic(0.005f);
+
+	PointLight::GPUData light2;
+	light2.setPosition(glm::fvec3(-5, 5, 0));
+	light2.setColour(glm::fvec3(1, 1, 0.8));
+	light2.setLinear(0.00001f);
+	light2.setQuadratic(0.005f);
+
+	auto& sl = lightManager.addSpotLight();
+	sl.setPosition(glm::fvec3(10, 10, 10));
+	sl.setColour(glm::fvec3(1, 1, 1));
+	sl.setInnerSpread(30);
+	sl.setOuterSpread(45);
+	sl.setDirection(glm::normalize(glm::fvec3(-1, -1, -1)));
+	sl.setLinear(0.00001);
+	sl.setQuadratic(0.005);
+
 	lightManager.addPointLight(light);
 	lightManager.addPointLight(light2);
 	lightManager.updateLightCounts();
 	lightManager.updateAllPointLights();
+	lightManager.updateAllSpotLights();
 }
 
 void Renderer::reInitialise()
@@ -323,7 +334,6 @@ void Renderer::populateDrawCmdBuffer()
 			int lodIndex = 0;
 			/// TODO: select appropriate LOD level
 			auto& lodMesh = triMesh[0];
-
 
 			cmd[i].firstIndex = lodMesh.firstIndex;
 			cmd[i].indexCount = lodMesh.indexDataLength;

@@ -70,7 +70,7 @@ void Engine::start()
 
 		world.addModelInstance("ground");
 		world.modelMap["ground"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, -1, 0));
-		world.modelMap["ground"]->setMaterial(0, 0, assets.getMaterial("dirt"));
+		world.modelMap["ground"]->setMaterial(0, 0, assets.getMaterial("bamboo"));
 	}
 
 	PROFILE_END("world");
