@@ -59,29 +59,43 @@ void Renderer::initialise()
 	createPBRCommands();
 	createScreenCommands();
 
-	PointLight::GPUData light;
-	light.setPosition(glm::fvec3(0, 5, 0));
-	light.setColour(glm::fvec3(1, 0.8, 1));
-	light.setLinear(0.00001f);
-	light.setQuadratic(0.005f);
+	for (int i = 0; i < 150; ++i)
+	{
+		auto& pl = lightManager.addPointLight();
+		auto& r = Engine::rand;
+		int s = 200;
+		int sh = s / 2;
+		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 10) + 5, s64(r() % s) - sh));
+		glm::fvec3 col;
+		switch (i % 7)
+		{
+		case 1: {
+			col = glm::fvec3(1, 0.2, 0.2);
+			break; }
+		case 2: {
+			col = glm::fvec3(0.2, 1, 0.2);
+			break; }
+		case 3: {
+			col = glm::fvec3(0.2, 0.2, 1);
+			break; }
+		case 4: {
+			col = glm::fvec3(1, 1, 0.2);
+			break; }
+		case 5: {
+			col = glm::fvec3(0.2, 1, 1);
+			break; }
+		case 6: {
+			col = glm::fvec3(1, 0.2, 1);
+			break; }
+		case 7: {
+			col = glm::fvec3(1, 1, 1);
+			break; }
+		}
+		pl.setColour(col);
+		pl.setLinear(0.00001);
+		pl.setQuadratic(0.005);
+	}
 
-	PointLight::GPUData light2;
-	light2.setPosition(glm::fvec3(-5, 5, 0));
-	light2.setColour(glm::fvec3(1, 1, 0.8));
-	light2.setLinear(0.00001f);
-	light2.setQuadratic(0.005f);
-
-	auto& sl = lightManager.addSpotLight();
-	sl.setPosition(glm::fvec3(10, 10, 10));
-	sl.setColour(glm::fvec3(1, 1, 1));
-	sl.setInnerSpread(30);
-	sl.setOuterSpread(45);
-	sl.setDirection(glm::normalize(glm::fvec3(-1, -1, -1)));
-	sl.setLinear(0.00001);
-	sl.setQuadratic(0.005);
-
-	lightManager.addPointLight(light);
-	lightManager.addPointLight(light2);
 	lightManager.updateLightCounts();
 	lightManager.updateAllPointLights();
 	lightManager.updateAllSpotLights();

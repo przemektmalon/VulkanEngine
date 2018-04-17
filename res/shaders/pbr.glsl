@@ -11,7 +11,7 @@ layout(binding=2, rg32f) uniform readonly image2D gNormal;
 layout(binding=3, rgba8) uniform readonly image2D gPBR;
 layout(binding=4) uniform sampler2D gDepth;
 
-#define MAX_LIGHTS_PER_TILE 128
+#define MAX_LIGHTS_PER_TILE 256
 
 shared uint maxZ;
 shared uint minZ;
@@ -381,7 +381,7 @@ void main()
 
 			float NdotL  = max(dot(normal, lightDir), 0.0);
 
-			//litPixel += ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
+			litPixel += ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
 
 		for(uint j = 0; j < currentTileSpotLightIndex; ++j)

@@ -27,6 +27,7 @@ void Engine::start()
 	createWindow();
 	queryVulkanPhysicalDeviceDetails();
 
+	rand.seed(0);
 	maxDepth = 5000.f;
 	
 	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 2.f, 0.1, maxDepth);
@@ -70,7 +71,7 @@ void Engine::start()
 
 		world.addModelInstance("ground");
 		world.modelMap["ground"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, -1, 0));
-		world.modelMap["ground"]->setMaterial(0, 0, assets.getMaterial("bamboo"));
+		world.modelMap["ground"]->setMaterial(0, 0, assets.getMaterial("marble"));
 	}
 
 	PROFILE_END("world");
@@ -174,7 +175,7 @@ void Engine::start()
 		fpsDisplay += frameTime.getSeconds();
 		if (fpsDisplay > 1.f)
 		{
-			//printf("%f\n", double(frames) / fpsDisplay);
+			printf("%f\n", double(frames) / fpsDisplay);
 			fpsDisplay = 0.f;
 			frames = 0;
 		}
@@ -370,3 +371,4 @@ Camera Engine::camera;
 World Engine::world;
 AssetStore Engine::assets;
 float Engine::maxDepth;
+std::mt19937_64 Engine::rand;
