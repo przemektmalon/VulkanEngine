@@ -95,7 +95,6 @@ public:
 	Texture gBufferNormalAttachment;
 	Texture gBufferPBRAttachment;
 	Texture gBufferDepthAttachment;
-	Texture gBufferWSDAttachment;
 
 	// Render pass
 	VkRenderPass gBufferRenderPass;

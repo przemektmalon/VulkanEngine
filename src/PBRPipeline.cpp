@@ -162,11 +162,6 @@ void Renderer::updatePBRDescriptorSets()
 	depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	depthImageInfo.imageView = gBufferDepthAttachment.getImageViewHandle();
 
-	VkDescriptorImageInfo wsdImageInfo;
-	wsdImageInfo.sampler = textureSampler;
-	wsdImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	wsdImageInfo.imageView = gBufferWSDAttachment.getImageViewHandle();
-
 	VkDescriptorBufferInfo pointLightsInfo;
 	pointLightsInfo.buffer = lightManager.pointLightsBuffer.getBuffer();
 	pointLightsInfo.offset = 0;
@@ -187,7 +182,7 @@ void Renderer::updatePBRDescriptorSets()
 	cameraInfo.offset = 0;
 	cameraInfo.range = sizeof(CameraUBOData);
 
-	std::array<VkWriteDescriptorSet, 10> descriptorWrites = {};
+	std::array<VkWriteDescriptorSet, 9> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -265,19 +260,11 @@ void Renderer::updatePBRDescriptorSets()
 
 	descriptorWrites[8].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[8].dstSet = pbrDescriptorSet;
-	descriptorWrites[8].dstBinding = 5;
+	descriptorWrites[8].dstBinding = 12;
 	descriptorWrites[8].dstArrayElement = 0;
-	descriptorWrites[8].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	descriptorWrites[8].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	descriptorWrites[8].descriptorCount = 1;
-	descriptorWrites[8].pImageInfo = &wsdImageInfo;
-
-	descriptorWrites[9].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[9].dstSet = pbrDescriptorSet;
-	descriptorWrites[9].dstBinding = 12;
-	descriptorWrites[9].dstArrayElement = 0;
-	descriptorWrites[9].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorWrites[9].descriptorCount = 1;
-	descriptorWrites[9].pBufferInfo = &lightCountsInfo;
+	descriptorWrites[8].pBufferInfo = &lightCountsInfo;
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

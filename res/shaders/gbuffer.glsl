@@ -56,7 +56,6 @@ layout(location = 3) in vec3 viewVec;
 layout(location = 0) out vec4 colour;
 layout(location = 1) out vec2 normal;
 layout(location = 2) out vec4 pbr;
-layout(location = 3) out vec4 wsd;
 
 
 vec2 encodeNormal(vec3 n)
@@ -103,11 +102,6 @@ void main()
     pbr.x = texture(texSampler[textureIndex+3], fragTexCoord).r; // Roughness
     pbr.y = texture(texSampler[textureIndex+4], fragTexCoord).r; // AO
     pbr.z = texture(texSampler[textureIndex+5], fragTexCoord).r; // height
-
-    //gl_FragDepth = gl_FragCoord.z;
-
-    wsd.z = gl_FragCoord.z;
-    wsd.xy = gl_FragCoord.xy;
 }
 
 #endif

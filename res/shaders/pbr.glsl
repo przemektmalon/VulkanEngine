@@ -9,7 +9,6 @@ layout(binding=0, rgba32f) uniform writeonly image2D outColour;
 layout(binding=1, rgba8) uniform readonly image2D gAlbedoSpec;
 layout(binding=2, rg32f) uniform readonly image2D gNormal;
 layout(binding=3, rgba8) uniform readonly image2D gPBR;
-layout(binding=5, rgba32f) uniform readonly image2D gWSD;
 layout(binding=4) uniform sampler2D gDepth;
 
 #define MAX_LIGHTS_PER_TILE 128
