@@ -52,11 +52,23 @@ public:
 	VkCommandPool commandPool;
 	VkQueryPool queryPool;
 
+	// Semaphores
+	VkSemaphore imageAvailableSemaphore;
+	VkSemaphore renderFinishedSemaphore;
+	VkSemaphore screenFinishedSemaphore;
+	VkSemaphore pbrFinishedSemaphore;
+
+	// Samplers
+	VkSampler textureSampler;
+	VkSampler skySampler;
+
 	void createLogicalDevice();
 	void createDescriptorPool();
 	void createCommandPool();
 	void createQueryPool();
 	void createTextureSampler();
+	void createSemaphores();
+	void createUBOs();
 
 	// Shaders
 	GBufferShader gBufferShader;
@@ -195,13 +207,8 @@ public:
 	// If we want to compact data (not sure if this will be worth the effort) we'd have to keep track of which memory regions are used by which models
 
 	Buffer stagingBuffer;
-	
 	Buffer screenQuadBuffer;
 	
-	Texture skybox;
-
-	std::vector<Vertex2D> quad;
-
 	Buffer vertexIndexBuffer;
 	u64 vertexInputByteOffset;
 	u64 indexInputByteOffset;
@@ -210,38 +217,22 @@ public:
 	void createDataBuffers();
 
 	// End GPU mem management
+	
+	// Skybox
+	Texture skybox;
 
 	// Draw buffers
 	Buffer drawCmdBuffer;
 	void populateDrawCmdBuffer();
 
 	// Uniform buffers
-
 	CameraUBOData cameraUBOData;
 	Buffer cameraUBO;
 	Buffer transformUBO;
 	LightManager lightManager;
 	
-	// Semaphores
-	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore renderFinishedSemaphore;
-	VkSemaphore screenFinishedSemaphore;
-	VkSemaphore pbrFinishedSemaphore;
-
-	// Samplers
-	VkSampler textureSampler;
-	VkSampler skySampler;
-
-	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-	VkFormat findDepthFormat();
-
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1);
-	
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
-
-	void createUBOs();
-
-	void createSemaphores();
 
 	// Creates staging buffer with requested size
 	void createStagingBuffer(VkDeviceSize size);
@@ -252,5 +243,6 @@ public:
 	
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
-	void updateUniformBuffer();
+	void updateCameraBuffer();
+	void updateTransformBuffer();
 };

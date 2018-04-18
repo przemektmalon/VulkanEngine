@@ -399,6 +399,7 @@ void Renderer::createDataBuffers()
 
 	createVertexIndexBuffers();
 
+	std::vector<Vertex2D> quad;
 	quad.push_back({ { -1,-1 },{ 0,0 } });
 	quad.push_back({ { 1,1 },{ 1,1 } });
 	quad.push_back({ { -1,1 },{ 0,1 } });
@@ -642,22 +643,25 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 }
 
 /*
-	@brief	Update transforms
+	@brief	Update camera buffer
 */
-void Renderer::updateUniformBuffer()
+void Renderer::updateCameraBuffer()
 {
 	cameraUBOData.view = Engine::camera.getView();
 	cameraUBOData.proj = Engine::camera.getProj();
-	//cameraUBOData.proj[1][1] *= -1;
-
 	cameraUBOData.pos = Engine::camera.getPosition();
-
 	cameraUBOData.viewRays = Engine::camera.getViewRays();
 
 	void* data = cameraUBO.map();
 	memcpy(data, &cameraUBOData, sizeof(cameraUBOData));
 	cameraUBO.unmap();
+}
 
+/*
+	@brief	Update transforms buffer
+*/
+void Renderer::updateTransformBuffer()
+{
 	glm::fmat4* transform = (glm::fmat4*)transformUBO.map();
 
 	int i = 0;
@@ -668,30 +672,6 @@ void Renderer::updateUniformBuffer()
 	}
 
 	transformUBO.unmap();
-}
-
-VkFormat Renderer::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
-	for (VkFormat format : candidates) {
-		VkFormatProperties props;
-		VK_VALIDATE(vkGetPhysicalDeviceFormatProperties(Engine::getPhysicalDevice(), format, &props));
-
-		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-			return format;
-		}
-		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-			return format;
-		}
-	}
-
-	throw std::runtime_error("failed to find supported format!");
-}
-
-VkFormat Renderer::findDepthFormat() {
-	return findSupportedFormat(
-		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-		VK_IMAGE_TILING_OPTIMAL,
-		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-	);
 }
 
 void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount)

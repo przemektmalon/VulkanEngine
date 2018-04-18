@@ -30,4 +30,6 @@ struct PhysicalDeviceDetails
 	VkPhysicalDeviceMemoryProperties memoryProperties;
 
 	u32 getMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties);
+	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+	VkFormat findDepthFormat();
 };

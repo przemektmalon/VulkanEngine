@@ -78,6 +78,7 @@ void Engine::start()
 
 	PROFILE_START("cmds");
 
+	renderer->updateTransformBuffer();
 	renderer->populateDrawCmdBuffer();
 
 	renderer->updateGBufferCommands();
@@ -144,9 +145,9 @@ void Engine::start()
 			}
 		}
 		
-		
 		// Rendering and engine logic
-		renderer->updateUniformBuffer();
+		renderer->updateCameraBuffer();
+		
 		renderer->render();
 
 		frameTime = clock.time() - frameTime;

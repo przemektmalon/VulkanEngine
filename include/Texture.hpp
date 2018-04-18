@@ -35,6 +35,7 @@ public:
 	u32 getWidth() { return width; }
 	u32 getHeight() { return height; }
 	int getNumLayers() { return numLayers; }
+	VkFormat getFormat() { return vkFormat; }
 
 	void loadFile(std::string pPath, bool genMipMaps = true);
 	void loadImage(Image* pImage, bool genMipMaps = true);
