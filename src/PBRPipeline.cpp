@@ -71,15 +71,14 @@ void Renderer::createPBRDescriptorSetLayouts()
 	cameraLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	cameraLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+	VkDescriptorSetLayoutBinding skyboxLayoutBinding = {};
+	skyboxLayoutBinding.binding = 5;
+	skyboxLayoutBinding.descriptorCount = 1;
+	skyboxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	skyboxLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding wsdLayoutBinding = {};
-	wsdLayoutBinding.binding = 5;
-	wsdLayoutBinding.descriptorCount = 1;
-	wsdLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	wsdLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, wsdLayoutBinding, lightCountsLayoutBinding };
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, skyboxLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, lightCountsLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -152,6 +151,11 @@ void Renderer::updatePBRDescriptorSets()
 	depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	depthImageInfo.imageView = gBufferDepthAttachment.getImageViewHandle();
 
+	VkDescriptorImageInfo skyImageInfo;
+	skyImageInfo.sampler = skySampler;
+	skyImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	skyImageInfo.imageView = skybox.getImageViewHandle();
+
 	VkDescriptorBufferInfo pointLightsInfo;
 	pointLightsInfo.buffer = lightManager.pointLightsBuffer.getBuffer();
 	pointLightsInfo.offset = 0;
@@ -172,7 +176,7 @@ void Renderer::updatePBRDescriptorSets()
 	cameraInfo.offset = 0;
 	cameraInfo.range = sizeof(CameraUBOData);
 
-	std::array<VkWriteDescriptorSet, 9> descriptorWrites = {};
+	std::array<VkWriteDescriptorSet, 10> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -255,6 +259,14 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[8].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	descriptorWrites[8].descriptorCount = 1;
 	descriptorWrites[8].pBufferInfo = &lightCountsInfo;
+
+	descriptorWrites[9].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[9].dstSet = pbrDescriptorSet;
+	descriptorWrites[9].dstBinding = 5;
+	descriptorWrites[9].dstArrayElement = 0;
+	descriptorWrites[9].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrites[9].descriptorCount = 1;
+	descriptorWrites[9].pImageInfo = &skyImageInfo;
 
 	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }

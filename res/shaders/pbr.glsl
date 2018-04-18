@@ -10,6 +10,7 @@ layout(binding=1, rgba8) uniform readonly image2D gAlbedoSpec;
 layout(binding=2, rg32f) uniform readonly image2D gNormal;
 layout(binding=3, rgba8) uniform readonly image2D gPBR;
 layout(binding=4) uniform sampler2D gDepth;
+layout(binding=5) uniform samplerCube skybox;
 
 #define MAX_LIGHTS_PER_TILE 256
 
@@ -329,7 +330,7 @@ void main()
 
 	if(depth == 1.f)
 	{
-		//litPixel += texture(skybox, -viewRay).rgb * 0.05;
+		litPixel += texture(skybox, -viewRay).rgb;
 	}
 	else if (length(normal) > 0.8)
 	{

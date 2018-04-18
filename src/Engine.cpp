@@ -58,10 +58,10 @@ void Engine::start()
 	{
 		std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahogany", "copper" };
 
-		for (int i = 0; i < 900; ++i)
+		for (int i = 0; i < 90; ++i)
 		{
 			world.addModelInstance("hollowbox", "hollowbox" + std::to_string(i));
-			world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 30) * 2), std::floor(int(i / (int)30) * 2), 0));
+			world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 10) * 2), std::floor(int(i / (int)10) * 2), 0));
 			world.modelMap["hollowbox" + std::to_string(i)]->setMaterial(0, 0, assets.getMaterial(materialList[i % 6]));
 		}
 

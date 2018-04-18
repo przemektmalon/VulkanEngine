@@ -198,6 +198,8 @@ public:
 	
 	Buffer screenQuadBuffer;
 	
+	Texture skybox;
+
 	std::vector<Vertex2D> quad;
 
 	Buffer vertexIndexBuffer;
@@ -228,6 +230,7 @@ public:
 
 	// Samplers
 	VkSampler textureSampler;
+	VkSampler skySampler;
 
 
 	
@@ -236,6 +239,7 @@ public:
 	bool hasStencilComponent(VkFormat format);
 
 	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, int mipLevels);
+	void createCubeImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, int mipLevels);
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel);
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels);

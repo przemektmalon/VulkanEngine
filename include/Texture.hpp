@@ -32,6 +32,7 @@ public:
 
 	void loadFile(std::string pPath, bool genMipMaps = true);
 	void loadImage(Image* pImage, bool genMipMaps = true);
+	void loadCube(std::string pPaths[6], bool genMipMaps = true);
 
 	void loadStream(TextureCreateInfo* ci);
 
