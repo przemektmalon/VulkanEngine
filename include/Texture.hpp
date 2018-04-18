@@ -32,6 +32,9 @@ public:
 	VkImageLayout getLayout() { return vkLayout; }
 	VkImageAspectFlags getAspect() { return vkAspect; }
 	int getMaxMipLevel() { return maxMipLevel; }
+	u32 getWidth() { return width; }
+	u32 getHeight() { return height; }
+	int getNumLayers() { return numLayers; }
 
 	void loadFile(std::string pPath, bool genMipMaps = true);
 	void loadImage(Image* pImage, bool genMipMaps = true);

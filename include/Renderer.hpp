@@ -232,14 +232,10 @@ public:
 	VkSampler textureSampler;
 	VkSampler skySampler;
 
-
-	
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat findDepthFormat();
 
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1);
-	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel);
-	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel, int baseLayer, int layerCount, VkDeviceSize bufferOffset = 0);
 	
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 
@@ -247,17 +243,13 @@ public:
 
 	void createSemaphores();
 
-	// Copies to optimal (efficient) device local buffer
-	void copyToDeviceLocalBuffer(void* srcData, VkDeviceSize size, VkBuffer dstBuffer, VkDeviceSize dstOffset = 0);
-	void copyToDeviceLocalBuffer(void* srcData, VkDeviceSize size, Buffer* dstBuffer, VkDeviceSize dstOffset = 0);
-	// Copies to staging buffer
-	void copyToStagingBuffer(void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
 	// Creates staging buffer with requested size
 	void createStagingBuffer(VkDeviceSize size);
+	// Copies to staging buffer
+	void copyToStagingBuffer(void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
 	// Destroys staging buffer
 	void destroyStagingBuffer();
-
-	void copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkDeviceSize dstOffset = 0, VkDeviceSize srcOffset = 0);
+	
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void updateUniformBuffer();

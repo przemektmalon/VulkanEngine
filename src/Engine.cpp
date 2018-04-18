@@ -67,6 +67,7 @@ void Engine::start()
 
 		world.addModelInstance("pbrsphere");
 		world.modelMap["pbrsphere"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(4, 0, 0));
+		world.modelMap["pbrsphere"]->setMaterial(0, 0, assets.getMaterial("marble"));
 
 		world.addModelInstance("ground");
 		world.modelMap["ground"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, -1, 0));

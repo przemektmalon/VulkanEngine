@@ -74,11 +74,11 @@ void Renderer::initialise()
 	createPBRCommands();
 	createScreenCommands();
 
-	for (int i = 0; i < 3; ++i)
+	for (int i = 0; i < 100; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
-		int s = 10;
+		int s = 80;
 		int sh = s / 2;
 		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 10) + 5, s64(r() % s) - sh));
 		glm::fvec3 col;
@@ -106,9 +106,9 @@ void Renderer::initialise()
 			col = glm::fvec3(1, 1, 1);
 			break; }
 		}
-		pl.setColour(col);
-		pl.setLinear(0.0001);
-		pl.setQuadratic(0.001);
+		pl.setColour(col * glm::fvec3(0.3));
+		pl.setLinear(0.1);
+		pl.setQuadratic(0.01);
 	}
 
 	lightManager.updateLightCounts();
@@ -379,12 +379,12 @@ void Renderer::pushModelDataToGPU(Model & model)
 	{
 		for (auto& lodLevel : triMesh)
 		{
-			copyToDeviceLocalBuffer(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), &vertexIndexBuffer, vertexInputByteOffset);
+			vertexIndexBuffer.setMem(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), vertexInputByteOffset);
 
 			lodLevel.firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
 			vertexInputByteOffset += lodLevel.vertexDataLength * sizeof(Vertex);
 
-			copyToDeviceLocalBuffer(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), &vertexIndexBuffer, INDEX_BUFFER_BASE + indexInputByteOffset);
+			vertexIndexBuffer.setMem(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), INDEX_BUFFER_BASE + indexInputByteOffset);
 
 			lodLevel.firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
 			indexInputByteOffset += lodLevel.indexDataLength * sizeof(u32);
@@ -408,7 +408,7 @@ void Renderer::createDataBuffers()
 
 	screenQuadBuffer.create(quad.size() * sizeof(Vertex2D), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	copyToDeviceLocalBuffer(quad.data(), quad.size() * sizeof(Vertex2D), screenQuadBuffer.getBuffer(), 0);
+	screenQuadBuffer.setMem(quad.data(), quad.size() * sizeof(Vertex2D), 0);
 
 	createUBOs();
 }
@@ -582,25 +582,6 @@ void Renderer::createSemaphores()
 }
 
 /*
-	@brief	Copies data into a device local (optimal) buffer using a staging buffer
-*/
-void Renderer::copyToDeviceLocalBuffer(void * srcData, VkDeviceSize size, VkBuffer dstBuffer, VkDeviceSize dstOffset)
-{
-	createStagingBuffer(size);
-	copyToStagingBuffer(srcData, size, 0);
-	copyVulkanBuffer(stagingBuffer.getBuffer(), dstBuffer, size, dstOffset);
-	destroyStagingBuffer();
-}
-
-void Renderer::copyToDeviceLocalBuffer(void * srcData, VkDeviceSize size, Buffer * dstBuffer, VkDeviceSize dstOffset)
-{
-	createStagingBuffer(size);
-	copyToStagingBuffer(srcData, size, 0);
-	copyVulkanBuffer(stagingBuffer.getBuffer(), dstBuffer->getBuffer(), size, dstOffset);
-	destroyStagingBuffer();
-}
-
-/*
 	@brief	Copies data to staging buffer
 */
 void Renderer::copyToStagingBuffer(void * srcData, VkDeviceSize size, VkDeviceSize dstOffset)
@@ -658,22 +639,6 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 	VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue));
 
 	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer));
-}
-
-/*
-	@brief	Copy a vulkan buffer
-*/
-void Renderer::copyVulkanBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkDeviceSize dstOffset, VkDeviceSize srcOffset)
-{
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
-	VkBufferCopy copyRegion = {};
-	copyRegion.srcOffset = srcOffset;
-	copyRegion.dstOffset = dstOffset;
-	copyRegion.size = size;
-	VK_VALIDATE(vkCmdCopyBuffer(commandBuffer, src, dst, 1, &copyRegion));
-
-	endSingleTimeCommands(commandBuffer);
 }
 
 /*
@@ -806,35 +771,6 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 		0, nullptr,
 		1, &barrier
 	));
-
-	endSingleTimeCommands(commandBuffer);
-}
-
-void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel)
-{
-	copyBufferToImage(buffer, image, width, height, mipLevel, 0, 1);
-}
-
-void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel, int baseLayer, int layerCount, VkDeviceSize bufferOffset)
-{
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
-	VkBufferImageCopy region = {};
-	region.bufferOffset = bufferOffset;
-	region.bufferRowLength = 0;
-	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.mipLevel = mipLevel;
-	region.imageSubresource.baseArrayLayer = baseLayer;
-	region.imageSubresource.layerCount = layerCount;
-	region.imageOffset = { 0, 0, 0 };
-	region.imageExtent = {
-		width,
-		height,
-		1
-	};
-
-	VK_VALIDATE(vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region));
 
 	endSingleTimeCommands(commandBuffer);
 }

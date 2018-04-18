@@ -3,6 +3,7 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
+
 void Buffer::create(VkDeviceSize pSize, VkBufferUsageFlags pUsage, VkMemoryPropertyFlags pMemFlags)
 {
 	size = pSize;
@@ -53,4 +54,63 @@ void * Buffer::map(VkDeviceSize offset, VkDeviceSize pSize)
 void Buffer::unmap()
 {
 	VK_VALIDATE(vkUnmapMemory(Engine::renderer->device, memory));
+}
+
+void Buffer::copyTo(Buffer * dst, VkDeviceSize range, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
+{
+	VkCommandBuffer commandBuffer = Engine::renderer->beginSingleTimeCommands();
+
+	VkBufferCopy copyRegion = {};
+	copyRegion.srcOffset = srcOffset;
+	copyRegion.dstOffset = dstOffset;
+	if (range == 0)
+		range = size;
+	copyRegion.size = range;
+	VK_VALIDATE(vkCmdCopyBuffer(commandBuffer, buffer, dst->getBuffer(), 1, &copyRegion));
+
+	Engine::renderer->endSingleTimeCommands(commandBuffer);
+}
+
+void Buffer::copyTo(Texture * dst, VkDeviceSize srcOffset, int mipLevel, int baseLayer, int layerCount)
+{
+	VkCommandBuffer commandBuffer = Engine::renderer->beginSingleTimeCommands();
+
+	VkBufferImageCopy region = {};
+	region.bufferOffset = srcOffset;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = mipLevel;
+	region.imageSubresource.baseArrayLayer = baseLayer;
+	region.imageSubresource.layerCount = layerCount;
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = {
+		dst->getWidth(),
+		dst->getHeight(),
+		u32(1)
+	};
+
+	VK_VALIDATE(vkCmdCopyBufferToImage(commandBuffer, buffer, dst->getImageHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region));
+
+	Engine::renderer->endSingleTimeCommands(commandBuffer);
+}
+
+void Buffer::setMem(void * src, VkDeviceSize pSize, VkDeviceSize offset)
+{
+	if (pSize + offset > size)
+		DBG_WARNING("Attempting to write out of buffer bounds");
+	if (memFlags | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	{
+		const auto r = Engine::renderer;
+		r->createStagingBuffer(pSize);
+		r->copyToStagingBuffer(src, pSize, 0);
+		r->stagingBuffer.copyTo(this , pSize, 0, offset);
+		r->destroyStagingBuffer();
+	}
+	else if ((memFlags | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memFlags | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+	{
+		auto d = map(offset, pSize);
+		memcpy(d, src, pSize);
+		unmap();
+	}
 }

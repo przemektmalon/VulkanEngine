@@ -37,7 +37,7 @@ void Texture::loadImage(Image * pImage, bool genMipMaps)
 	createImage();
 	r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
 
-	r->copyBufferToImage(r->stagingBuffer.getBuffer(), vkImage, width, height, 0);
+	r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
 	r->destroyStagingBuffer();
 
 	if (genMipMaps)
@@ -92,7 +92,7 @@ void Texture::loadCube(std::string pPaths[6], bool genMipMaps)
 		r->createStagingBuffer(textureSize);
 		r->copyToStagingBuffer(&(img[l].data[0]), (size_t)textureSize);
 
-		r->copyBufferToImage(r->stagingBuffer.getBuffer(), vkImage, width, height, 0, l, 1);
+		r->stagingBuffer.copyTo(this, 0, 0, l, 1);
 
 		r->destroyStagingBuffer();
 	}
@@ -127,7 +127,7 @@ void Texture::loadStream(TextureCreateInfo * ci)
 		vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		createImage();
 		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
-		r->copyBufferToImage(r->stagingBuffer.getBuffer(), vkImage, u32(width), u32(height), 0);
+		r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
 		r->destroyStagingBuffer();
 	}
 	else
