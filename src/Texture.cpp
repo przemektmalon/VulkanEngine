@@ -342,6 +342,30 @@ void Texture::loadStream(TextureCreateInfo * ci)
 	vkImageView = r->createImageView(vkImage, vkFormat, vkAspect, maxMipLevel + 1);
 }
 
+void Texture::create(TextureCreateInfo * ci)
+{
+	if (ci->pData)
+		loadStream(ci);
+	else if (ci->pPaths)
+	{
+		if (ci->numLayers == 1)
+			loadFile(ci->pPaths[0], ci->genMipMaps);
+		else if (ci->numLayers == 6)
+		{
+			std::string cubePaths[6];
+			for (int i = 0; i < 6; ++i)
+				cubePaths[i] = ci->pPaths[i];
+			loadCube(cubePaths, ci->genMipMaps);
+		}
+		else
+		{
+			DBG_WARNING("Only 1 or 6 layer textures supported");
+		}
+	}
+	else
+		loadStream(ci);
+}
+
 void Texture::destroy()
 {
 	const auto r = Engine::renderer;

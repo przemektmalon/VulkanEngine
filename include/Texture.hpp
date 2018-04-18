@@ -4,7 +4,7 @@
 
 struct TextureCreateInfo
 {
-	TextureCreateInfo() : width(0), height(0), pData(0), format(VkFormat(0)), bpp(0), genMipMaps(0), aspectFlags(0), usageFlags(0), layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {}
+	TextureCreateInfo() : width(0), height(0), pData(0), format(VkFormat(0)), bpp(0), genMipMaps(0), aspectFlags(0), usageFlags(0), layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL), pPaths(0), numLayers(1), name(std::string("Unnamed texture")) {}
 	int width;
 	int height;
 	int bpp;
@@ -14,6 +14,9 @@ struct TextureCreateInfo
 	VkImageAspectFlags aspectFlags;
 	VkImageUsageFlags usageFlags;
 	VkImageLayout layout;
+	std::string* pPaths;
+	int numLayers;
+	std::string name;
 };
 
 class Texture
@@ -35,6 +38,8 @@ public:
 	void loadCube(std::string pPaths[6], bool genMipMaps = true);
 
 	void loadStream(TextureCreateInfo* ci);
+
+	void create(TextureCreateInfo* ci);
 
 	void destroy();
 

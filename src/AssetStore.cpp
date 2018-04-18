@@ -52,8 +52,13 @@ void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for
 					continue;
 				}
 
-				auto& tex = textures.insert(std::make_pair(name, Texture(path))).first->second;
-				tex.setName(name);
+				auto& tex = textures.insert(std::make_pair(name, Texture())).first->second;
+				TextureCreateInfo ci;
+				ci.pPaths = &path;
+				ci.numLayers = 1;
+				ci.name = name;
+				ci.genMipMaps = true;
+				tex.create(&ci);
 			}
 			else if (line == "[Model]")
 			{
