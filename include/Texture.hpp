@@ -41,11 +41,16 @@ public:
 
 	void create(TextureCreateInfo* ci);
 
-	void generateMipMaps();
-
 	void destroy();
 
+	static void createImage(u32 width, u32 height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, int mipLevels = 1, int numLayers = 1);
+	static VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels, int numLayers = 1);
+	
 private:
+
+	void createImage();
+	void createImageView();
+	void generateMipMaps();
 
 	std::string name;
 	int width, height;
