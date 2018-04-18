@@ -39,6 +39,7 @@
 		DBG_WARNING(Engine::validationMessage); \
 		Engine::validationWarning = false; \
 		Engine::validationMessage.clear(); \
+		DebugBreak(); \
 	} \
 }
 

@@ -273,7 +273,6 @@ void main()
 	uint threadCount = gl_WorkGroupSize.x*gl_WorkGroupSize.y;
 	uint passCount = (lightCounts.point + threadCount - 1) / threadCount;
 
-	vec3 lightIn = vec3(0,0,0);
 
 	for(uint i = 0; i < passCount; ++i)
 	{	
@@ -290,10 +289,8 @@ void main()
 
 		if(inFrustum)
 		{
-			lightIn = lightIn + pointLights.data[lightIndex].colQuad.xyz;
 			uint nextTileLightIndex = atomicAdd(currentTilePointLightIndex,1);
 			tilePointLightIndices[nextTileLightIndex] = lightIndex;
-			
 		}
 	}
 
@@ -312,7 +309,7 @@ void main()
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
 
-		//if (inFrustum)
+		if (inFrustum)
 		{
 			uint nextTileLightIndex = atomicAdd(currentTileSpotLightIndex,1);
 			tileSpotLightIndices[nextTileLightIndex] = lightIndex;

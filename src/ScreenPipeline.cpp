@@ -409,7 +409,9 @@ void Renderer::updateScreenCommands()
 
 		VK_VALIDATE(vkCmdEndRenderPass(screenCommandBuffers[i]));
 
-		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 3));
+		setImageLayout(screenCommandBuffers[i], pbrOutput, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, queryPool, 3));
 
 		VK_CHECK_RESULT(vkEndCommandBuffer(screenCommandBuffers[i]));
 	}

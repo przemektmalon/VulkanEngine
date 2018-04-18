@@ -441,17 +441,6 @@ void Renderer::updateGBufferCommands()
 
 	VK_VALIDATE(vkCmdEndRenderPass(gBufferCommandBuffer));
 
-	//setImageLayout(gBufferCommandBuffer, gBufferColourAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	//setImageLayout(gBufferCommandBuffer, gBufferNormalAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	//setImageLayout(gBufferCommandBuffer, gBufferPBRAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	//setImageLayout(gBufferCommandBuffer, gBufferDepthAttachment, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-
-	gBufferColourAttachment.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	gBufferNormalAttachment.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	gBufferPBRAttachment.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	gBufferDepthAttachment.setLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-
-
 	VK_CHECK_RESULT(vkEndCommandBuffer(gBufferCommandBuffer));
 }
 

@@ -28,8 +28,7 @@ public:
 	VkImageView getImageViewHandle() { return vkImageView; }
 	VkImageLayout getLayout() { return vkLayout; }
 	VkImageAspectFlags getAspect() { return vkAspect; }
-
-	void setLayout(VkImageLayout set) { vkLayout = set; }
+	int getMaxMipLevel() { return maxMipLevel; }
 
 	void loadFile(std::string pPath, bool genMipMaps = true);
 	void loadImage(Image* pImage, bool genMipMaps = true);
