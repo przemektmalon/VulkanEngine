@@ -16,6 +16,19 @@ void Renderer::initialise()
 	createDescriptorPool();
 	createCommandPool();
 	createQueryPool();
+
+	std::string skyFolder = "res/textures/sky/";
+	std::string skyPaths[6] = { skyFolder + "right.png", skyFolder + "left.png", skyFolder + "top.png", skyFolder + "bottom.png", skyFolder + "front.png", skyFolder + "back.png" };
+
+	TextureCreateInfo ci;
+	ci.genMipMaps = true;
+	ci.pPaths = skyPaths;
+	ci.numLayers = 6;
+	ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	ci.name = "Skybox";
+
+	skybox.create(&ci);
+
 	createTextureSampler();
 	createSemaphores();
 
@@ -96,11 +109,6 @@ void Renderer::initialise()
 		pl.setLinear(0.0001);
 		pl.setQuadratic(0.001);
 	}
-
-	std::string skyFolder = "/res/textures/sky/";
-	std::string skyPaths[6] = { skyFolder + "right.png", skyFolder + "left.png", skyFolder + "top.png", skyFolder + "bottom.png", skyFolder + "front.png", skyFolder + "back.png" };
-
-	skybox.loadCube(skyPaths);
 
 	lightManager.updateLightCounts();
 	lightManager.updateAllPointLights();
@@ -596,7 +604,7 @@ void Renderer::copyToDeviceLocalBuffer(void * srcData, VkDeviceSize size, Buffer
 */
 void Renderer::copyToStagingBuffer(void * srcData, VkDeviceSize size, VkDeviceSize dstOffset)
 {
-	void* data = stagingBuffer.map();
+	void* data = stagingBuffer.map(dstOffset, size);
 	memcpy(data, srcData, (size_t)size);
 	stagingBuffer.unmap();
 }
@@ -815,9 +823,8 @@ void Renderer::createCubeImage(uint32_t width, uint32_t height, VkFormat format,
 	VK_CHECK_RESULT(vkBindImageMemory(device, image, imageMemory, 0));
 }
 
-void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels)
+void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount)
 {
-
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.oldLayout = oldLayout;
@@ -829,7 +836,7 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = mipLevels;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.layerCount = layerCount;
 
 	VkPipelineStageFlags sourceStage;
 	VkPipelineStageFlags destinationStage;
@@ -902,16 +909,21 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 
 void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel)
 {
+	copyBufferToImage(buffer, image, width, height, mipLevel, 0, 1);
+}
+
+void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, int mipLevel, int baseLayer, int layerCount, VkDeviceSize bufferOffset)
+{
 	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
 	VkBufferImageCopy region = {};
-	region.bufferOffset = 0;
+	region.bufferOffset = bufferOffset;
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.mipLevel = mipLevel;
-	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 1;
+	region.imageSubresource.baseArrayLayer = baseLayer;
+	region.imageSubresource.layerCount = layerCount;
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = {
 		width,

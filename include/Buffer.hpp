@@ -11,6 +11,7 @@ public:
 	void destroy();
 
 	void* map();
+	void* map(VkDeviceSize offset, VkDeviceSize pSize);
 	void unmap();
 
 	VkBuffer getBuffer() { return buffer; }

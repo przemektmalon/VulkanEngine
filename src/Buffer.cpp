@@ -43,6 +43,13 @@ void * Buffer::map()
 	return data;
 }
 
+void * Buffer::map(VkDeviceSize offset, VkDeviceSize pSize)
+{
+	void* data;
+	VK_CHECK_RESULT(vkMapMemory(Engine::renderer->device, memory, offset, pSize, 0, &data));
+	return data;
+}
+
 void Buffer::unmap()
 {
 	VK_VALIDATE(vkUnmapMemory(Engine::renderer->device, memory));

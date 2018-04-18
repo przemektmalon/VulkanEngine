@@ -22,7 +22,7 @@ struct TextureCreateInfo
 class Texture
 {
 public:
-	Texture() : width(0), height(0), maxMipLevel(0), vkImage(0), vkMemory(0), vkImageView(0) {}
+	Texture() : width(0), height(0), maxMipLevel(1), vkImage(0), vkMemory(0), vkImageView(0) {}
 	Texture(std::string pPath) { loadFile(pPath); }
 
 	void setName(std::string pName) { name = pName; }
@@ -41,6 +41,8 @@ public:
 
 	void create(TextureCreateInfo* ci);
 
+	void generateMipMaps();
+
 	void destroy();
 
 private:
@@ -55,5 +57,7 @@ private:
 	VkImageLayout vkLayout;
 	VkImageAspectFlags vkAspect;
 	VkImageUsageFlags vkUsage;
+	int numLayers;
 	u32 gpuIndex;
+	Image* img;
 };
