@@ -78,17 +78,23 @@ void Renderer::createPBRDescriptorSetLayouts()
 	skyboxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	skyboxLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding shadowsLayoutBinding = {};
-	shadowsLayoutBinding.binding = 13;
-	shadowsLayoutBinding.descriptorCount = 150;
-	shadowsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	shadowsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	VkDescriptorSetLayoutBinding pointShadowsLayoutBinding = {};
+	pointShadowsLayoutBinding.binding = 13;
+	pointShadowsLayoutBinding.descriptorCount = 150;
+	pointShadowsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	pointShadowsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, skyboxLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, lightCountsLayoutBinding, shadowsLayoutBinding };
+	VkDescriptorSetLayoutBinding spotShadowsLayoutBinding = {};
+	spotShadowsLayoutBinding.binding = 14;
+	spotShadowsLayoutBinding.descriptorCount = 150;
+	spotShadowsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	spotShadowsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, skyboxLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, lightCountsLayoutBinding, pointShadowsLayoutBinding, spotShadowsLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 11;
+	layoutInfo.bindingCount = 12;
 	layoutInfo.pBindings = bindings;
 
 	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout));
@@ -182,22 +188,37 @@ void Renderer::updatePBRDescriptorSets()
 	cameraInfo.offset = 0;
 	cameraInfo.range = sizeof(CameraUBOData);
 
-	VkDescriptorImageInfo shadowsInfo[150];
+	VkDescriptorImageInfo pointShadowsInfo[150];
 	for (int i = 0; i < 150; ++i)
 	{
-		shadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		shadowsInfo[i].imageView = lightManager.pointLights[0].getShadowTexture()->getImageViewHandle();
-		shadowsInfo[i].sampler = skySampler;
+		pointShadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		pointShadowsInfo[i].imageView = lightManager.pointLights[0].getShadowTexture()->getImageViewHandle();
+		pointShadowsInfo[i].sampler = skySampler;
 	}
 
 	int i = 0;
 	for (auto& s : lightManager.pointLights)
 	{
-		shadowsInfo[i].imageView = s.getShadowTexture()->getImageViewHandle();
+		pointShadowsInfo[i].imageView = s.getShadowTexture()->getImageViewHandle();
 		++i;
 	}
 
-	std::array<VkWriteDescriptorSet, 11> descriptorWrites = {};
+	VkDescriptorImageInfo spotShadowsInfo[150];
+	for (int i = 0; i < 150; ++i)
+	{
+		spotShadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		spotShadowsInfo[i].imageView = lightManager.spotLights[0].getShadowTexture()->getImageViewHandle();
+		spotShadowsInfo[i].sampler = textureSampler;
+	}
+
+	i = 0;
+	for (auto& s : lightManager.spotLights)
+	{
+		spotShadowsInfo[i].imageView = s.getShadowTexture()->getImageViewHandle();
+		++i;
+	}
+
+	std::array<VkWriteDescriptorSet, 12> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -295,7 +316,15 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[10].dstArrayElement = 0;
 	descriptorWrites[10].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptorWrites[10].descriptorCount = 150;
-	descriptorWrites[10].pImageInfo = shadowsInfo;
+	descriptorWrites[10].pImageInfo = pointShadowsInfo;
+
+	descriptorWrites[11].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[11].dstSet = pbrDescriptorSet;
+	descriptorWrites[11].dstBinding = 14;
+	descriptorWrites[11].dstArrayElement = 0;
+	descriptorWrites[11].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrites[11].descriptorCount = 150;
+	descriptorWrites[11].pImageInfo = spotShadowsInfo;
 
 	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }

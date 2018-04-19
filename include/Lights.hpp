@@ -52,7 +52,9 @@ public:
 		glm::fvec4 all;
 	} linearFadesTexture;
 
-	float getRadius() { return positionRadius.separate.radius; }
+	float getRadius() { 
+		return positionRadius.separate.radius; 
+	}
 	void setRadius(float set) {
 		positionRadius.separate.radius = set;
 	}
@@ -186,31 +188,6 @@ public:
 		glm::fmat4* getProjView() { return projView; }
 		void updateProjView(glm::fmat4& proj) ///TODO: dont need lookAt, just construct manually
 		{
-			/*projView[0][0] = glm::fvec3(0, 0, 1);
-			projView[0][1] = glm::fvec3(0,-1, 0);
-			projView[0][2] = glm::fvec3(-1,0, 0);
-
-			projView[1][0] = glm::fvec3(0, 0,-1);
-			projView[1][1] = glm::fvec3(0,-1, 0);
-			projView[1][2] = glm::fvec3(1, 0, 0);
-
-			projView[2][0] = glm::fvec3(0, 0, 1);
-			projView[2][1] = glm::fvec3(0, 0, 1);
-			projView[2][2] = glm::fvec3(0, 0, 1);
-
-			projView[3][0] = glm::fvec3(0, 0, 1);
-			projView[3][1] = glm::fvec3(0, 0, 1);
-			projView[3][2] = glm::fvec3(0, 0, 1);
-
-			projView[4][0] = glm::fvec3(0, 0, 1);
-			projView[4][1] = glm::fvec3(0, 0, 1);
-			projView[4][2] = glm::fvec3(0, 0, 1);
-
-			projView[5][0] = glm::fvec3(0, 0, 1);
-			projView[5][1] = glm::fvec3(0, 0, 1);
-			projView[5][2] = glm::fvec3(0, 0, 1);*/
-
-
 			projView[0] = proj * (glm::lookAt(getPosition(), getPosition() + glm::fvec3(1.0, 0.0, 0.0), glm::fvec3(0.0, -1.0, 0.0)));
 			projView[1] = proj * (glm::lookAt(getPosition(), getPosition() + glm::fvec3(-1.0, 0.0, 0.0), glm::fvec3(0.0, -1.0, 0.0)));
 			projView[2] = proj * (glm::lookAt(getPosition(), getPosition() + glm::fvec3(0.0, 1.0, 0.0), glm::fvec3(0.0, 0.0, 1.0)));
@@ -293,7 +270,10 @@ private:
 	GPUData* gpuData;
 
 public:
-	SpotLight() : matNeedsUpdate(true), gpuData(nullptr) { /*shadowTex = new Texture();*/ }
+	SpotLight() : matNeedsUpdate(true), gpuData(nullptr) 
+	{
+		initTexture();
+	}
 	~SpotLight() {}
 
 	struct GPUData : public LightGPUDataBase
@@ -353,7 +333,12 @@ public:
 		{
 			float out = getOuter();
 			float rad = getRadius();
-			auto proj = glm::perspective<float>(getOuter(), 1.f, 0.01f, getRadius() * 2.f);
+			auto proj = glm::perspective<float>(glm::acos(out), 1.f, 1.f, getRadius() * 2.f);
+			glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f,
+				+0.0f, -1.0f, 0.0f, 0.0f,
+				+0.0f, 0.0f, 0.5f, 0.0f,
+				+0.0f, 0.0f, 0.5f, 1.0f);
+			proj = clip * proj;
 			auto view = glm::lookAt(getPosition(), getPosition() + getDirection(), glm::fvec3(0, 1, 0));
 			projView = proj * view;
 		}
@@ -426,6 +411,8 @@ public:
 		gpuData->setFadeLength(set);
 	}
 
+	void destroy();
+
 	void update()
 	{
 		updateRadius();
@@ -433,10 +420,7 @@ public:
 			gpuData->updateProjView();
 	}
 
-	void initTexture(int resolution = 512)
-	{
-		/// TODO: create shadow texture
-	}
+	void initTexture(int resolution = 512);
 
 	void updateRadius();
 	inline static float calculateRadius(float linear, float quad);
@@ -468,6 +452,8 @@ public: ///TODO: Max light count is 150, add setters etc
 		pointLightsBuffer.destroy();
 		sunLightBuffer.destroy();
 		for (auto& l : pointLights)
+			l.destroy();
+		for (auto& l : spotLights)
 			l.destroy();
 	}
 

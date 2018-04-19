@@ -79,7 +79,7 @@ void Renderer::initialise()
 	createPBRCommands();
 	createScreenCommands();
 
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 1; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
@@ -115,6 +115,15 @@ void Renderer::initialise()
 		pl.setLinear(0.01);
 		pl.setQuadratic(0.01);
 	}
+
+	auto& sl = lightManager.addSpotLight();
+	sl.setPosition(glm::fvec3(10, 10, 10));
+	sl.setDirection(glm::normalize(glm::fvec3(-1, -1, -1)));
+	sl.setColour(glm::fvec3(2.5, 2.5, 2));
+	sl.setInnerSpread(40);
+	sl.setOuterSpread(60);
+	sl.setLinear(0.01);
+	sl.setQuadratic(0.01);
 
 	lightManager.updateLightCounts();
 	lightManager.updateAllPointLights();
@@ -529,7 +538,7 @@ void Renderer::createTextureSampler()
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerInfo.mipLodBias = 0.0f;
 	samplerInfo.minLod = 0.0f;
-	samplerInfo.maxLod = 11.0f;
+	samplerInfo.maxLod = 1.0f;
 
 	VK_CHECK_RESULT(vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler));
 
@@ -584,7 +593,7 @@ void Renderer::createDescriptorPool()
 	poolSizes[8].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[8].descriptorCount = 2;
 	poolSizes[9].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[9].descriptorCount = 150;
+	poolSizes[9].descriptorCount = 300;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

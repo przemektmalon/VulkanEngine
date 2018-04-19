@@ -9,6 +9,7 @@
 #include "Buffer.hpp"
 #include "Lights.hpp"
 #include "PointShadowShader.hpp"
+#include "SpotShadowShader.hpp"
 
 struct CameraUBOData {
 	glm::fmat4 view;
@@ -77,6 +78,7 @@ public:
 	PBRShader pbrShader;
 	ScreenShader screenShader;
 	PointShadowShader pointShadowShader;
+	SpotShadowShader spotShadowShader;
 
 	/// --------------------
 	/// GBuffer pipeline
@@ -147,15 +149,25 @@ public:
 	VkPipeline pointShadowPipeline;
 	VkPipelineLayout pointShadowPipelineLayout;
 
+	VkPipeline spotShadowPipeline;
+	VkPipelineLayout spotShadowPipelineLayout;
+
 	// Descriptors
 	VkDescriptorSetLayout pointShadowDescriptorSetLayout;
 	VkDescriptorSet pointShadowDescriptorSet;
 
+	VkDescriptorSetLayout spotShadowDescriptorSetLayout;
+	VkDescriptorSet spotShadowDescriptorSet;
+
 	// Render pass
 	VkRenderPass pointShadowRenderPass;
 
+	VkRenderPass spotShadowRenderPass;
+
 	// Command buffer
 	VkCommandBuffer pointShadowCommandBuffer;
+
+	VkCommandBuffer spotShadowCommandBuffer;
 
 	/// --------------------
 	/// PBR shading pipeline

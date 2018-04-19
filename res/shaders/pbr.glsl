@@ -66,6 +66,7 @@ layout(binding = 9) uniform CameraUBO {
 } camera;
 
 layout(binding = 13) uniform samplerCube pointShadows[150];
+layout(binding = 14) uniform sampler2D spotShadows[150];
 
 vec3 decodeNormal(vec2 enc)
 {
@@ -455,7 +456,38 @@ void main()
 			vec3 specular = nominator / denominator;
 
 			float NdotL  = max(dot(normal, lightDir), 0.0);
-			litPixel += ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
+
+			vec4 fragPosLightSpace = spotLights.data[i].pv * vec4(worldPos,1.f);
+
+			vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;;
+			projCoords.x *= 0.5f; projCoords.x += 0.5f;
+			projCoords.y *= 0.5f; projCoords.y += 0.5f;
+
+			float currentDepth = projCoords.z;
+		    
+		    float bias = max(0.001f * (1.0 - dot(normal, lightDir)), 0.001f);
+
+	    	const int pres = 2;
+
+			float camToLight = length(posRad.xyz - viewPos);
+
+			float shadow = 0.f;
+
+			vec2 texelSize = vec2(1.0 / 512.f);
+			for(int x = -pres; x <= pres; ++x)
+			{
+			    for(int y = -pres; y <= pres; ++y)
+			    {
+					float pcfDepth = texture(spotShadows[i], projCoords.xy + vec2(x, y) * texelSize).r;
+			        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+			    }
+			}
+			shadow /= ((2.f*pres) + 1) * ((2.f*pres) + 1);
+
+			if(projCoords.z > 1.0)
+	        	shadow = 0.0;
+
+			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
 	}
 	
