@@ -193,7 +193,7 @@ void Renderer::updatePBRDescriptorSets()
 	{
 		pointShadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 		pointShadowsInfo[i].imageView = lightManager.pointLights[0].getShadowTexture()->getImageViewHandle();
-		pointShadowsInfo[i].sampler = skySampler;
+		pointShadowsInfo[i].sampler = shadowSampler;
 	}
 
 	int i = 0;
@@ -208,7 +208,7 @@ void Renderer::updatePBRDescriptorSets()
 	{
 		spotShadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 		spotShadowsInfo[i].imageView = lightManager.spotLights[0].getShadowTexture()->getImageViewHandle();
-		spotShadowsInfo[i].sampler = textureSampler;
+		spotShadowsInfo[i].sampler = shadowSampler;
 	}
 
 	i = 0;

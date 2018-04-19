@@ -64,6 +64,7 @@ public:
 	// Samplers
 	VkSampler textureSampler;
 	VkSampler skySampler;
+	VkSampler shadowSampler;
 
 	void createLogicalDevice();
 	void createDescriptorPool();
