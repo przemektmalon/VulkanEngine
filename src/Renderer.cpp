@@ -79,13 +79,13 @@ void Renderer::initialise()
 	createPBRCommands();
 	createScreenCommands();
 
-	for (int i = 0; i < 1; ++i)
+	for (int i = 0; i < 5; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
-		int s = 25;
+		int s = 30;
 		int sh = s / 2;
-		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 10) + 5, s64(r() % s) - sh));
+		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 15) + 5, s64(r() % s) - sh));
 		glm::fvec3 col;
 		switch (i % 7)
 		{
@@ -114,16 +114,16 @@ void Renderer::initialise()
 		pl.setColour(col * glm::fvec3(1.3));
 		pl.setLinear(0.01);
 		pl.setQuadratic(0.01);
-	}
 
-	auto& sl = lightManager.addSpotLight();
-	sl.setPosition(glm::fvec3(10, 10, 10));
-	sl.setDirection(glm::normalize(glm::fvec3(-1, -1, -1)));
-	sl.setColour(glm::fvec3(2.5, 2.5, 2));
-	sl.setInnerSpread(40);
-	sl.setOuterSpread(60);
-	sl.setLinear(0.01);
-	sl.setQuadratic(0.01);
+		auto& sl = lightManager.addSpotLight();
+		sl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 10) + 5, s64(r() % s) - sh));
+		sl.setDirection(glm::normalize(glm::fvec3(0)-sl.getPosition()));
+		sl.setColour(col * glm::fvec3(1.5));
+		sl.setInnerSpread(40);
+		sl.setOuterSpread(60);
+		sl.setLinear(0.01);
+		sl.setQuadratic(0.01);
+	}
 
 	lightManager.updateLightCounts();
 	lightManager.updateAllPointLights();
@@ -537,9 +537,9 @@ void Renderer::createTextureSampler()
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	samplerInfo.mipLodBias = 0.0f;
+	samplerInfo.mipLodBias = -1.0f;
 	samplerInfo.minLod = 0.0f;
-	samplerInfo.maxLod = 1.0f;
+	samplerInfo.maxLod = 11.0f;
 
 	VK_CHECK_RESULT(vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler));
 
