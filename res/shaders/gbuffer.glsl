@@ -86,20 +86,22 @@ mat3 cotangentFrame(vec3 N, vec3 p, vec2 uv)
     return mat3( normalize(T * invmax), normalize(B * invmax), N );
 }
 
-vec3 perturbNormal(vec3 N, vec3 V, vec2 texcoord)
+vec3 perturbNormal(vec3 N, vec3 V, vec2 texcoord, vec3 nTex)
 {
-    vec3 map = texture(texSampler[textureIndex+1], texcoord).xyz * 2.f - 1.f;
+    vec3 map = nTex * 2.f - 1.f;
     mat3 TBN = cotangentFrame( N, -V, texcoord );
     return normalize( TBN * map );
 }
 
 void main()
 {
-    colour = texture(texSampler[textureIndex], fragTexCoord);
-    normal = encodeNormal(normalize(perturbNormal(normalize(fragNormal), normalize(viewVec), fragTexCoord)));
+	vec4 albedoSpec = texture(texSampler[textureIndex], fragTexCoord);
+	vec4 normalRough = texture(texSampler[textureIndex+1], fragTexCoord);
 
-    colour.w = texture(texSampler[textureIndex+2], fragTexCoord).r; // Spec/Metal
-    pbr.x = texture(texSampler[textureIndex+3], fragTexCoord).r; // Roughness
+    colour = albedoSpec;
+    normal = encodeNormal(normalize(perturbNormal(normalize(fragNormal), normalize(viewVec), fragTexCoord, normalRough.xyz)));
+
+    pbr.x = normalRough.w; // Roughness
     //pbr.y = texture(texSampler[textureIndex+4], fragTexCoord).r; // AO
     //pbr.z = texture(texSampler[textureIndex+5], fragTexCoord).r; // height
 }

@@ -4,6 +4,8 @@
 class Image
 {
 public:
+	Image() {}
+	Image(std::string path, int pComponents = 4) { load(path, pComponents); }
 	std::vector<char> data;
 	int width, height;
 	int bpp;

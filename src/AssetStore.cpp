@@ -64,7 +64,7 @@ void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for
 			{
 				std::string line;
 				std::getline(file, line);
-				std::string name, path, limit, albedo, normal, specular, metallic, roughness, material, physics;
+				std::string name, path, limit, albedoSpec, normalRough, material, physics;
 				std::vector<std::string> paths;
 				std::vector<u32> limits;
 
@@ -84,29 +84,14 @@ void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for
 						limit = value;
 						return true;
 					}
-					else if (key == "albedo")
+					else if (key == "albedoSpec")
 					{
-						albedo = value;
+						albedoSpec = value;
 						return true;
 					}
-					else if (key == "normal")
+					else if (key == "normalRough")
 					{
-						normal = value;
-						return true;
-					}
-					else if (key == "specular")
-					{
-						specular = value;
-						return true;
-					}
-					else if (key == "metallic")
-					{
-						metallic = value;
-						return true;
-					}
-					else if (key == "roughness")
-					{
-						roughness = value;
+						normalRough = value;
 						return true;
 					}
 					else if (key == "material")
@@ -161,17 +146,9 @@ void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for
 							lodLevel.material = getMaterial(material);
 						else
 						{
-							lodLevel.material->albedo = getTexture(albedo);
-							lodLevel.material->normal = getTexture(normal);
-							if (specular.length() != 0)
-								lodLevel.material->specularMetallic = getTexture(specular);
-							else
-								lodLevel.material->specularMetallic = getTexture(metallic);
-
-							lodLevel.material->roughness = getTexture(roughness);
+							lodLevel.material->albedoSpec = getTexture(albedoSpec);
+							lodLevel.material->normalRough = getTexture(normalRough);
 						}
-
-						/// TODO: AO texture
 					}
 				}
 				Engine::renderer->pushModelDataToGPU(model);
@@ -180,7 +157,7 @@ void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for
 			{
 				std::string line;
 				std::getline(file, line);
-				std::string name, albedo, normal, specMetal, roughness, ao, height;
+				std::string name, albedoSpec, normalRough;
 
 				auto place = [&](std::string key, std::string value) -> bool {
 					if (key == "name")
@@ -188,39 +165,14 @@ void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for
 						name = value;
 						return true;
 					}
-					else if (key == "albedo")
+					else if (key == "albedoSpec")
 					{
-						albedo = value;
+						albedoSpec = value;
 						return true;
 					}
-					else if (key == "normal")
+					else if (key == "normalRough")
 					{
-						normal = value;
-						return true;
-					}
-					else if (key == "specular")
-					{
-						specMetal = value;
-						return true;
-					}
-					else if (key == "metallic")
-					{
-						specMetal = value;
-						return true;
-					}
-					else if (key == "roughness")
-					{
-						roughness = value;
-						return true;
-					}
-					else if (key == "ao")
-					{
-						ao = value;
-						return true;
-					}
-					else if (key == "height")
-					{
-						height = value;
+						normalRough = value;
 						return true;
 					}
 					return false;
@@ -237,14 +189,14 @@ void AssetStore::loadAssets(std::string assetListFilePath) /// TODO: use xml for
 					key = getUntil(line, '=');
 				}
 
-				addMaterial(name, albedo, normal, specMetal, roughness, ao, height);
+				addMaterial(name, albedoSpec, normalRough);
 			}
 		}
 	}
 	file.close();
 }
 
-void AssetStore::addMaterial(std::string name, std::string albedo, std::string normal, std::string specMetal, std::string roughness, std::string ao, std::string height)
+void AssetStore::addMaterial(std::string name, std::string albedoSpec, std::string normalRough)
 {
 	auto find = materialIndices.find(name);
 	if (find != materialIndices.end())
@@ -254,11 +206,7 @@ void AssetStore::addMaterial(std::string name, std::string albedo, std::string n
 	materialIndices[name] = matIndex;
 
 
-	materials[matIndex].albedo = getTexture(albedo);
-	materials[matIndex].normal = getTexture(normal);
-	materials[matIndex].specularMetallic = getTexture(specMetal);
-	materials[matIndex].roughness = getTexture(roughness);
-	materials[matIndex].ao = getTexture(ao);
-	materials[matIndex].height = getTexture(height);
-	materials[matIndex].gpuIndexBase = (materials.size() - 1) * 6;
+	materials[matIndex].albedoSpec = getTexture(albedoSpec);
+	materials[matIndex].normalRough = getTexture(normalRough);
+	materials[matIndex].gpuIndexBase = (materials.size() - 1) * 2;
 }

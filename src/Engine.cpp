@@ -5,6 +5,8 @@
 #include "Image.hpp"
 #include "Profiler.hpp"
 
+#include "PBRImage.hpp"
+
 /*
 	@brief	Initialise enigne and sub-systems
 */
@@ -30,7 +32,19 @@ void Engine::start()
 
 	rand.seed(0);
 	maxDepth = 5000.f;
-	
+
+	/// This code joins separate albedo/spec and normal/rough images into a single image
+	/* std::array<std::string, 7> tn = { "bamboo", "copper", "dirt", "greasymetal", "mahog", "marble", "rustediron" };
+
+	std::string td = "res/textures/";
+
+	for (int i = 0; i < tn.size(); ++i)
+	{
+		PBRImage c; c.create(Image(td + tn[i] + "_D.png"), Image(td + tn[i] + "_N.png"), Image(td + tn[i] + "_S.png"), Image(td + tn[i] + "_R.png"));
+		c.albedoSpec.save(td + tn[i] + "_DS.png");
+		c.normalRough.save(td + tn[i] + "_NR.png");
+	} */
+
 	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 2.f, 0.1, maxDepth);
 
 	renderer = new Renderer();

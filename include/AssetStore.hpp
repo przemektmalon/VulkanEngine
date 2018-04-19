@@ -26,5 +26,5 @@ public:
 	std::unordered_map<std::string, u32> materialIndices;
 	std::unordered_map<std::string, Texture> textures;
 
-	void addMaterial(std::string name, std::string albedo, std::string normal = std::string(""), std::string specMetal = std::string(""), std::string roughness = std::string(""), std::string ao = std::string(""), std::string height = std::string(""));
+	void addMaterial(std::string name, std::string albedoSpec, std::string normalRough);
 };

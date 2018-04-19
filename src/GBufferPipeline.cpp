@@ -328,39 +328,19 @@ void Renderer::updateGBufferDescriptorSets()
 	{
 		imageInfo[i].sampler = textureSampler;
 		imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo[i].imageView = Engine::assets.materials.begin()->second.albedo->getImageViewHandle();
+		imageInfo[i].imageView = Engine::assets.materials.begin()->second.albedoSpec->getImageViewHandle();
 	}
 
 	u32 i = 0;
 	for (auto& material : Engine::assets.materials)
 	{
-		imageInfo[i].imageView = material.second.albedo->getImageViewHandle();
+		imageInfo[i].imageView = material.second.albedoSpec->getImageViewHandle();
 
-		if (material.second.normal)
-			imageInfo[i + 1].imageView = material.second.normal->getImageViewHandle();
+		if (material.second.normalRough)
+			imageInfo[i + 1].imageView = material.second.normalRough->getImageViewHandle();
 		else
-			imageInfo[i + 1].imageView = material.second.albedo->getImageViewHandle(); /// TODO: some null texture
-
-		if (material.second.specularMetallic)
-			imageInfo[i + 2].imageView = material.second.specularMetallic->getImageViewHandle();
-		else
-			imageInfo[i + 2].imageView = material.second.albedo->getImageViewHandle();
-
-		if (material.second.roughness)
-			imageInfo[i + 3].imageView = material.second.roughness->getImageViewHandle();
-		else
-			imageInfo[i + 3].imageView = material.second.albedo->getImageViewHandle();
-
-		if (material.second.ao)
-			imageInfo[i + 4].imageView = material.second.ao->getImageViewHandle();
-		else
-			imageInfo[i + 4].imageView = material.second.albedo->getImageViewHandle();
-
-		if (material.second.height)
-			imageInfo[i + 5].imageView = material.second.height->getImageViewHandle();
-		else
-			imageInfo[i + 5].imageView = material.second.albedo->getImageViewHandle();
-		i += 6;
+			imageInfo[i + 1].imageView = material.second.albedoSpec->getImageViewHandle(); /// TODO: some null texture
+		i += 2;
 	}
 
 	std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};

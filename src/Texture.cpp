@@ -238,7 +238,7 @@ void Texture::generateMipMaps()
 
 			copyRegions.push_back(region);
 
-			offset += level.data.size() * level.bpp * level.components;
+			offset += level.data.size();
 			prevMip = &level;
 			++lvl;
 		}

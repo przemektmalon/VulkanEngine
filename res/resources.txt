@@ -1,159 +1,93 @@
 [Texture]
-path=res/textures/dirt_D.png
-name=dirt_D
+path=res/textures/dirt_DS.png
+name=dirt_DS
 
 [Texture]
-path=res/textures/dirt_N.png
-name=dirt_N
+path=res/textures/dirt_NR.png
+name=dirt_NR
 
 [Texture]
-path=res/textures/dirt_S.png
-name=dirt_S
+path=res/textures/bamboo_DS.png
+name=bamboo_DS
 
 [Texture]
-path=res/textures/dirt_R.png
-name=dirt_R
+path=res/textures/bamboo_NR.png
+name=bamboo_NR
 
 [Texture]
-path=res/textures/bamboo_D.png
-name=bamboo_D
+path=res/textures/mahog_DS.png
+name=mahog_DS
 
 [Texture]
-path=res/textures/bamboo_N.png
-name=bamboo_N
+path=res/textures/mahog_NR.png
+name=mahog_NR
 
 [Texture]
-path=res/textures/bamboo_S.png
-name=bamboo_S
+path=res/textures/rustediron_DS.png
+name=rustediron_DS
 
 [Texture]
-path=res/textures/bamboo_R.png
-name=bamboo_R
+path=res/textures/rustediron_NR.png
+name=rustediron_NR
 
 [Texture]
-path=res/textures/mahog_D.png
-name=mahog_D
+path=res/textures/copper_DS.png
+name=copper_DS
 
 [Texture]
-path=res/textures/mahog_N.png
-name=mahog_N
+path=res/textures/copper_NR.png
+name=copper_NR
 
 [Texture]
-path=res/textures/mahog_R.png
-name=mahog_R
+path=res/textures/greasymetal_DS.png
+name=greasymetal_DS
 
 [Texture]
-path=res/textures/rustediron_D.png
-name=rustediron_D
+path=res/textures/greasymetal_NR.png
+name=greasymetal_NR
 
 [Texture]
-path=res/textures/rustediron_N.png
-name=rustediron_N
+path=res/textures/marble_DS.png
+name=marble_DS
 
 [Texture]
-path=res/textures/rustediron_S.png
-name=rustediron_S
-
-[Texture]
-path=res/textures/rustediron_R.png
-name=rustediron_R
-
-[Texture]
-path=res/textures/copper_D.png
-name=copper_D
-
-[Texture]
-path=res/textures/copper_N.png
-name=copper_N
-
-[Texture]
-path=res/textures/copper_R.png
-name=copper_R
-
-[Texture]
-path=res/textures/copper_S.png
-name=copper_S
-
-[Texture]
-path=res/textures/greasymetal_D.png
-name=greasymetal_D
-
-[Texture]
-path=res/textures/greasymetal_N.png
-name=greasymetal_N
-
-[Texture]
-path=res/textures/greasymetal_S.png
-name=greasymetal_S
-
-[Texture]
-path=res/textures/greasymetal_R.png
-name=greasymetal_R
-
-[Texture]
-path=res/textures/marble_D.png
-name=marble_D
-
-[Texture]
-path=res/textures/marble_N.png
-name=marble_N
-
-[Texture]
-path=res/textures/marble_R.png
-name=marble_R
-
-[Texture]
-path=res/textures/marble_S.png
-name=marble_S
+path=res/textures/marble_NR.png
+name=marble_NR
 
 [Material]
 name=marble
-albedo=marble_D
-normal=marble_N
-metallic=marble_S
-roughness=marble_R
+albedoSpec=marble_DS
+normalRough=marble_NR
 
 [Material]
 name=copper
-albedo=copper_D
-normal=copper_N
-metallic=copper_S
-roughness=copper_R
+albedoSpec=copper_DS
+normalRough=copper_NR
 
 [Material]
 name=greasymetal
-albedo=greasymetal_D
-normal=greasymetal_N
-metallic=greasymetal_S
-roughness=greasymetal_R
+albedoSpec=greasymetal_DS
+normalRough=greasymetal_NR
 
 [Material]
 name=mahogany
-albedo=mahog_D
-normal=mahog_N
-metallic=bamboo_S
-roughness=mahog_R
+albedoSpec=mahog_DS
+normalRough=mahog_NR
 
 [Material]
 name=bamboo
-albedo=bamboo_D
-normal=bamboo_N
-metallic=bamboo_S
-roughness=bamboo_R
+albedoSpec=bamboo_DS
+normalRough=bamboo_NR
 
 [Material]
 name=rustediron
-albedo=rustediron_D
-normal=rustediron_N
-metallic=rustediron_S
-roughness=rustediron_R
+albedoSpec=rustediron_DS
+normalRough=rustediron_NR
 
 [Material]
 name=dirt
-albedo=dirt_D
-normal=dirt_N
-metallic=dirt_S
-roughness=dirt_R
+albedoSpec=dirt_DS
+normalRough=dirt_NR
 
 [Model]
 path=res/models/ball2.obj
