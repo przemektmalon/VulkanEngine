@@ -62,7 +62,10 @@ layout(binding = 9) uniform CameraUBO {
     mat4 proj;
     vec4 position;
     vec4 viewRays;
+    float farPlane;
 } camera;
+
+layout(binding = 13) uniform samplerCube pointShadows[150];
 
 vec3 decodeNormal(vec2 enc)
 {
@@ -379,7 +382,38 @@ void main()
 
 			float NdotL  = max(dot(normal, lightDir), 0.0);
 
-			litPixel += ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
+			vec3 fragToLight = worldPos - lightPos.xyz; 
+
+			float currentDepth = length(fragToLight);
+			    
+		    float bias = max(0.001f * (1.0 - dot(normal, lightDir)), 0.001f);
+
+		    float shadow = 0.f;
+
+			float samples = 2.0;
+			float offset = 0.1;
+
+			float camToLight = length(lightPos.xyz - viewPos);
+
+			for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+			{
+			    for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+			    {
+			        for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+			        {
+			        	float closestDepth = texture(pointShadows[i], fragToLight + vec3(x, y, z)).r;
+			            closestDepth *= lightPos.w;
+			            if(currentDepth - bias > closestDepth)
+			            {
+			                shadow += 1.0;
+			            }
+			        }
+			    }
+			}
+
+			shadow /= (samples * samples * samples);
+
+			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
 
 		for(uint j = 0; j < currentTileSpotLightIndex; ++j)
@@ -421,7 +455,6 @@ void main()
 			vec3 specular = nominator / denominator;
 
 			float NdotL  = max(dot(normal, lightDir), 0.0);
-
 			litPixel += ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
 	}

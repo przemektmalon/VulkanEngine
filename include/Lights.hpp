@@ -8,6 +8,7 @@ class Light
 	friend class LightManager;
 public:
 	Texture* shadowTex;
+	VkFramebuffer shadowFBO;
 
 	virtual Texture* getShadowTexture() = 0;
 };
@@ -169,7 +170,7 @@ private:
 public:
 	PointLight() : matNeedsUpdate(true), gpuData(nullptr)
 	{
-		/// TODO: create shadow texture
+		initTexture();
 	}
 
 	struct GPUData : public LightGPUDataBase
@@ -185,6 +186,31 @@ public:
 		glm::fmat4* getProjView() { return projView; }
 		void updateProjView(glm::fmat4& proj) ///TODO: dont need lookAt, just construct manually
 		{
+			/*projView[0][0] = glm::fvec3(0, 0, 1);
+			projView[0][1] = glm::fvec3(0,-1, 0);
+			projView[0][2] = glm::fvec3(-1,0, 0);
+
+			projView[1][0] = glm::fvec3(0, 0,-1);
+			projView[1][1] = glm::fvec3(0,-1, 0);
+			projView[1][2] = glm::fvec3(1, 0, 0);
+
+			projView[2][0] = glm::fvec3(0, 0, 1);
+			projView[2][1] = glm::fvec3(0, 0, 1);
+			projView[2][2] = glm::fvec3(0, 0, 1);
+
+			projView[3][0] = glm::fvec3(0, 0, 1);
+			projView[3][1] = glm::fvec3(0, 0, 1);
+			projView[3][2] = glm::fvec3(0, 0, 1);
+
+			projView[4][0] = glm::fvec3(0, 0, 1);
+			projView[4][1] = glm::fvec3(0, 0, 1);
+			projView[4][2] = glm::fvec3(0, 0, 1);
+
+			projView[5][0] = glm::fvec3(0, 0, 1);
+			projView[5][1] = glm::fvec3(0, 0, 1);
+			projView[5][2] = glm::fvec3(0, 0, 1);*/
+
+
 			projView[0] = proj * (glm::lookAt(getPosition(), getPosition() + glm::fvec3(1.0, 0.0, 0.0), glm::fvec3(0.0, -1.0, 0.0)));
 			projView[1] = proj * (glm::lookAt(getPosition(), getPosition() + glm::fvec3(-1.0, 0.0, 0.0), glm::fvec3(0.0, -1.0, 0.0)));
 			projView[2] = proj * (glm::lookAt(getPosition(), getPosition() + glm::fvec3(0.0, 1.0, 0.0), glm::fvec3(0.0, 0.0, 1.0)));
@@ -247,13 +273,9 @@ public:
 			gpuData->updateProjView(proj);
 	}
 
-	void initTexture(int resolution = 1024)
-	{
-		/*TextureCreateInfo ci = {};
-		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-		ci.bpp = 32 * 4;
-		ci.format*/
-	}
+	void initTexture(int resolution = 1024);
+
+	void destroy();
 
 	void updateRadius();
 	inline static float calculateRadius(float linear, float quad);
@@ -445,6 +467,8 @@ public: ///TODO: Max light count is 150, add setters etc
 		spotLightsBuffer.destroy();
 		pointLightsBuffer.destroy();
 		sunLightBuffer.destroy();
+		for (auto& l : pointLights)
+			l.destroy();
 	}
 
 	PointLight& addPointLight()

@@ -8,6 +8,7 @@
 #include "PBRShader.hpp"
 #include "Buffer.hpp"
 #include "Lights.hpp"
+#include "PointShadowShader.hpp"
 
 struct CameraUBOData {
 	glm::fmat4 view;
@@ -57,6 +58,7 @@ public:
 	VkSemaphore renderFinishedSemaphore;
 	VkSemaphore screenFinishedSemaphore;
 	VkSemaphore pbrFinishedSemaphore;
+	VkSemaphore shadowFinishedSemaphore;
 
 	// Samplers
 	VkSampler textureSampler;
@@ -74,6 +76,7 @@ public:
 	GBufferShader gBufferShader;
 	PBRShader pbrShader;
 	ScreenShader screenShader;
+	PointShadowShader pointShadowShader;
 
 	/// --------------------
 	/// GBuffer pipeline
@@ -119,6 +122,40 @@ public:
 
 	// Command buffer
 	VkCommandBuffer gBufferCommandBuffer;
+
+	/// --------------------
+	/// Shadow pipeline
+	/// --------------------
+
+	// Functions
+	void createShadowRenderPass();
+	void createShadowDescriptorSetLayouts();
+	void createShadowPipeline();
+	void createShadowDescriptorSets();
+	void createShadowCommands();
+
+	void updateShadowDescriptorSets();
+	void updateShadowCommands();
+
+	void destroyShadowRenderPass();
+	void destroyShadowDescriptorSetLayouts();
+	void destroyShadowPipeline();
+	void destroyShadowDescriptorSets();
+	void destroyShadowCommands();
+
+	// Pipeline objets
+	VkPipeline pointShadowPipeline;
+	VkPipelineLayout pointShadowPipelineLayout;
+
+	// Descriptors
+	VkDescriptorSetLayout pointShadowDescriptorSetLayout;
+	VkDescriptorSet pointShadowDescriptorSet;
+
+	// Render pass
+	VkRenderPass pointShadowRenderPass;
+
+	// Command buffer
+	VkCommandBuffer pointShadowCommandBuffer;
 
 	/// --------------------
 	/// PBR shading pipeline
@@ -231,7 +268,7 @@ public:
 	Buffer transformUBO;
 	LightManager lightManager;
 	
-	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1);
+	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 
 	// Creates staging buffer with requested size

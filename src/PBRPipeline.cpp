@@ -78,12 +78,17 @@ void Renderer::createPBRDescriptorSetLayouts()
 	skyboxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	skyboxLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+	VkDescriptorSetLayoutBinding shadowsLayoutBinding = {};
+	shadowsLayoutBinding.binding = 13;
+	shadowsLayoutBinding.descriptorCount = 150;
+	shadowsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	shadowsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, skyboxLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, lightCountsLayoutBinding };
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, skyboxLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, lightCountsLayoutBinding, shadowsLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 10;
+	layoutInfo.bindingCount = 11;
 	layoutInfo.pBindings = bindings;
 
 	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout));
@@ -177,7 +182,22 @@ void Renderer::updatePBRDescriptorSets()
 	cameraInfo.offset = 0;
 	cameraInfo.range = sizeof(CameraUBOData);
 
-	std::array<VkWriteDescriptorSet, 10> descriptorWrites = {};
+	VkDescriptorImageInfo shadowsInfo[150];
+	for (int i = 0; i < 150; ++i)
+	{
+		shadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		shadowsInfo[i].imageView = lightManager.pointLights[0].getShadowTexture()->getImageViewHandle();
+		shadowsInfo[i].sampler = skySampler;
+	}
+
+	int i = 0;
+	for (auto& s : lightManager.pointLights)
+	{
+		shadowsInfo[i].imageView = s.getShadowTexture()->getImageViewHandle();
+		++i;
+	}
+
+	std::array<VkWriteDescriptorSet, 11> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -268,6 +288,14 @@ void Renderer::updatePBRDescriptorSets()
 	descriptorWrites[9].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptorWrites[9].descriptorCount = 1;
 	descriptorWrites[9].pImageInfo = &skyImageInfo;
+
+	descriptorWrites[10].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[10].dstSet = pbrDescriptorSet;
+	descriptorWrites[10].dstBinding = 13;
+	descriptorWrites[10].dstArrayElement = 0;
+	descriptorWrites[10].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrites[10].descriptorCount = 150;
+	descriptorWrites[10].pImageInfo = shadowsInfo;
 
 	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }

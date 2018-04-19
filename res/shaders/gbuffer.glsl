@@ -102,8 +102,6 @@ void main()
     normal = encodeNormal(normalize(perturbNormal(normalize(fragNormal), normalize(viewVec), fragTexCoord, normalRough.xyz)));
 
     pbr.x = normalRough.w; // Roughness
-    //pbr.y = texture(texSampler[textureIndex+4], fragTexCoord).r; // AO
-    //pbr.z = texture(texSampler[textureIndex+5], fragTexCoord).r; // height
 }
 
 #endif

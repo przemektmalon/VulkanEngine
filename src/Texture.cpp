@@ -150,14 +150,14 @@ void Texture::loadStream(TextureCreateInfo * ci)
 		r->copyToStagingBuffer(ci->pData, (size_t)textureSize);
 		vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		createImage();
-		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
+		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
 		r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
 		r->destroyStagingBuffer();
 	}
 	else
 	{
 		createImage();
-		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, vkLayout, maxMipLevel + 1);
+		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, vkLayout, maxMipLevel + 1, numLayers, vkAspect);
 	}
 
 	if (vkLayout)
@@ -315,7 +315,7 @@ void Texture::createImage(u32 width, u32 height, VkFormat format, VkImageTiling 
 	imageInfo.arrayLayers = numLayers;
 	imageInfo.format = format;
 	imageInfo.tiling = tiling;
-	imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	imageInfo.usage = usage;
 	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;

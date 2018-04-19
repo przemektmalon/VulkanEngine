@@ -45,15 +45,18 @@ void Renderer::initialise()
 	
 	// Pipeline render passes
 	createGBufferRenderPass();
+	createShadowRenderPass();
 	createScreenRenderPass();
 
 	// Pipeline descriptor set layouts
 	createGBufferDescriptorSetLayouts();
+	createShadowDescriptorSetLayouts();
 	createPBRDescriptorSetLayouts();
 	createScreenDescriptorSetLayouts();
 
 	// Pipeline objects
 	createGBufferPipeline();
+	createShadowPipeline();
 	createPBRPipeline();
 	createScreenPipeline();
 	
@@ -66,19 +69,21 @@ void Renderer::initialise()
 
 	// Pipeline descriptor sets
 	createGBufferDescriptorSets();
+	createShadowDescriptorSets();
 	createPBRDescriptorSets();
 	createScreenDescriptorSets();
 
 	// Pipeline commands
 	createGBufferCommands();
+	createShadowCommands();
 	createPBRCommands();
 	createScreenCommands();
 
-	for (int i = 0; i < 100; ++i)
+	for (int i = 0; i < 10; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
-		int s = 80;
+		int s = 25;
 		int sh = s / 2;
 		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 10) + 5, s64(r() % s) - sh));
 		glm::fvec3 col;
@@ -106,8 +111,8 @@ void Renderer::initialise()
 			col = glm::fvec3(1, 1, 1);
 			break; }
 		}
-		pl.setColour(col * glm::fvec3(0.3));
-		pl.setLinear(0.1);
+		pl.setColour(col * glm::fvec3(1.3));
+		pl.setLinear(0.01);
 		pl.setQuadratic(0.01);
 	}
 
@@ -175,6 +180,14 @@ void Renderer::cleanup()
 		destroyGBufferCommands();
 	}
 
+	// Shadow pipelins
+	{
+		destroyShadowRenderPass();
+		destroyShadowDescriptorSetLayouts();
+		destroyShadowPipeline();
+		destroyShadowCommands();
+	}
+
 	// PBR pipeline
 	{
 		destroyPBRAttachments();
@@ -207,6 +220,7 @@ void Renderer::cleanup()
 	VK_VALIDATE(vkDestroySemaphore(device, imageAvailableSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, pbrFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, screenFinishedSemaphore, 0));
+	VK_VALIDATE(vkDestroySemaphore(device, shadowFinishedSemaphore, 0));
 
 	skybox.destroy();
 	cameraUBO.destroy();
@@ -273,8 +287,17 @@ void Renderer::render()
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
 
-	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
+	VkPipelineStageFlags waitStages4[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
 	submitInfo.pWaitSemaphores = &renderFinishedSemaphore;
+	submitInfo.pWaitDstStageMask = waitStages4;
+	submitInfo.pCommandBuffers = &pointShadowCommandBuffer;
+	submitInfo.pSignalSemaphores = &shadowFinishedSemaphore;
+
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
+
+	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
+	submitInfo.pWaitSemaphores = &shadowFinishedSemaphore;
 	submitInfo.pWaitDstStageMask = waitStages3;
 	submitInfo.pCommandBuffers = &pbrCommandBuffer;
 	submitInfo.pSignalSemaphores = &pbrFinishedSemaphore;
@@ -435,6 +458,7 @@ void Renderer::createLogicalDevice()
 	pdf.samplerAnisotropy = VK_TRUE;
 	pdf.multiDrawIndirect = VK_TRUE;
 	pdf.shaderStorageImageExtendedFormats = VK_TRUE;
+	pdf.geometryShader = VK_TRUE;
 
 	VkDeviceCreateInfo dci = {};
 	dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -540,7 +564,7 @@ void Renderer::createUBOs()
 */
 void Renderer::createDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 8> poolSizes = {};
+	std::array<VkDescriptorPoolSize, 10> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = 1;
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -557,12 +581,16 @@ void Renderer::createDescriptorPool()
 	poolSizes[6].descriptorCount = 1;
 	poolSizes[7].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[7].descriptorCount = 4;
+	poolSizes[8].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[8].descriptorCount = 2;
+	poolSizes[9].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[9].descriptorCount = 150;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = 3;
+	poolInfo.maxSets = 4;
 
 	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool));
 }
@@ -580,6 +608,7 @@ void Renderer::createSemaphores()
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &pbrFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &screenFinishedSemaphore));
+	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &shadowFinishedSemaphore));
 }
 
 /*
@@ -674,7 +703,7 @@ void Renderer::updateTransformBuffer()
 	transformUBO.unmap();
 }
 
-void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount)
+void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount, VkImageAspectFlags aspect)
 {
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -683,7 +712,7 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = image;
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.aspectMask = aspect;
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = mipLevels;
 	barrier.subresourceRange.baseArrayLayer = 0;
@@ -726,6 +755,13 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 	else if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+	}
+	else if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;

@@ -3,6 +3,44 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
+void PointLight::initTexture(int resolution)
+{
+	TextureCreateInfo ci = {};
+	ci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
+	ci.bpp = 32;
+	ci.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
+	ci.genMipMaps = false;
+	ci.components = 1;
+	ci.height = resolution;
+	ci.width = resolution;
+	ci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	ci.numLayers = 6;
+	ci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	shadowTex = new Texture();
+	shadowTex->create(&ci);
+
+	std::array<VkImageView, 1> attachments = {
+		shadowTex->getImageViewHandle()
+	};
+
+	VkFramebufferCreateInfo framebufferInfo = {};
+	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	framebufferInfo.renderPass = Engine::renderer->pointShadowRenderPass;
+	framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	framebufferInfo.pAttachments = attachments.data();
+	framebufferInfo.width = 1024;
+	framebufferInfo.height = 1024;
+	framebufferInfo.layers = 6;
+
+	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, &shadowFBO));
+}
+
+void PointLight::destroy()
+{
+	vkDestroyFramebuffer(Engine::renderer->device, shadowFBO, 0);
+	shadowTex->destroy();
+}
+
 void PointLight::updateRadius()
 {
 	matNeedsUpdate = true;

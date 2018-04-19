@@ -25,7 +25,7 @@ void Renderer::createGBufferAttachments()
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	tci.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
 	tci.bpp = 32;
-	tci.components = 4;
+	tci.components = 1;
 	tci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
@@ -316,12 +316,12 @@ void Renderer::updateGBufferDescriptorSets()
 	VkDescriptorBufferInfo bufferInfo = {};
 	bufferInfo.buffer = cameraUBO.getBuffer();
 	bufferInfo.offset = 0;
-	bufferInfo.range = sizeof(CameraUBOData);
+	bufferInfo.range = VK_WHOLE_SIZE;
 
 	VkDescriptorBufferInfo bufferInfo2 = {};
 	bufferInfo2.buffer = transformUBO.getBuffer();;
 	bufferInfo2.offset = 0;
-	bufferInfo2.range = sizeof(glm::fmat4) * 3;
+	bufferInfo2.range = VK_WHOLE_SIZE;
 
 	VkDescriptorImageInfo	imageInfo[1000];
 	for (u32 i = 0; i < 1000; ++i)
