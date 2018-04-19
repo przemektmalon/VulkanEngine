@@ -6,21 +6,34 @@
 void Texture::loadFile(std::string pPath, bool genMipMaps)
 {
 	img = new Image;
-	img->load(pPath);
+	img->load(pPath, components);
 	if (img->data.size() == 0)
 	{
 		DBG_WARNING("Failed to load image: " << pPath);
 		/// TODO: Load a default null texture
 		return;
 	}
+	components = img->components;
+	bpp = img->bpp;
+	vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
+	switch (img->components) {
+	case 4:
+		vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
+		break;
+	case 3:
+		vkFormat = VK_FORMAT_R8G8B8_UNORM;
+		break;
+	case 1:
+		vkFormat = VK_FORMAT_R8_UNORM;
+		break;
+	}
 	loadImage(img, genMipMaps);
 }
 
 void Texture::loadImage(Image * pImage, bool genMipMaps)
 {
-	VkDeviceSize textureSize = pImage->data.size() * sizeof(Pixel);
-	vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
-	vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	VkDeviceSize textureSize = pImage->data.size();
+	
 	width = pImage->width; height = pImage->height;
 
 	if (genMipMaps)
@@ -50,15 +63,32 @@ void Texture::loadImage(Image * pImage, bool genMipMaps)
 
 void Texture::loadCube(std::string pPaths[6], bool genMipMaps)
 {
+	vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
 	img = new Image[6];
 	for (int i = 0; i < 6; ++i)
 	{
-		img[i].load(pPaths[i]);
+		img[i].load(pPaths[i], components);
 		if (img[i].data.size() == 0)
 		{
 			DBG_WARNING("Failed to load image: " << pPaths[i]);
 			return;
 		}
+		if (i > 0 && img->components != components && img->bpp != components)
+			DBG_WARNING("Components of all cube images must be equal");
+		components = img->components;
+		bpp = img->bpp;	
+	}
+
+	switch (img->components) {
+	case 4:
+		vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
+		break;
+	case 3:
+		vkFormat = VK_FORMAT_R8G8B8_UNORM;
+		break;
+	case 1:
+		vkFormat = VK_FORMAT_R8_UNORM;
+		break;
 	}
 
 	int w = img[0].width, h = img[0].height;
@@ -88,7 +118,7 @@ void Texture::loadCube(std::string pPaths[6], bool genMipMaps)
 
 	for (int l = 0; l < 6; ++l)
 	{
-		VkDeviceSize textureSize = img[0].data.size() * sizeof(Pixel);
+		VkDeviceSize textureSize = img[0].data.size();
 		r->createStagingBuffer(textureSize);
 		r->copyToStagingBuffer(&(img[l].data[0]), (size_t)textureSize);
 
@@ -105,13 +135,7 @@ void Texture::loadCube(std::string pPaths[6], bool genMipMaps)
 
 void Texture::loadStream(TextureCreateInfo * ci)
 {
-	width = ci->width; height = ci->height;
-	vkFormat = ci->format;
-	vkLayout = ci->layout;
-	vkAspect = ci->aspectFlags;
-	vkUsage = ci->usageFlags;
-	numLayers = ci->numLayers;
-	VkDeviceSize textureSize = width * height * ci->bpp;
+	VkDeviceSize textureSize = width * height * components;
 
 	if (ci->genMipMaps)
 		maxMipLevel = glm::floor(glm::log2<float>(glm::max(width, height)));
@@ -148,6 +172,12 @@ void Texture::create(TextureCreateInfo * ci)
 	numLayers = ci->numLayers;
 	vkLayout = ci->layout;
 	vkFormat = ci->format;
+	vkAspect = ci->aspectFlags;
+	vkUsage = ci->usageFlags;
+	width = ci->width;
+	height = ci->height;
+	bpp = ci->bpp;
+	components = ci->components;
 	if (ci->pData)
 		loadStream(ci);
 	else if (ci->pPaths)
@@ -179,7 +209,7 @@ void Texture::generateMipMaps()
 
 	const auto r = Engine::renderer;
 
-	VkDeviceSize allMipsSize = (img[0].data.size() * 1.335) * numLayers * sizeof(Pixel);
+	VkDeviceSize allMipsSize = (img[0].data.size() * 1.335) * numLayers;
 	r->createStagingBuffer(allMipsSize);
 
 	VkDeviceSize offset = 0;
@@ -194,7 +224,7 @@ void Texture::generateMipMaps()
 		for (auto& level : layer)
 		{
 			prevMip->generateMipMap(level);
-			r->copyToStagingBuffer(&level.data[0], level.data.size() * sizeof(Pixel), offset);
+			r->copyToStagingBuffer(&level.data[0], level.data.size(), offset);
 			
 			VkBufferImageCopy region = {};
 			region.imageSubresource.aspectMask = vkAspect;
@@ -208,7 +238,7 @@ void Texture::generateMipMaps()
 
 			copyRegions.push_back(region);
 
-			offset += level.data.size() * sizeof(Pixel);
+			offset += level.data.size() * level.bpp * level.components;
 			prevMip = &level;
 			++lvl;
 		}

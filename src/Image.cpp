@@ -6,28 +6,29 @@
 #include "stb_image_write.h"
 #include "cro_mipmap.h"
 
-void Image::setSize(int pWidth, int pHeight)
+void Image::setSize(int pWidth, int pHeight, int pComponents)
 {
-	width = pWidth; height = pHeight;
-	data.resize(width * height);
+	width = pWidth; height = pHeight; components = pComponents;
+	data.resize(width * height * components);
 }
 
-void Image::load(std::string path)
+void Image::load(std::string path, int pComponents)
 {
 	char buff[FILENAME_MAX];
   	GetCurrentDir( buff, FILENAME_MAX );
   	std::string current_working_dir(buff);
 	path = current_working_dir + "/" + path;
 
-	int bpp;
 	DBG_INFO("Loading image: " << path);
-	unsigned char* loadedData = stbi_load(path.c_str(), &width, &height, &bpp, 4);
+	unsigned char* loadedData = stbi_load(path.c_str(), &width, &height, &components, pComponents);
+	components = pComponents;
+	bpp = 8 * components;
 	if (!loadedData) {
 		DBG_WARNING("Failed to load image: " << path);
 		return;
 	}
-	data.resize(width*height);
-	memcpy(&data[0], loadedData, width * height * sizeof(Pixel));
+	data.resize(width*height*components);
+	memcpy(&data[0], loadedData, width * height * components);
 	stbi_image_free(loadedData);
 }
 

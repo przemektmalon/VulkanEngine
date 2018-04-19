@@ -249,7 +249,10 @@ public:
 
 	void initTexture(int resolution = 1024)
 	{
-		
+		/*TextureCreateInfo ci = {};
+		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+		ci.bpp = 32 * 4;
+		ci.format*/
 	}
 
 	void updateRadius();

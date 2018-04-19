@@ -7,12 +7,13 @@ void Renderer::createPBRAttachments()
 	tci.width = renderResolution.width;
 	tci.height = renderResolution.height;
 	tci.bpp = 32 * 4;
+	tci.components = 4;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
 	tci.usageFlags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-	pbrOutput.loadStream(&tci);
+	pbrOutput.create(&tci);
 }
 
 void Renderer::createPBRDescriptorSetLayouts()

@@ -7,26 +7,29 @@ void Renderer::createGBufferAttachments()
 	tci.width = renderResolution.width;
 	tci.height = renderResolution.height;
 	tci.bpp = 32;
+	tci.components = 4;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_R8G8B8A8_UNORM;
 	tci.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 
-	gBufferColourAttachment.loadStream(&tci);
-	gBufferPBRAttachment.loadStream(&tci);
+	gBufferColourAttachment.create(&tci);
+	gBufferPBRAttachment.create(&tci);
 
 	tci.format = VK_FORMAT_R32G32_SFLOAT;
 	tci.bpp = 32 * 2;
+	tci.components = 2;
 
-	gBufferNormalAttachment.loadStream(&tci);
+	gBufferNormalAttachment.create(&tci);
 
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	tci.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
 	tci.bpp = 32;
+	tci.components = 4;
 	tci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-	gBufferDepthAttachment.loadStream(&tci);
+	gBufferDepthAttachment.create(&tci);
 }
 
 void Renderer::createGBufferRenderPass()
