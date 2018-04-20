@@ -128,6 +128,11 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }  
 
+float calcRealDepth(float linDepth, float near, float far)
+{
+	return 2.0 * near * far / (far + near - (2.0 * linDepth - 1.0) * (far - near));
+}
+
 void main()
 {
 	uvec2 renderSize = textureSize(gDepth, 0);
@@ -158,9 +163,9 @@ void main()
 		atomicMax(maxZ, z);
 		atomicMin(minZ, z);
 	}
-
-	//barrier();
 	
+	barrier();
+
 	if(localID == 0)
 	{
 		farZMin = maxZ;
@@ -187,77 +192,74 @@ void main()
 		}
 	}
 
-	//barrier();
+	const float farZMinf = uintBitsToFloat(farZMin);
+	const float nearZMaxf = uintBitsToFloat(nearZMax);
 
-	float farZMinf = uintBitsToFloat(farZMin);
-	float nearZMaxf = uintBitsToFloat(nearZMax);
+	const float zNear = 0.1;
+	const float zFar = 5000.f;
 
-	float zNear = 0.1;
-	float zFar = 5000.f;
+    const float realDepth = calcRealDepth(depth, zNear, zFar);
 
-    float realDepth = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * depth - 1.0) * (zFar - zNear));
+    const float minZView = calcRealDepth(minZf, zNear, zFar);
+    const float maxZView = calcRealDepth(maxZf, zNear, zFar);
+    const float farZMinView = calcRealDepth(farZMinf, zNear, zFar);
+    const float nearZMaxView = calcRealDepth(nearZMaxf, zNear, zFar);
 
-    float minZView = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * minZf - 1.0) * (zFar - zNear));
-    float maxZView = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * maxZf - 1.0) * (zFar - zNear));
-    float farZMinView = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * farZMinf - 1.0) * (zFar - zNear));
-    float nearZMaxView = 2.0 * zNear * zFar / (zFar + zNear - (2.0 * nearZMaxf - 1.0) * (zFar - zNear));
-
-	vec4 viewRays = camera.viewRays;
+	const vec4 viewRays = camera.viewRays;
 
 	vec3 viewRay;
-	viewRay.x = mix(viewRays.z, viewRays.x, float(pixel.x)/renderSize.x);
-	viewRay.y = mix(viewRays.w, viewRays.y, float(pixel.y)/renderSize.y);
+	viewRay.x = mix(viewRays.z, viewRays.x, float(pixel.x) / renderSize.x);
+	viewRay.y = mix(viewRays.w, viewRays.y, float(pixel.y) / renderSize.y);
+	viewRay.z = 1.f;
 
-	mat4 vwt = camera.view;
-	vwt[3] = vec4(0,0,0,vwt[3][3]);
-	vwt = transpose(vwt);
-	viewRay = vec3(vwt * vec4(viewRay.xy,1.f,1.f));
+	const mat3 m3View = transpose(mat3(camera.view));
+
+	viewRay = m3View * viewRay;
 
 	vec3 worldPos = viewPos + (viewRay * -realDepth);
 
 	const uvec3 groupID = gl_WorkGroupID;
+	const uvec3 groupSize = gl_WorkGroupSize;
 
-	//barrier();
+	const vec2 groupRatio = vec2(float(renderSize.x) / float(groupSize.x), float(renderSize.y) / float(groupSize.y));
+	
+	const float xMixRatio1 = float(groupID.x) / groupRatio.x;
+	const float yMixRatio1 = float(groupID.y) / groupRatio.y;
 
-	float xMixRatio1 = float(gl_WorkGroupID.x)/(float(renderSize.x)/float(gl_WorkGroupSize.x));
-	float yMixRatio1 = float(gl_WorkGroupID.y)/(float(renderSize.y)/float(gl_WorkGroupSize.y));
+	const float xMixRatio2 = float(groupID.x+1) / groupRatio.x;
+	const float yMixRatio2 = float(groupID.y+1) / groupRatio.y;
 
-	float xMixRatio2 = float(gl_WorkGroupID.x+1)/(float(renderSize.x)/float(gl_WorkGroupSize.x));
-	float yMixRatio2 = float(gl_WorkGroupID.y+1)/(float(renderSize.y)/float(gl_WorkGroupSize.y));
+	
 
-	//FAR LIGHTS
+	// FAR DEPTH -------------------------------------------
 	vec3 viewRayTLFar;
 	viewRayTLFar.x = mix(viewRays.z, viewRays.x, xMixRatio1);
 	viewRayTLFar.y = mix(viewRays.w, viewRays.y, yMixRatio1);
 	viewRayTLFar.z = 1.f;
 
-	mat3 m3View = mat3(vwt);
-
-	//viewRayTLFar = vec3(mat3(view) * vec3(viewRayTLFar.xy,1.f));
-	viewRayTLFar = m3View * vec3(viewRayTLFar);
+	viewRayTLFar = m3View * viewRayTLFar;
 
 	vec3 viewRayBRFar;
 	viewRayBRFar.x = mix(viewRays.z, viewRays.x, xMixRatio2);
 	viewRayBRFar.y = mix(viewRays.w, viewRays.y, yMixRatio2);
 	viewRayBRFar.z = 1.f;
 
-	//viewRayBRFar = vec3(mat3(view) * vec3(viewRayBRFar.xy,1.f));
-	viewRayBRFar = m3View * vec3(viewRayBRFar);
+	viewRayBRFar = m3View * viewRayBRFar;
 
 	vec3 TLFar = viewPos + (viewRayTLFar * -maxZView);
 	vec3 BRFar = viewPos + (viewRayBRFar * -farZMinView);
 
 	vec3 AABBFarHalfSize = (abs(BRFar - TLFar) / 2.f);
 	vec3 AABBFarCenter = BRFar - (BRFar - TLFar) / 2.f;
-	//FAR LIGHTS
+	// FAR DEPTH -------------------------------------------
 
-	//NEAR LIGHTS
+
+	// NEAR DEPTH ------------------------------------------
 	vec3 viewRayTLNear;
 	viewRayTLNear.x = mix(viewRays.z, viewRays.x, xMixRatio1);
 	viewRayTLNear.y = mix(viewRays.w, viewRays.y, yMixRatio1);
 	viewRayTLNear.z = 1.f;
 
-	//viewRayTLNear = vec3(mat3(view) * vec3(viewRayTLNear.xy,1.f));
 	viewRayTLNear = m3View * vec3(viewRayTLNear);
 
 	vec3 viewRayBRNear;
@@ -265,7 +267,6 @@ void main()
 	viewRayBRNear.y = mix(viewRays.w, viewRays.y, yMixRatio2);
 	viewRayBRNear.z = 1.f;
 
-	//viewRayBRNear = vec3(mat3(view) * vec3(viewRayBRNear.xy,1.f));
 	viewRayBRNear = m3View * vec3(viewRayBRNear);
 
 	vec3 TLNear = viewPos + (viewRayTLNear * -nearZMaxView);
@@ -273,11 +274,11 @@ void main()
 
 	vec3 AABBNearHalfSize = (abs(BRNear - TLNear) / 2.f);
 	vec3 AABBNearCenter = BRNear - (BRNear - TLNear) / 2.f;
-	//NEAR LIGHTS
+	// NEAR DEPTH ------------------------------------------
 
+	// FRUSTUM CULLING -------------------------------------
 	uint threadCount = gl_WorkGroupSize.x*gl_WorkGroupSize.y;
 	uint passCount = (lightCounts.point + threadCount - 1) / threadCount;
-
 
 	for(uint i = 0; i < passCount; ++i)
 	{	
@@ -290,7 +291,6 @@ void main()
 		float rad = lightPos.w;
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
-
 
 		if(inFrustum)
 		{
@@ -320,24 +320,22 @@ void main()
 			tileSpotLightIndices[nextTileLightIndex] = lightIndex;
 		}
 	}
+	// FRUSTUM CULLING -------------------------------------
 
 	barrier();
 
 	vec3 litPixel = vec3(0.0);
-
 	float ambient = 0.07;
-
 	vec4 albedoSpec = vec4(0.0);
 	float ssaoVal = 1.0;
-
-	vec3 normal = decodeNormal(imageLoad(gNormal, pixel).xy);
 
 	if(depth == 1.f)
 	{
 		litPixel += texture(skybox, -viewRay).rgb;
 	}
-	else if (length(normal) > 0.8)
+	else
 	{
+		vec3 normal = decodeNormal(imageLoad(gNormal, pixel).xy);
 		vec4 pbr = imageLoad(gPBR, pixel);
 		
 		float roughness = pbr.r;
