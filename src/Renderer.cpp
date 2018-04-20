@@ -90,22 +90,22 @@ void Renderer::initialise()
 		switch (i % 7)
 		{
 		case 0: {
-			col = glm::fvec3(1, 0.2, 0.2);
+			col = glm::fvec3(1, 0.5, 0.5);
 			break; }
 		case 1: {
-			col = glm::fvec3(0.2, 1, 0.2);
+			col = glm::fvec3(0.5, 1, 0.5);
 			break; }
 		case 2: {
-			col = glm::fvec3(0.2, 0.2, 1);
+			col = glm::fvec3(0.5, 0.5, 1);
 			break; }
 		case 3: {
-			col = glm::fvec3(1, 1, 0.2);
+			col = glm::fvec3(1, 1, 0.5);
 			break; }
 		case 4: {
-			col = glm::fvec3(0.2, 1, 1);
+			col = glm::fvec3(0.5, 1, 1);
 			break; }
 		case 5: {
-			col = glm::fvec3(1, 0.2, 1);
+			col = glm::fvec3(1, 0.5, 1);
 			break; }
 		case 6: {
 			col = glm::fvec3(1, 1, 1);
@@ -114,15 +114,19 @@ void Renderer::initialise()
 		pl.setColour(col * glm::fvec3(1.3));
 		pl.setLinear(0.01);
 		pl.setQuadratic(0.01);
+		pl.setFadeStart(5);
+		pl.setFadeLength(10);
 
 		auto& sl = lightManager.addSpotLight();
-		sl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 10) + 5, s64(r() % s) - sh));
+		sl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 15) + 5, s64(r() % s) - sh));
 		sl.setDirection(glm::normalize(glm::fvec3(0)-sl.getPosition()));
-		sl.setColour(col * glm::fvec3(1.5));
-		sl.setInnerSpread(40);
-		sl.setOuterSpread(60);
-		sl.setLinear(0.01);
-		sl.setQuadratic(0.01);
+		sl.setColour(col * glm::fvec3(1.2));
+		sl.setInnerSpread(44);
+		sl.setOuterSpread(45);
+		sl.setLinear(0.05);
+		sl.setQuadratic(0.05);
+		sl.setFadeStart(50);
+		sl.setFadeLength(10);
 	}
 
 	lightManager.updateLightCounts();
@@ -559,9 +563,9 @@ void Renderer::createTextureSampler()
 
 	VK_CHECK_RESULT(vkCreateSampler(device, &samplerInfo, nullptr, &skySampler));
 
-	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	samplerInfo.addressModeV = samplerInfo.addressModeU;
+	samplerInfo.addressModeW = samplerInfo.addressModeU;
 	samplerInfo.anisotropyEnable = VK_FALSE;
 	samplerInfo.maxAnisotropy = 0;
 	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;

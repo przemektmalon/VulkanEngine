@@ -396,26 +396,40 @@ void main()
 
 			float camToLight = length(lightPos.xyz - viewPos);
 
-			for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+			uint fadeLength = floatBitsToUint(linearFadeTexHandle.y) >> 16;
+			uint fadeStart = floatBitsToUint(linearFadeTexHandle.y) & 0x0000FFFF;
+
+			if (camToLight < float(fadeStart) + float(fadeLength))
 			{
-			    for(float y = -offset; y < offset; y += offset / (samples * 0.5))
-			    {
-			        for(float z = -offset; z < offset; z += offset / (samples * 0.5))
-			        {
-			        	float closestDepth = texture(pointShadows[i], fragToLight + vec3(x, y, z)).r;
-			            closestDepth *= lightPos.w;
-			            if(currentDepth - bias > closestDepth)
-			            {
-			                shadow += 1.0;
-			            }
-			        }
-			    }
+				for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+				{
+				    for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+				    {
+				        for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+				        {
+				        	float closestDepth = texture(pointShadows[i], fragToLight + vec3(x, y, z)).r;
+				            closestDepth *= lightPos.w;
+				            if(currentDepth - bias > closestDepth)
+				            {
+				                shadow += 1.0;
+				            }
+				        }
+				    }
+				}
+			}
+
+			if (camToLight > float(fadeStart) && camToLight < float(fadeStart) + float(fadeLength))
+			{
+				shadow *= (float(fadeLength) - (camToLight - float(fadeStart))) / float(fadeLength);
 			}
 
 			shadow /= (samples * samples * samples);
 
 			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
+
+
+// CURRENT TILE SPOT LIGHT INDEX IS 2 WHEN SHOULD BE 1
 
 		for(uint j = 0; j < currentTileSpotLightIndex; ++j)
 		{
@@ -465,24 +479,35 @@ void main()
 
 			float currentDepth = projCoords.z;
 		    
-		    float bias = max(0.001f * (1.0 - dot(normal, lightDir)), 0.001f);
+		    float bias = max(0.01f * (1.0 - dot(normal, lightDir)), 0.01f);
 
 	    	const int pres = 2;
 
 			float camToLight = length(posRad.xyz - viewPos);
 
+			uint fadeLength = fadeData >> 16;
+			uint fadeStart = fadeData & 0x0000FFFF;
+
 			float shadow = 0.f;
 
-			vec2 texelSize = vec2(1.0 / 512.f);
-			for(int x = -pres; x <= pres; ++x)
+			if (camToLight < float(fadeStart) + float(fadeLength))
 			{
-			    for(int y = -pres; y <= pres; ++y)
-			    {
-					float pcfDepth = texture(spotShadows[i], projCoords.xy + vec2(x, y) * texelSize).r;
-			        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-			    }
+				vec2 texelSize = vec2(1.0 / 512.f);
+				for(int x = -pres; x <= pres; ++x)
+				{
+				    for(int y = -pres; y <= pres; ++y)
+				    {
+						float pcfDepth = texture(spotShadows[i], projCoords.xy + vec2(x, y) * texelSize).r;
+				        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+				    }
+				}
+				shadow /= ((2.f*pres) + 1) * ((2.f*pres) + 1);
 			}
-			shadow /= ((2.f*pres) + 1) * ((2.f*pres) + 1);
+
+			if (camToLight > float(fadeStart) && camToLight < float(fadeStart) + float(fadeLength))
+			{
+				shadow *= (float(fadeLength) - (camToLight - float(fadeStart))) / float(fadeLength);
+			}
 
 			if(projCoords.z > 1.0)
 	        	shadow = 0.0;

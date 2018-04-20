@@ -333,7 +333,8 @@ public:
 		{
 			float out = getOuter();
 			float rad = getRadius();
-			auto proj = glm::perspective<float>(glm::acos(out), 1.f, 1.f, getRadius() * 2.f);
+			float rads = glm::acos(out);
+			auto proj = glm::perspective<float>(rads*2.f, 1.f, 1.f, rad * 2.f);
 			glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f,
 				+0.0f, -1.0f, 0.0f, 0.0f,
 				+0.0f, 0.0f, 0.5f, 0.0f,
