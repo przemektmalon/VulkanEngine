@@ -283,7 +283,7 @@ void main()
 	{	
 		uint lightIndex =  (i * threadCount) + gl_LocalInvocationIndex;
 
-		if(lightIndex > lightCounts.point)
+		if(lightIndex > lightCounts.point - 1)
 			continue;
 
 		vec4 lightPos = pointLights.data[lightIndex].posRad;
@@ -305,7 +305,7 @@ void main()
 	{
 		uint lightIndex =  (i * threadCount) + gl_LocalInvocationIndex;
 
-		if (lightIndex > lightCounts.spot)
+		if (lightIndex > lightCounts.spot - 1)
 			continue;
 
 		vec4 lightPos = spotLights.data[lightIndex].posRad;
@@ -427,9 +427,6 @@ void main()
 
 			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
-
-
-// CURRENT TILE SPOT LIGHT INDEX IS 2 WHEN SHOULD BE 1
 
 		for(uint j = 0; j < currentTileSpotLightIndex; ++j)
 		{
