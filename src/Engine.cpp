@@ -54,7 +54,7 @@ void Engine::start()
 
 	PROFILE_START("assets");
 
-	Engine::assets.loadAssets("res/resources.txt");
+	Engine::assets.loadAssets("res/resources.xml");
 
 	PROFILE_END("assets");
 
@@ -71,7 +71,7 @@ void Engine::start()
 
 	// Adding models to the world
 	{
-		std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahogany", "copper" };
+		std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahog", "copper" };
 
 		for (int i = 0; i < 50; ++i)
 		{

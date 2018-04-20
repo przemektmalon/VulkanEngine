@@ -1,0 +1,142 @@
+<resources>
+
+	<resfolder>res/</resfolder>
+	<texfolder>textures/</texfolder>
+	<modelfolder>models/</modelfolder>
+
+	<!-- Paths beginning with '_' will be prefaced with resfolder/assetfolder/ -->
+
+	<texture>
+		<path>_dirt_DS.png</path>
+		<name>dirt_DS</name>
+	</texture>
+
+	<texture>
+		<path>_dirt_NR.png</path>
+		<name>dirt_NR</name>
+	</texture>
+
+	<texture>
+		<path>_bamboo_DS.png</path>
+		<name>bamboo_DS</name>
+	</texture>
+
+	<texture>
+		<path>_bamboo_NR.png</path>
+		<name>bamboo_NR</name>
+	</texture>
+
+	<texture>
+		<path>_mahog_DS.png</path>
+		<name>mahog_DS</name>
+	</texture>
+
+	<texture>
+		<path>_mahog_NR.png</path>
+		<name>mahog_NR</name>
+	</texture>
+
+	<texture>
+		<path>_rustediron_DS.png</path>
+		<name>rustediron_DS</name>
+	</texture>
+
+	<texture>
+		<path>_rustediron_NR.png</path>
+		<name>rustediron_NR</name>
+	</texture>
+
+	<texture>
+		<path>_copper_DS.png</path>
+		<name>copper_DS</name>
+	</texture>
+
+	<texture>
+		<path>_copper_NR.png</path>
+		<name>copper_NR</name>
+	</texture>
+
+	<texture>
+		<path>_greasymetal_DS.png</path>
+		<name>greasymetal_DS</name>
+	</texture>
+
+	<texture>
+		<path>_greasymetal_NR.png</path>
+		<name>greasymetal_NR</name>
+	</texture>
+
+	<texture>
+		<path>_marble_DS.png</path>
+		<name>marble_DS</name>
+	</texture>
+
+	<texture>
+		<path>_marble_NR.png</path>
+		<name>marble_NR</name>
+	</texture>
+
+	<material>
+		<name>bamboo</name>
+		<albedospec>bamboo_DS</albedospec>
+		<normalrough>bamboo_NR</normalrough>
+	</material>
+
+	<material>
+		<name>marble</name>
+		<albedospec>marble_DS</albedospec>
+		<normalrough>marble_NR</normalrough>
+	</material>
+
+	<material>
+		<name>copper</name>
+		<albedospec>copper_DS</albedospec>
+		<normalrough>copper_NR</normalrough>
+	</material>
+
+	<material>
+		<name>greasymetal</name>
+		<albedospec>greasymetal_DS</albedospec>
+		<normalrough>greasymetal_NR</normalrough>
+	</material>
+
+	<material>
+		<name>mahog</name>
+		<albedospec>mahog_DS</albedospec>
+		<normalrough>mahog_NR</normalrough>
+	</material>
+
+	<material>
+		<name>rustediron</name>
+		<albedospec>rustediron_DS</albedospec>
+		<normalrough>rustediron_NR</normalrough>
+	</material>
+
+	<material>
+		<name>dirt</name>
+		<albedospec>dirt_DS</albedospec>
+		<normalrough>dirt_NR</normalrough>
+	</material>
+
+	<model>
+		<path>_ball2.obj</path>
+		<name>pbrsphere</name>
+		<material>bamboo</material>
+		<physics></physics>
+	</model>
+
+	<model>
+		<path>_hollowbox.obj</path>
+		<name>hollowbox</name>
+		<material>bamboo</material>
+		<physics></physics>
+	</model>
+
+	<model>
+		<path>_ground.obj</path>
+		<name>ground</name>
+		<material>dirt</material>
+		<physics></physics>
+	</model>
+
+</resources>

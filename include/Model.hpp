@@ -84,8 +84,6 @@ struct Vertex2D
 class Model
 {
 public:
-	Model() {}
-	Model(std::string path) { load(path); }
 
 	struct TriangleMesh
 	{
@@ -108,7 +106,7 @@ public:
 	std::vector<u32> lodLimits;
 	std::string physicsInfoFilePath;
 
-	void load(std::string path);
+	void load();
 };
 
 class ModelInstance

@@ -169,6 +169,7 @@ void Texture::loadStream(TextureCreateInfo * ci)
 
 void Texture::create(TextureCreateInfo * ci)
 {
+	name = ci->name;
 	numLayers = ci->numLayers;
 	vkLayout = ci->layout;
 	vkFormat = ci->format;

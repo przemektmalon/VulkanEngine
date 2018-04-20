@@ -6,8 +6,12 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
-void Model::load(std::string path)
+void Model::load()
 {
+	auto path = lodPaths[0];
+
+	/// TODO: load multiple LODs
+
 	Assimp::Importer importer;
 	char buff[FILENAME_MAX];
 	GetCurrentDir(buff, FILENAME_MAX);
