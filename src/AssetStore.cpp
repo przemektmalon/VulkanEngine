@@ -28,6 +28,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 	{
 		std::vector<std::string> paths;
 		auto name = xml.getString(xml.firstNode(texNode, "name"));
+		bool mip = true;
 
 		auto pathNode = xml.firstNode(texNode, "path");
 		while (pathNode)
@@ -40,7 +41,14 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 			pathNode = pathNode->next_sibling("path");
 		}
-		
+
+		auto mipNode = xml.firstNode(texNode, "mip");
+		if (mipNode) {
+			if (xml.getString(mipNode) == "false") {
+				mip = false;
+			}
+		}
+
 		texNode = texNode->next_sibling("texture");
 
 		auto find = textures.find(name);
@@ -52,7 +60,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 		auto& tex = textures.insert(std::make_pair(name, Texture())).first->second;
 		TextureCreateInfo ci;
-		ci.genMipMaps = true;
+		ci.genMipMaps = mip;
 		ci.components = 4;
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

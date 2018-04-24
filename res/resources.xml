@@ -84,6 +84,7 @@
 		<path>_sky/front.png</path>
 		<path>_sky/back.png</path>
 		<name>skybox</name>
+		<mip>false</mip>
 	</texture>
 
 	<material>
