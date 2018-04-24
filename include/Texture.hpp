@@ -25,7 +25,6 @@ class Texture : public Asset
 {
 public:
 	Texture() : width(0), height(0), components(0), numLayers(1), maxMipLevel(1), vkImage(0), vkMemory(0), vkImageView(0) {}
-	Texture(std::string pPath) { loadFile(pPath); }
 
 	void setName(std::string pName) { name = pName; }
 	VkImage getImageHandle() { return vkImage; }
@@ -42,19 +41,12 @@ public:
 	void loadToRAM(void* pCreateStruct = 0, AllocFunc = malloc);
 	void loadToGPU(void* pCreateStruct = 0);
 
-	void create(TextureCreateInfo* ci);
-
 	void destroy();
 
 	static void createImage(u32 width, u32 height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, int mipLevels = 1, int numLayers = 1);
 	static VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels, int numLayers = 1);
 	
 private:
-
-	void loadFile(std::string pPath, bool genMipMaps = true);
-	void loadImage(Image* pImage, bool genMipMaps = true);
-	void loadCube(std::string pPaths[6], bool genMipMaps = true);
-	void loadStream(TextureCreateInfo* ci);
 
 	void createImage();
 	void createImageView();

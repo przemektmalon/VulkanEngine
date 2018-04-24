@@ -18,7 +18,7 @@ public:
 
 	Asset() : type(Undefined), availability(0), ramPointer(0), gpuMemory(0), size(0) {}
 
-	void prepare(std::string pDiskPath, std::string pName);
+	void prepare(std::vector<std::string>& pDiskPaths, std::string pName);
 
 	virtual void loadToRAM(void* pCreateStruct = 0, AllocFunc = malloc);
 	virtual void loadToGPU(void* pCreateStruct = 0);
@@ -30,7 +30,7 @@ public:
 
 	std::string getName() { return name; }
 	Type getType() { return type; }
-	std::string getDiskPath() { return diskPath; }
+	const std::vector<std::string>& getDiskPath() { return diskPaths; }
 	void* getRAMPointer() { return ramPointer; }
 	VkDeviceMemory getGPUMemory() { return gpuMemory; }
 	u64 getSize() { return size; }
@@ -41,7 +41,7 @@ protected:
 
 	Type type;
 	AvailabilityFlags availability;
-	std::string diskPath;
+	std::vector<std::string> diskPaths;
 	void* ramPointer;
 	VkDeviceMemory gpuMemory;
 

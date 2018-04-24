@@ -26,20 +26,27 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 	auto texNode = xml.firstNode(root, "texture");
 	while (texNode)
 	{
-		auto path = xml.getString(xml.firstNode(texNode, "path"));
+		std::vector<std::string> paths;
 		auto name = xml.getString(xml.firstNode(texNode, "name"));
 
-		if (path.length() == 0)
-			continue;
-		if (path[0] == '_')
-			path = texFolder + (path.c_str() + 1);
+		auto pathNode = xml.firstNode(texNode, "path");
+		while (pathNode)
+		{
+			auto path = xml.getString(pathNode);
+			if (path[0] == '_')
+				path = texFolder + (path.c_str() + 1);
 
+			paths.push_back(path);
+
+			pathNode = pathNode->next_sibling("path");
+		}
+		
 		texNode = texNode->next_sibling("texture");
 
 		auto find = textures.find(name);
 		if (find != textures.end())
 		{
-			DBG_WARNING("Texture " << name << " already loaded");
+			DBG_WARNING("Texture named \"" << name << "\" already loaded (duplicate)");
 			continue;
 		}
 
@@ -49,13 +56,12 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		ci.components = 4;
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		ci.numLayers = 1;
+		ci.numLayers = paths.size();
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
 
-		tex.prepare(path, name);
+		tex.prepare(paths, name);
 		tex.loadToRAM(&ci);
-		tex.loadToGPU(&ci);
+		tex.loadToGPU();
 	}
 
 	// Textures ---------------------------------------------------------------------

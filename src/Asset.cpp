@@ -2,22 +2,29 @@
 #include "Asset.hpp"
 #include "File.hpp"
 
-void Asset::prepare(std::string pDiskPath, std::string pName)
+void Asset::prepare(std::vector<std::string>& pDiskPaths, std::string pName)
 {
 	name = pName;
-	diskPath = pDiskPath;
+	diskPaths = pDiskPaths;
 
-	File file;
+	bool pathMissing = false;
 
-	file.open(diskPath, File::in);
-	if (file.isOpen())
-		availability |= ON_DISK;
-	else {
-		DBG_WARNING("Asset \"" << diskPath << "\" not found on disk.");
-		return;
+	for (auto& diskPath : diskPaths)
+	{
+		File file;
+		file.open(diskPath, File::in);
+		if (!file.isOpen()) {
+			pathMissing = true;
+			DBG_WARNING("Asset \"" << diskPath << "\" not found on disk.");
+		}
+		size += file.getSize();
+		file.close();
 	}
-	size = file.getSize();
-	file.close();
+
+	if (!pathMissing)
+	{
+		availability |= ON_DISK;
+	}
 }
 
 void Asset::loadToRAM(void* pCreateStruct, AllocFunc)

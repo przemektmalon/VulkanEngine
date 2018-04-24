@@ -17,7 +17,7 @@ void PointLight::initTexture(int resolution)
 	ci.numLayers = 6;
 	ci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	shadowTex = new Texture();
-	shadowTex->create(&ci);
+	shadowTex->loadToGPU(&ci);
 
 	std::array<VkImageView, 1> attachments = {
 		shadowTex->getImageViewHandle()
@@ -73,7 +73,7 @@ void SpotLight::initTexture(int resolution)
 	ci.numLayers = 1;
 	ci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	shadowTex = new Texture();
-	shadowTex->create(&ci);
+	shadowTex->loadToGPU(&ci);
 
 	std::array<VkImageView, 1> attachments = {
 		shadowTex->getImageViewHandle()

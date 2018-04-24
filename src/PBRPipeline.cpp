@@ -166,7 +166,7 @@ void Renderer::updatePBRDescriptorSets()
 	VkDescriptorImageInfo skyImageInfo;
 	skyImageInfo.sampler = skySampler;
 	skyImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	skyImageInfo.imageView = skybox.getImageViewHandle();
+	skyImageInfo.imageView = Engine::assets.getTexture("skybox")->getImageViewHandle();
 
 	VkDescriptorBufferInfo pointLightsInfo;
 	pointLightsInfo.buffer = lightManager.pointLightsBuffer.getBuffer();

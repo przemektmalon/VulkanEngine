@@ -17,19 +17,6 @@ void Renderer::initialise()
 	createCommandPool();
 	createQueryPool();
 
-	std::string skyFolder = "res/textures/sky/";
-	std::string skyPaths[6] = { skyFolder + "right.png", skyFolder + "left.png", skyFolder + "top.png", skyFolder + "bottom.png", skyFolder + "front.png", skyFolder + "back.png" };
-
-	TextureCreateInfo ci;
-	ci.genMipMaps = true;
-	ci.pPaths = skyPaths;
-	ci.numLayers = 6;
-	ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	ci.format = VK_FORMAT_R8G8B8A8_UNORM;
-	ci.name = "Skybox";
-
-	skybox.create(&ci);
-
 	createTextureSampler();
 	createSemaphores();
 
@@ -236,7 +223,6 @@ void Renderer::cleanup()
 	VK_VALIDATE(vkDestroySemaphore(device, screenFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, shadowFinishedSemaphore, 0));
 
-	skybox.destroy();
 	cameraUBO.destroy();
 	transformUBO.destroy();
 	vertexIndexBuffer.destroy();
@@ -559,7 +545,7 @@ void Renderer::createTextureSampler()
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerInfo.mipLodBias = 0.0f;
 	samplerInfo.minLod = 0.0f;
-	samplerInfo.maxLod = skybox.getMaxMipLevel();
+	samplerInfo.maxLod = 1.f;
 
 	VK_CHECK_RESULT(vkCreateSampler(device, &samplerInfo, nullptr, &skySampler));
 

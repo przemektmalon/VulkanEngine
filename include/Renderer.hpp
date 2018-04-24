@@ -268,9 +268,6 @@ public:
 
 	// End GPU mem management
 	
-	// Skybox
-	Texture skybox;
-
 	// Draw buffers
 	Buffer drawCmdBuffer;
 	void populateDrawCmdBuffer();

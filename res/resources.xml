@@ -76,6 +76,16 @@
 		<name>marble_NR</name>
 	</texture>
 
+	<texture>
+		<path>_sky/right.png</path>
+		<path>_sky/left.png</path>
+		<path>_sky/top.png</path>
+		<path>_sky/bottom.png</path>
+		<path>_sky/front.png</path>
+		<path>_sky/back.png</path>
+		<name>skybox</name>
+	</texture>
+
 	<material>
 		<name>bamboo</name>
 		<albedospec>bamboo_DS</albedospec>

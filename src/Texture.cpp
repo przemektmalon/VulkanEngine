@@ -3,195 +3,51 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
-void Texture::loadFile(std::string pPath, bool genMipMaps)
-{
-	img = new Image;
-	img->load(pPath, components);
-	if (img->data.size() == 0)
-	{
-		DBG_WARNING("Failed to load image: " << pPath);
-		/// TODO: Load a default null texture
-		return;
-	}
-	components = img->components;
-	bpp = img->bpp;
-	width = img->width;
-	height = img->height;
-	size = img->data.size();
-	vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
-	switch (img->components) {
-	case 4:
-		vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
-		break;
-	case 3:
-		vkFormat = VK_FORMAT_R8G8B8_UNORM;
-		break;
-	case 1:
-		vkFormat = VK_FORMAT_R8_UNORM;
-		break;
-	}
-	loadImage(img, genMipMaps);
-}
-
-void Texture::loadImage(Image * pImage, bool genMipMaps)
-{
-	VkDeviceSize textureSize = pImage->data.size();
-
-	if (genMipMaps)
-		maxMipLevel = glm::floor(glm::log2<float>(glm::max(width, height)));
-	else
-		maxMipLevel = 0;
-
-	const auto r = Engine::renderer;
-
-	r->createStagingBuffer(textureSize);
-	r->copyToStagingBuffer(&(pImage->data[0]), (size_t)textureSize);
-
-	vkUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	createImage();
-	r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
-
-	r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
-	r->destroyStagingBuffer();
-
-	if (genMipMaps)
-		generateMipMaps();
-	else
-		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, maxMipLevel + 1);
-
-	createImageView();
-}
-
-void Texture::loadCube(std::string pPaths[6], bool genMipMaps)
-{
-	vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
-	img = new Image[6];
-	for (int i = 0; i < 6; ++i)
-	{
-		img[i].load(pPaths[i], components);
-		if (img[i].data.size() == 0)
-		{
-			DBG_WARNING("Failed to load image: " << pPaths[i]);
-			return;
-		}
-		if (i > 0 && img->components != components && img->bpp != components)
-			DBG_WARNING("Components of all cube images must be equal");
-		components = img->components;
-		bpp = img->bpp;	
-	}
-
-	switch (img->components) {
-	case 4:
-		vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
-		break;
-	case 3:
-		vkFormat = VK_FORMAT_R8G8B8_UNORM;
-		break;
-	case 1:
-		vkFormat = VK_FORMAT_R8_UNORM;
-		break;
-	}
-
-	int w = img[0].width, h = img[0].height;
-	for (int i = 1; i < 6; ++i)
-	{
-		if (img[i].width != w || img[i].height != h)
-		{
-			DBG_WARNING("Cube texture layer dimensions must be equal");
-			return;
-		}
-		w = img[i].width; h = img[i].height;
-	}
-
-	width = img[0].width; height = img[0].height;
-	vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
-
-	if (genMipMaps)
-		maxMipLevel = glm::floor(glm::log2<float>(glm::max(width, height)));
-	else
-		maxMipLevel = 0;
-
-	const auto r = Engine::renderer;
-
-	vkUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	createImage();
-	r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1, numLayers);
-
-	for (int l = 0; l < 6; ++l)
-	{
-		VkDeviceSize textureSize = img[0].data.size();
-		r->createStagingBuffer(textureSize);
-		r->copyToStagingBuffer(&(img[l].data[0]), (size_t)textureSize);
-
-		r->stagingBuffer.copyTo(this, 0, 0, l, 1);
-
-		r->destroyStagingBuffer();
-	}
-
-	if (genMipMaps)
-		generateMipMaps();
-
-	createImageView();
-}
-
-void Texture::loadStream(TextureCreateInfo * ci)
-{
-	VkDeviceSize textureSize = width * height * components;
-
-	if (ci->genMipMaps)
-		maxMipLevel = glm::floor(glm::log2<float>(glm::max(width, height)));
-	else
-		maxMipLevel = 0;
-
-	const auto r = Engine::renderer;
-
-	if (ci->pData)
-	{
-		r->createStagingBuffer(textureSize);
-		r->copyToStagingBuffer(ci->pData, (size_t)textureSize);
-		vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-		createImage();
-		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
-		r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
-		r->destroyStagingBuffer();
-	}
-	else
-	{
-		createImage();
-		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, vkLayout, maxMipLevel + 1, numLayers, vkAspect);
-	}
-
-	if (vkLayout)
-		if (ci->pData)
-			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, maxMipLevel + 1);
-
-	createImageView();
-}
-
 void Texture::loadToRAM(void * pCreateStruct, AllocFunc)
 {
 	auto ci = (TextureCreateInfo*)pCreateStruct;
+
+	mipped = ci->genMipMaps;
+	numLayers = ci->numLayers;
+
+	vkLayout = ci->layout;
+	vkFormat = ci->format;
+	vkAspect = ci->aspectFlags;
+	vkUsage = ci->usageFlags;
+	components = ci->components;
 
 	if (isAvailable(ON_DISK))
 	{
 		// Asset has been prepared by asset store
 		// Name and size filled in
 
-		img = new Image;
-		img->load(diskPath, components);
-		if (img->data.size() == 0)
+		img = new Image[numLayers];
+
+		for (int i = 0; i < numLayers; ++i)
 		{
-			DBG_WARNING("Failed to load image: " << diskPath);
-			/// TODO: Load a default null texture
-			return;
+			img[i].load(diskPaths[i], components);
+			if (img[i].data.size() == 0)
+			{
+				DBG_WARNING("Failed to load image: " << diskPaths[i]);
+				return;
+			}
+			if (i > 0 && img->components != components && img->bpp != components)
+				DBG_WARNING("Components of all cube images must be equal");
+			components = img->components;
+			bpp = img->bpp;
 		}
-		components = img->components;
-		bpp = img->bpp;
-		width = img->width;
-		height = img->height;
-		mipped = ci->genMipMaps;
-		size = img->data.size();
-		vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
+
+		int w = img[0].width, h = img[0].height;
+		for (int i = 1; i < numLayers; ++i)
+		{
+			if (img[i].width != w || img[i].height != h)
+			{
+				DBG_WARNING("Cube texture layer dimensions must be equal");
+				return;
+			}
+			w = img[i].width; h = img[i].height;
+		}
+
 		switch (img->components) {
 		case 4:
 			vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
@@ -203,6 +59,11 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc)
 			vkFormat = VK_FORMAT_R8_UNORM;
 			break;
 		}
+
+		width = img->width;
+		height = img->height;
+		size = img->data.size() * numLayers;
+		vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
 		availability |= ON_RAM;
 		ramPointer = img->data.data();
@@ -217,14 +78,8 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc)
 		height = ci->height;
 		components = ci->components;
 		bpp = ci->bpp;
-		size = width * height * components;
-		numLayers = ci->numLayers;
-		vkLayout = ci->layout;
-		vkFormat = ci->format;
-		vkAspect = ci->aspectFlags;
-		vkUsage = ci->usageFlags;
-		mipped = ci->genMipMaps;
-
+		size = width * height * components * numLayers;
+		
 		if (ci->pData)
 		{
 			img = new Image;
@@ -250,8 +105,6 @@ void Texture::loadToGPU(void * pCreateStruct)
 		mipped = ci->genMipMaps;
 	}
 
-
-
 	const auto r = Engine::renderer;
 
 	if (isAvailable(ON_RAM))
@@ -263,18 +116,23 @@ void Texture::loadToGPU(void * pCreateStruct)
 		else
 			maxMipLevel = 0;
 
-		r->createStagingBuffer(size);
-		r->copyToStagingBuffer(img->data.data(), (size_t)size);
 		vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		createImage();
-		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
-		r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
-		r->destroyStagingBuffer();
+		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1, numLayers, vkAspect);
+
+		for (int i = 0; i < numLayers; ++i)
+		{
+			VkDeviceSize layerSize = size / numLayers;
+			r->createStagingBuffer(layerSize);
+			r->copyToStagingBuffer(img[i].data.data(), (size_t)layerSize);
+			r->stagingBuffer.copyTo(this, 0, 0, i, 1);
+			r->destroyStagingBuffer();
+		}
 
 		if (mipped)
 			generateMipMaps();
 		else
-			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, maxMipLevel + 1);
+			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, maxMipLevel + 1, numLayers, vkAspect);
 	}
 	else
 	{
@@ -305,14 +163,14 @@ void Texture::loadToGPU(void * pCreateStruct)
 			r->copyToStagingBuffer(ci->pData, (size_t)size);
 			vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			createImage();
-			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
+			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1, numLayers, vkAspect);
 			r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
 			r->destroyStagingBuffer();
 
 			if (mipped)
 				generateMipMaps();
 			else
-				r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, maxMipLevel + 1);
+				r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, maxMipLevel + 1, numLayers, vkAspect);
 		}
 		else
 		{
@@ -322,40 +180,6 @@ void Texture::loadToGPU(void * pCreateStruct)
 	}
 
 	createImageView();
-}
-
-void Texture::create(TextureCreateInfo * ci)
-{
-	name = ci->name;
-	numLayers = ci->numLayers;
-	vkLayout = ci->layout;
-	vkFormat = ci->format;
-	vkAspect = ci->aspectFlags;
-	vkUsage = ci->usageFlags;
-	width = ci->width;
-	height = ci->height;
-	bpp = ci->bpp;
-	components = ci->components;
-	if (ci->pData)
-		loadStream(ci);
-	else if (ci->pPaths)
-	{
-		if (ci->numLayers == 1)
-			loadFile(ci->pPaths[0], ci->genMipMaps);
-		else if (ci->numLayers == 6)
-		{
-			std::string cubePaths[6];
-			for (int i = 0; i < 6; ++i)
-				cubePaths[i] = ci->pPaths[i];
-			loadCube(cubePaths, ci->genMipMaps);
-		}
-		else
-		{
-			DBG_WARNING("Only 1 or 6 layer textures supported");
-		}
-	}
-	else
-		loadStream(ci);
 }
 
 void Texture::generateMipMaps()
