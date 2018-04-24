@@ -1,6 +1,7 @@
 #pragma once
 #include "PCH.hpp"
 #include "Image.hpp"
+#include "Asset.hpp"
 
 struct TextureCreateInfo
 {
@@ -20,10 +21,10 @@ struct TextureCreateInfo
 	std::string name;
 };
 
-class Texture
+class Texture : public Asset
 {
 public:
-	Texture() : width(0), height(0), numLayers(1), maxMipLevel(1), vkImage(0), vkMemory(0), vkImageView(0) {}
+	Texture() : width(0), height(0), components(0), numLayers(1), maxMipLevel(1), vkImage(0), vkMemory(0), vkImageView(0) {}
 	Texture(std::string pPath) { loadFile(pPath); }
 
 	void setName(std::string pName) { name = pName; }
@@ -37,6 +38,9 @@ public:
 	u32 getHeight() { return height; }
 	int getNumLayers() { return numLayers; }
 	VkFormat getFormat() { return vkFormat; }
+
+	void loadToRAM(void* pCreateStruct = 0, AllocFunc = malloc);
+	void loadToGPU(void* pCreateStruct = 0);
 
 	void create(TextureCreateInfo* ci);
 
@@ -56,7 +60,6 @@ private:
 	void createImageView();
 	void generateMipMaps();
 
-	std::string name;
 	int width, height;
 	int bpp, components;
 	int maxMipLevel;
@@ -68,6 +71,7 @@ private:
 	VkImageAspectFlags vkAspect;
 	VkImageUsageFlags vkUsage;
 	int numLayers;
+	bool mipped;
 	u32 gpuIndex;
 	Image* img;
 };

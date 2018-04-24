@@ -54,7 +54,7 @@ void Engine::start()
 
 	PROFILE_START("assets");
 
-	Engine::assets.loadAssets("res/resources.xml");
+	Engine::assets.loadAssets("/res/resources.xml");
 
 	PROFILE_END("assets");
 

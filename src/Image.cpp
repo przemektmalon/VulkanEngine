@@ -17,11 +17,17 @@ void Image::load(std::string path, int pComponents)
 	char buff[FILENAME_MAX];
   	GetCurrentDir( buff, FILENAME_MAX );
   	std::string current_working_dir(buff);
-	path = current_working_dir + "/" + path;
+	if (path[0] == '/')
+		path = current_working_dir + path;
+	else
+		path = current_working_dir + "/" + path;
 
 	DBG_INFO("Loading image: " << path);
 	unsigned char* loadedData = stbi_load(path.c_str(), &width, &height, &components, pComponents);
-	components = pComponents;
+	if (pComponents != 0)
+	{
+		components = pComponents;
+	}
 	bpp = 8 * components;
 	if (!loadedData) {
 		DBG_WARNING("Failed to load image: " << path);

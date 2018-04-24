@@ -15,6 +15,9 @@ void Texture::loadFile(std::string pPath, bool genMipMaps)
 	}
 	components = img->components;
 	bpp = img->bpp;
+	width = img->width;
+	height = img->height;
+	size = img->data.size();
 	vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
 	switch (img->components) {
 	case 4:
@@ -33,8 +36,6 @@ void Texture::loadFile(std::string pPath, bool genMipMaps)
 void Texture::loadImage(Image * pImage, bool genMipMaps)
 {
 	VkDeviceSize textureSize = pImage->data.size();
-	
-	width = pImage->width; height = pImage->height;
 
 	if (genMipMaps)
 		maxMipLevel = glm::floor(glm::log2<float>(glm::max(width, height)));
@@ -163,6 +164,162 @@ void Texture::loadStream(TextureCreateInfo * ci)
 	if (vkLayout)
 		if (ci->pData)
 			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, maxMipLevel + 1);
+
+	createImageView();
+}
+
+void Texture::loadToRAM(void * pCreateStruct, AllocFunc)
+{
+	auto ci = (TextureCreateInfo*)pCreateStruct;
+
+	if (isAvailable(ON_DISK))
+	{
+		// Asset has been prepared by asset store
+		// Name and size filled in
+
+		img = new Image;
+		img->load(diskPath, components);
+		if (img->data.size() == 0)
+		{
+			DBG_WARNING("Failed to load image: " << diskPath);
+			/// TODO: Load a default null texture
+			return;
+		}
+		components = img->components;
+		bpp = img->bpp;
+		width = img->width;
+		height = img->height;
+		mipped = ci->genMipMaps;
+		size = img->data.size();
+		vkAspect = VK_IMAGE_ASPECT_COLOR_BIT;
+		switch (img->components) {
+		case 4:
+			vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
+			break;
+		case 3:
+			vkFormat = VK_FORMAT_R8G8B8_UNORM;
+			break;
+		case 1:
+			vkFormat = VK_FORMAT_R8_UNORM;
+			break;
+		}
+
+		availability |= ON_RAM;
+		ramPointer = img->data.data();
+	}
+	else
+	{
+		// Asset is being create from stream by the app
+		// The create struct should contain a name a other data to calculate size etc
+
+		name = ci->name;
+		width = ci->width;
+		height = ci->height;
+		components = ci->components;
+		bpp = ci->bpp;
+		size = width * height * components;
+		numLayers = ci->numLayers;
+		vkLayout = ci->layout;
+		vkFormat = ci->format;
+		vkAspect = ci->aspectFlags;
+		vkUsage = ci->usageFlags;
+		mipped = ci->genMipMaps;
+
+		if (ci->pData)
+		{
+			img = new Image;
+			img->setSize(width, height, components);
+			memcpy(img->data.data(), ci->pData, size);
+
+			availability |= ON_RAM;
+			ramPointer = img->data.data();
+		}
+	}
+}
+
+void Texture::loadToGPU(void * pCreateStruct)
+{
+	auto ci = (TextureCreateInfo*)pCreateStruct;
+
+	if (ci)
+	{
+		vkLayout = ci->layout;
+		vkFormat = ci->format;
+		vkAspect = ci->aspectFlags;
+		vkUsage = ci->usageFlags;
+		mipped = ci->genMipMaps;
+	}
+
+
+
+	const auto r = Engine::renderer;
+
+	if (isAvailable(ON_RAM))
+	{
+		// Asset in RAM, check if create struct is non-zero
+
+		if (mipped)
+			maxMipLevel = glm::floor(glm::log2<float>(glm::max(width, height)));
+		else
+			maxMipLevel = 0;
+
+		r->createStagingBuffer(size);
+		r->copyToStagingBuffer(img->data.data(), (size_t)size);
+		vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		createImage();
+		r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
+		r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
+		r->destroyStagingBuffer();
+
+		if (mipped)
+			generateMipMaps();
+		else
+			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, maxMipLevel + 1);
+	}
+	else
+	{
+		// Asset not in RAM, check if we have data to upload to GPU
+		// We need to fill in meta data here
+
+		if (!ci)
+		{
+			DBG_SEVERE("Attempting to load texture to GPU with no create info when it's required");
+		}
+
+		name = ci->name;
+		width = ci->width;
+		height = ci->height;
+		components = ci->components;
+		bpp = ci->bpp;
+		size = width * height * bpp;
+		numLayers = ci->numLayers;
+
+		if (mipped)
+			maxMipLevel = glm::floor(glm::log2<float>(glm::max(width, height)));
+		else
+			maxMipLevel = 0;
+
+		if (ci->pData)
+		{
+			r->createStagingBuffer(size);
+			r->copyToStagingBuffer(ci->pData, (size_t)size);
+			vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			createImage();
+			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1);
+			r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
+			r->destroyStagingBuffer();
+
+			if (mipped)
+				generateMipMaps();
+			else
+				r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, maxMipLevel + 1);
+		}
+		else
+		{
+			createImage();
+			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, vkLayout, maxMipLevel + 1, numLayers, vkAspect);
+		}
+	}
 
 	createImageView();
 }

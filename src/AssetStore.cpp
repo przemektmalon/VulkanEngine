@@ -45,11 +45,17 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 		auto& tex = textures.insert(std::make_pair(name, Texture())).first->second;
 		TextureCreateInfo ci;
-		ci.pPaths = &path;
-		ci.name = name;
 		ci.genMipMaps = true;
 		ci.components = 4;
-		tex.create(&ci);
+		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ci.numLayers = 1;
+		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+
+		tex.prepare(path, name);
+		tex.loadToRAM(&ci);
+		tex.loadToGPU(&ci);
 	}
 
 	// Textures ---------------------------------------------------------------------

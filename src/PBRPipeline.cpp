@@ -13,7 +13,7 @@ void Renderer::createPBRAttachments()
 	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
 	tci.usageFlags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-	pbrOutput.create(&tci);
+	pbrOutput.loadToGPU(&tci);
 }
 
 void Renderer::createPBRDescriptorSetLayouts()
