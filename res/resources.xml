@@ -3,6 +3,7 @@
 	<resfolder>/res/</resfolder>
 	<texfolder>textures/</texfolder>
 	<modelfolder>models/</modelfolder>
+	<fontfolder>fonts/</fontfolder>
 
 	<!-- Paths beginning with '_' will be prefaced with resfolder/assetfolder/ -->
 
@@ -162,5 +163,10 @@
 		<material>dirt</material>
 		<physics></physics>
 	</model>
+
+	<font>
+		<name>consola</name>
+		<path>_consola.ttf</path>
+	</font>
 
 </resources>

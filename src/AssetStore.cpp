@@ -20,6 +20,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 	auto resFolder = xml.getString(xml.firstNode(root, "resfolder"));
 	auto texFolder = resFolder + xml.getString(xml.firstNode(root, "texfolder"));
 	auto modelFolder = resFolder + xml.getString(xml.firstNode(root, "modelfolder"));
+	auto fontFolder = resFolder + xml.getString(xml.firstNode(root, "fontfolder"));
 
 	// Textures ---------------------------------------------------------------------
 	
@@ -135,7 +136,6 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		model.physicsInfoFilePath = physics;
 		model.lodPaths = lodPaths;
 		model.lodLimits = lodLimits;
-		model.name = name;
 
 		model.prepare(lodPaths, name);
 		model.loadToRAM();
@@ -144,6 +144,30 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 	}
 
 	// Models -----------------------------------------------------------------------
+
+	// Fonts ------------------------------------------------------------------------
+
+	FT_Init_FreeType(&freetype);
+
+	auto fontNode = xml.firstNode(root, "font");
+	while (fontNode)
+	{
+		auto name = xml.getString(xml.firstNode(fontNode, "name"));
+		auto path = xml.getString(xml.firstNode(fontNode, "path"));
+
+		if (path[0] == '_')
+			path = fontFolder + (path.c_str() + 1);
+
+		std::vector<std::string> paths; paths.push_back(path);
+
+		auto& font = fonts.insert(std::make_pair(name, Font())).first->second;
+		font.prepare(paths, name);
+		font.loadToRAM();
+
+		fontNode = fontNode->next_sibling("font");
+	}
+
+	// Fonts ------------------------------------------------------------------------
 }
 
 void AssetStore::addMaterial(std::string name, std::string albedoSpec, std::string normalRough)

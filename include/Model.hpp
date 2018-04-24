@@ -82,14 +82,6 @@ struct Vertex2D
 	}
 };
 
-struct ModelCreateInfo
-{
-	std::string name;
-	std::vector<std::string> lodPaths;
-	std::vector<u32> lodLimits;
-	std::string physicsInfoFilePath;
-};
-
 class Model : public Asset
 {
 public:
@@ -104,11 +96,7 @@ public:
 
 		s32 firstVertex; // In GPU buffer
 		u32 firstIndex; // In GPU buffer
-
-		
 	};
-
-	std::string name;
 
 	std::vector<TriangleMesh> modelLODs;
 	std::vector<std::string> lodPaths;

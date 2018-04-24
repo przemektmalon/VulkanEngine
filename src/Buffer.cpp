@@ -71,9 +71,16 @@ void Buffer::copyTo(Buffer * dst, VkDeviceSize range, VkDeviceSize srcOffset, Vk
 	Engine::renderer->endSingleTimeCommands(commandBuffer);
 }
 
-void Buffer::copyTo(Texture * dst, VkDeviceSize srcOffset, int mipLevel, int baseLayer, int layerCount)
+void Buffer::copyTo(Texture * dst, VkDeviceSize srcOffset, int mipLevel, int baseLayer, int layerCount, VkOffset3D offset, VkExtent3D extent)
 {
 	VkCommandBuffer commandBuffer = Engine::renderer->beginSingleTimeCommands();
+
+	if (extent.depth == 0)
+		extent.depth = 1;
+	if (extent.width == 0)
+		extent.width = dst->getWidth();
+	if (extent.height == 0)
+		extent.height = dst->getHeight();
 
 	VkBufferImageCopy region = {};
 	region.bufferOffset = srcOffset;
@@ -83,12 +90,8 @@ void Buffer::copyTo(Texture * dst, VkDeviceSize srcOffset, int mipLevel, int bas
 	region.imageSubresource.mipLevel = mipLevel;
 	region.imageSubresource.baseArrayLayer = baseLayer;
 	region.imageSubresource.layerCount = layerCount;
-	region.imageOffset = { 0, 0, 0 };
-	region.imageExtent = {
-		dst->getWidth(),
-		dst->getHeight(),
-		u32(1)
-	};
+	region.imageOffset = offset;
+	region.imageExtent = extent;
 
 	VK_VALIDATE(vkCmdCopyBufferToImage(commandBuffer, buffer, dst->getImageHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region));
 

@@ -40,7 +40,7 @@ void Image::load(std::string path, int pComponents)
 
 void Image::save(std::string path)
 {
-	int result = stbi_write_png(path.c_str(), width, height, 4, &data[0], 0);
+	int result = stbi_write_png(path.c_str(), width, height, components, &data[0], 0);
 }
 
 void Image::generateMipMap(Image & mipmapped)
