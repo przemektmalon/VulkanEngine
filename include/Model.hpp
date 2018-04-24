@@ -1,6 +1,7 @@
 #pragma once
 #include "PCH.hpp"
 #include "Material.hpp"
+#include "Asset.hpp"
 
 struct Vertex
 {
@@ -81,7 +82,15 @@ struct Vertex2D
 	}
 };
 
-class Model
+struct ModelCreateInfo
+{
+	std::string name;
+	std::vector<std::string> lodPaths;
+	std::vector<u32> lodLimits;
+	std::string physicsInfoFilePath;
+};
+
+class Model : public Asset
 {
 public:
 
@@ -96,7 +105,7 @@ public:
 		s32 firstVertex; // In GPU buffer
 		u32 firstIndex; // In GPU buffer
 
-		Material* material;
+		::Material* material;
 	};
 
 	std::string name;
@@ -106,7 +115,8 @@ public:
 	std::vector<u32> lodLimits;
 	std::string physicsInfoFilePath;
 
-	void load();
+	void loadToRAM(void* pCreateStruct = 0, AllocFunc alloc = malloc);
+	void loadToGPU(void* pCreateStruct = 0);
 };
 
 class ModelInstance

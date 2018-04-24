@@ -20,10 +20,10 @@ public:
 
 	void prepare(std::vector<std::string>& pDiskPaths, std::string pName);
 
-	virtual void loadToRAM(void* pCreateStruct = 0, AllocFunc = malloc);
+	virtual void loadToRAM(void* pCreateStruct = 0, AllocFunc alloc = malloc);
 	virtual void loadToGPU(void* pCreateStruct = 0);
 
-	virtual void cleanupRAM(FreeFunc = free);
+	virtual void cleanupRAM(FreeFunc fr = free);
 	virtual void cleanupGPU();
 
 	bool isAvailable(AvailabilityFlags flags);

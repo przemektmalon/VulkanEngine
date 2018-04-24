@@ -38,7 +38,7 @@ public:
 	int getNumLayers() { return numLayers; }
 	VkFormat getFormat() { return vkFormat; }
 
-	void loadToRAM(void* pCreateStruct = 0, AllocFunc = malloc);
+	void loadToRAM(void* pCreateStruct = 0, AllocFunc alloc = malloc);
 	void loadToGPU(void* pCreateStruct = 0);
 
 	void destroy();

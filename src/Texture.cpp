@@ -3,7 +3,7 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
-void Texture::loadToRAM(void * pCreateStruct, AllocFunc)
+void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 {
 	auto ci = (TextureCreateInfo*)pCreateStruct;
 

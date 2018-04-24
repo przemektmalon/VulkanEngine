@@ -6,9 +6,9 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
-void Model::load()
+void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 {
-	auto path = lodPaths[0];
+	auto path = diskPaths[0];
 
 	/// TODO: load multiple LODs
 
@@ -68,7 +68,14 @@ void Model::load()
 		}
 	}
 
+	availability |= ON_RAM;
+
 	DBG_INFO("Model loaded: " << path);
+}
+
+void Model::loadToGPU(void * pCreateStruct)
+{
+	Engine::renderer->pushModelDataToGPU(*this);
 }
 
 void ModelInstance::setModel(Model * m)

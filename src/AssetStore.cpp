@@ -128,7 +128,10 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		model.lodPaths = lodPaths;
 		model.lodLimits = lodLimits;
 		model.name = name;
-		model.load();
+
+		model.prepare(lodPaths, name);
+		model.loadToRAM();
+
 		for (auto& triMesh : model.triMeshes)
 		{
 			for (auto &lodLevel : triMesh)
@@ -136,7 +139,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 				lodLevel.material = getMaterial(material);
 			}
 		}
-		Engine::renderer->pushModelDataToGPU(model); /// TODO: load only whats needed to GPU
+		model.loadToGPU(); /// TODO: load only whats needed to GPU, determined by world scripts ?
 	}
 
 	// Models -----------------------------------------------------------------------
