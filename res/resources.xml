@@ -129,6 +129,19 @@
 	</material>
 
 	<model>
+		<name>monkey</name>
+		<path>_monkeyLowLOD.obj</path>
+		<limit>6</limit>
+		<path>_monkeyMedLOD.obj</path>
+		<limit>4</limit>
+		<path>_monkeyHighLOD.obj</path>
+		<limit>0</limit>
+
+		<material>marble</material>
+		<physics></physics>
+	</model>
+
+	<model>
 		<path>_ball2.obj</path>
 		<name>pbrsphere</name>
 		<material>bamboo</material>

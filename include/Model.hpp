@@ -105,15 +105,17 @@ public:
 		s32 firstVertex; // In GPU buffer
 		u32 firstIndex; // In GPU buffer
 
-		::Material* material;
+		
 	};
 
 	std::string name;
 
-	std::vector<std::vector<TriangleMesh>> triMeshes;
+	std::vector<TriangleMesh> modelLODs;
 	std::vector<std::string> lodPaths;
 	std::vector<u32> lodLimits;
 	std::string physicsInfoFilePath;
+
+	::Material* material;
 
 	void loadToRAM(void* pCreateStruct = 0, AllocFunc alloc = malloc);
 	void loadToGPU(void* pCreateStruct = 0);
@@ -127,9 +129,9 @@ public:
 	Model * model;
 	u32 transformIndex; // Index into gpu transform buffer
 
-	std::vector<std::vector<Material*>> material;
+	Material* material;
 
 	void setModel(Model* m);
 
-	void setMaterial(int lodLevel, int meshIndex, Material* pMaterial);
+	void setMaterial(Material* pMaterial);
 };

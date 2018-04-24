@@ -81,16 +81,19 @@ void Engine::start()
 			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % 1000) / 100.f, s64(rand() % s) - sh);
 			//world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 5) * 2), std::floor(int(i / (int)5) * 2), 0));
 			world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(), pos);
-			world.modelMap["hollowbox" + std::to_string(i)]->setMaterial(0, 0, assets.getMaterial(materialList[i % 6]));
+			world.modelMap["hollowbox" + std::to_string(i)]->setMaterial(assets.getMaterial(materialList[i % 6]));
 		}
 
 		world.addModelInstance("pbrsphere");
 		world.modelMap["pbrsphere"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(4, 0, 0));
-		world.modelMap["pbrsphere"]->setMaterial(0, 0, assets.getMaterial("marble"));
+		world.modelMap["pbrsphere"]->setMaterial(assets.getMaterial("marble"));
 
 		world.addModelInstance("ground");
 		world.modelMap["ground"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, -1, 0));
-		world.modelMap["ground"]->setMaterial(0, 0, assets.getMaterial("marble"));
+		world.modelMap["ground"]->setMaterial(assets.getMaterial("marble"));
+
+		world.addModelInstance("monkey");
+		world.modelMap["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
 	}
 
 	PROFILE_END("world");
@@ -167,7 +170,7 @@ void Engine::start()
 		
 		// Rendering and engine logic
 		renderer->updateCameraBuffer();
-		
+		renderer->populateDrawCmdBuffer();
 		renderer->render();
 
 		frameTime = clock.time() - frameTime;

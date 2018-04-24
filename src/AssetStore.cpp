@@ -131,14 +131,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 		model.prepare(lodPaths, name);
 		model.loadToRAM();
-
-		for (auto& triMesh : model.triMeshes)
-		{
-			for (auto &lodLevel : triMesh)
-			{
-				lodLevel.material = getMaterial(material);
-			}
-		}
+		model.material = getMaterial(material);
 		model.loadToGPU(); /// TODO: load only whats needed to GPU, determined by world scripts ?
 	}
 

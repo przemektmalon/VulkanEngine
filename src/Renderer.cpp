@@ -370,21 +370,25 @@ void Renderer::populateDrawCmdBuffer()
 	
 	for (auto& m : Engine::world.models)
 	{
-		int meshIndex = 0;
-		for (auto& triMesh : m.model->triMeshes)
-		{
-			int lodIndex = 0;
-			/// TODO: select appropriate LOD level
-			auto& lodMesh = triMesh[0];
+		glm::fvec3 modelPos = glm::fvec3(m.transform[3].x, m.transform[3].y, m.transform[3].z);
+		float distanceToCam = glm::length(Engine::camera.getPosition() - modelPos);
 
-			cmd[i].firstIndex = lodMesh.firstIndex;
-			cmd[i].indexCount = lodMesh.indexDataLength;
-			cmd[i].vertexOffset = lodMesh.firstVertex;
-			cmd[i].firstInstance = (m.material[meshIndex][lodIndex]->gpuIndexBase << 20) | (m.transformIndex);
-			cmd[i].instanceCount = 1; /// TODO: do we want/need a different class for real instanced drawing ?
-			++meshIndex;
-			++i;
+		int lodIndex = 0;
+		for (auto lim : m.model->lodLimits)
+		{
+			if (distanceToCam > lim)
+				break;
+			++lodIndex;
 		}
+
+		auto& lodMesh = m.model->modelLODs[lodIndex];
+
+		cmd[i].firstIndex = lodMesh.firstIndex;
+		cmd[i].indexCount = lodMesh.indexDataLength;
+		cmd[i].vertexOffset = lodMesh.firstVertex;
+		cmd[i].firstInstance = (m.material->gpuIndexBase << 20) | (m.transformIndex);
+		cmd[i].instanceCount = 1; /// TODO: do we want/need a different class for real instanced drawing ?
+		++i;
 	}
 
 	drawCmdBuffer.unmap();
@@ -398,20 +402,17 @@ void Renderer::createVertexIndexBuffers()
 
 void Renderer::pushModelDataToGPU(Model & model)
 {
-	for (auto& triMesh : model.triMeshes)
+	for (auto& lodLevel : model.modelLODs)
 	{
-		for (auto& lodLevel : triMesh)
-		{
-			vertexIndexBuffer.setMem(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), vertexInputByteOffset);
+		vertexIndexBuffer.setMem(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), vertexInputByteOffset);
 
-			lodLevel.firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
-			vertexInputByteOffset += lodLevel.vertexDataLength * sizeof(Vertex);
+		lodLevel.firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
+		vertexInputByteOffset += lodLevel.vertexDataLength * sizeof(Vertex);
 
-			vertexIndexBuffer.setMem(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), INDEX_BUFFER_BASE + indexInputByteOffset);
+		vertexIndexBuffer.setMem(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), INDEX_BUFFER_BASE + indexInputByteOffset);
 
-			lodLevel.firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
-			indexInputByteOffset += lodLevel.indexDataLength * sizeof(u32);
-		}
+		lodLevel.firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
+		indexInputByteOffset += lodLevel.indexDataLength * sizeof(u32);
 	}
 }
 
