@@ -75,6 +75,7 @@ void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 void Model::loadToGPU(void * pCreateStruct)
 {
 	Engine::renderer->pushModelDataToGPU(*this);
+	availability |= ON_GPU;
 }
 
 void ModelInstance::setModel(Model * m)

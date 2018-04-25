@@ -46,6 +46,12 @@ void Font::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 	}
 }
 
+void Font::cleanupGPU()
+{
+	for (auto& g : glyphContainers)
+		g.second.release();
+}
+
 GlyphContainer * Font::loadGlyphs(u16 pCharSize)
 {
 	auto ins = glyphContainers.insert(std::make_pair(pCharSize, GlyphContainer(pCharSize, ftFace)));

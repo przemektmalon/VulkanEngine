@@ -29,27 +29,32 @@ void Renderer::initialise()
 	createGBufferAttachments();
 	createPBRAttachments();
 	createScreenAttachments();
+	createOverlayAttachments();
 	
 	// Pipeline render passes
 	createGBufferRenderPass();
 	createShadowRenderPass();
 	createScreenRenderPass();
+	createOverlayRenderPass();
 
 	// Pipeline descriptor set layouts
 	createGBufferDescriptorSetLayouts();
 	createShadowDescriptorSetLayouts();
 	createPBRDescriptorSetLayouts();
 	createScreenDescriptorSetLayouts();
+	createOverlayDescriptorSetLayouts();
 
 	// Pipeline objects
 	createGBufferPipeline();
 	createShadowPipeline();
 	createPBRPipeline();
 	createScreenPipeline();
+	createOverlayPipeline();
 	
 	// Pipeline framebuffers
 	createGBufferFramebuffers();
 	createScreenFramebuffers();
+	createOverlayFramebuffers();
 
 	// Buffers for models, screen quad, uniforms
 	createDataBuffers();
@@ -59,12 +64,14 @@ void Renderer::initialise()
 	createShadowDescriptorSets();
 	createPBRDescriptorSets();
 	createScreenDescriptorSets();
+	createOverlayDescriptorSets();
 
 	// Pipeline commands
 	createGBufferCommands();
 	createShadowCommands();
 	createPBRCommands();
 	createScreenCommands();
+	createOverlayCommands();
 
 	for (int i = 0; i < 5; ++i)
 	{
@@ -209,6 +216,16 @@ void Renderer::cleanup()
 		destroyScreenSwapChain();
 	}
 
+	// Overlay pipeline
+	{
+		destroyOverlayAttachments();
+		destroyOverlayRenderPass();
+		destroyOverlayDescriptorSetLayouts();
+		destroyOverlayPipeline();
+		destroyOverlayFramebuffers();
+		destroyOverlayCommands();
+	}
+
 	VK_VALIDATE(vkDestroyDescriptorPool(device, descriptorPool, nullptr));
 	VK_VALIDATE(vkDestroyCommandPool(device, commandPool, 0));
 	VK_VALIDATE(vkDestroyQueryPool(device, queryPool, 0));
@@ -222,6 +239,7 @@ void Renderer::cleanup()
 	VK_VALIDATE(vkDestroySemaphore(device, pbrFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, screenFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, shadowFinishedSemaphore, 0));
+	VK_VALIDATE(vkDestroySemaphore(device, overlayFinishedSemaphore, 0));
 
 	cameraUBO.destroy();
 	transformUBO.destroy();
@@ -273,10 +291,9 @@ void Renderer::render()
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &imageAvailableSemaphore;
-	submitInfo.pWaitDstStageMask = waitStages;
+
+	submitInfo.waitSemaphoreCount = 0;
+	submitInfo.pWaitDstStageMask = 0;
 
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &gBufferCommandBuffer;
@@ -287,27 +304,38 @@ void Renderer::render()
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
 
-	VkPipelineStageFlags waitStages4[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
+	VkPipelineStageFlags waitStages1[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
+	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = &renderFinishedSemaphore;
-	submitInfo.pWaitDstStageMask = waitStages4;
-	submitInfo.pCommandBuffers = &pointShadowCommandBuffer;
+	submitInfo.pWaitDstStageMask = waitStages1;
+	submitInfo.pCommandBuffers = &shadowCommandBuffer;
 	submitInfo.pSignalSemaphores = &shadowFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
 
-	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
 	submitInfo.pWaitSemaphores = &shadowFinishedSemaphore;
-	submitInfo.pWaitDstStageMask = waitStages3;
+	submitInfo.pWaitDstStageMask = waitStages1;
 	submitInfo.pCommandBuffers = &pbrCommandBuffer;
 	submitInfo.pSignalSemaphores = &pbrFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
-	
+
 	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.pWaitSemaphores = &pbrFinishedSemaphore;
+	submitInfo.waitSemaphoreCount = 0;
 	submitInfo.pWaitDstStageMask = waitStages2;
+	submitInfo.pCommandBuffers = &overlayCommandBuffer;
+	submitInfo.pSignalSemaphores = &overlayFinishedSemaphore;
+
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
+	
+	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	VkSemaphore waitSems[] = { imageAvailableSemaphore, pbrFinishedSemaphore, overlayFinishedSemaphore };
+	submitInfo.pWaitSemaphores = waitSems;
+	submitInfo.waitSemaphoreCount = 3;
+	submitInfo.pWaitDstStageMask = waitStages3;
 	submitInfo.pCommandBuffers = &screenCommandBuffers[imageIndex];
 	submitInfo.pSignalSemaphores = &screenFinishedSemaphore;
 
@@ -607,7 +635,7 @@ void Renderer::createDescriptorPool()
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = 4;
+	poolInfo.maxSets = 15;
 
 	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool));
 }
@@ -626,6 +654,7 @@ void Renderer::createSemaphores()
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &pbrFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &screenFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &shadowFinishedSemaphore));
+	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayFinishedSemaphore));
 }
 
 /*

@@ -1,5 +1,7 @@
 #include "PCH.hpp"
 #include "Text.hpp"
+#include "Engine.hpp"
+#include "Renderer.hpp"
 
 void Text::Style::setFont(Font * pFont)
 {
@@ -21,7 +23,7 @@ void Text::Style::setOrigin(glm::ivec2 pOrigin)
 	origin = pOrigin;
 }
 
-void Text::Style::setColour(glm::fvec3 pColour)
+void Text::Style::setColour(glm::fvec4 pColour)
 {
 	colour = pColour;
 }
@@ -53,7 +55,7 @@ void Text::update()
 
 	glm::ivec2 glyphPos = glyphs->getPosition(*p);
 	glm::ivec2 glyphSize = glyphs->getSize(*p);
-
+	 
 	glm::fvec2 botLeft(vertPos.x + glyphPos.x, vertPos.y + ascender + (glyphSize.y - glyphPos.y));
 	glm::fvec2 topRight(vertPos.x + glyphPos.x + glyphSize.x, vertPos.y + ascender - glyphPos.y);
 
@@ -83,10 +85,13 @@ void Text::update()
 
 			float vertices[] = {
 				//Position						Texcoords
-				botLeft.x,  botLeft.y,  0,		glyphCoords.x,				glyphCoords.y + cOffset.y,	// Bot-left
-				botRight.x, botRight.y, 0,		glyphCoords.x + cOffset.x,	glyphCoords.y + cOffset.y,	// Bot-right
-				topRight.x, topRight.y, 0,		glyphCoords.x + cOffset.x,	glyphCoords.y,				// Top-right
-				topLeft.x,  topLeft.y,  0,		glyphCoords.x,				glyphCoords.y				// Top-left
+				botLeft.x,  botLeft.y,  		glyphCoords.x,				glyphCoords.y + cOffset.y,	// Bot-left
+				botRight.x, botRight.y, 		glyphCoords.x + cOffset.x,	glyphCoords.y + cOffset.y,	// Bot-right
+				topRight.x, topRight.y, 		glyphCoords.x + cOffset.x,	glyphCoords.y,				// Top-right
+
+				topRight.x, topRight.y, 		glyphCoords.x + cOffset.x,	glyphCoords.y,				// Top-right
+				topLeft.x,  topLeft.y,  		glyphCoords.x,				glyphCoords.y,				// Top-left
+				botLeft.x,  botLeft.y,  		glyphCoords.x,				glyphCoords.y + cOffset.y,	// Bot-left
 			};
 			memcpy((char*)(verts.data())+(sizeof(vertices) * index), vertices, sizeof(vertices));
 
@@ -111,11 +116,46 @@ void Text::update()
 	bounds.top = minY;
 	bounds.width = maxX - minX;
 	bounds.height = maxY - minY;
+
+	memcpy(pushConstData, &style.colour, sizeof(style.colour));
+
+	/// TODO: reuse buffer if possible
+	if (vertsBuffer.getBuffer())
+		vertsBuffer.destroy();
+	vertsBuffer.create(verts.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	char* data = (char*)vertsBuffer.map();
+	memcpy(data, verts.data(), verts.size() * sizeof(Vertex));
+	vertsBuffer.unmap();
+
+	VkDescriptorImageInfo fontInfo = {};
+	fontInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	fontInfo.imageView = glyphs->getTexture()->getImageViewHandle();
+	fontInfo.sampler = Engine::renderer->textureSampler;
+
+	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
+
+	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[0].dstSet = descSet;
+	descriptorWrites[0].dstBinding = 0;
+	descriptorWrites[0].dstArrayElement = 0;
+	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrites[0].descriptorCount = 1;
+	descriptorWrites[0].pImageInfo = &fontInfo;
+
+	VK_VALIDATE(vkUpdateDescriptorSets(Engine::renderer->device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }
 
 void Text::draw(VkCommandBuffer cmd)
 {
+	VkDeviceSize offsets[] = { 0 };
+	VkBuffer buffer[] = { vertsBuffer.getBuffer() };
+	VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, buffer, offsets));
+	VK_VALIDATE(vkCmdDraw(cmd, verts.size(), 1, 0, 0));
+}
 
+void Text::cleanup()
+{
+	vertsBuffer.destroy();
 }
 
 void Text::setFont(Font * pFont)
@@ -160,7 +200,7 @@ void Text::setOrigin(glm::ivec2 pOrigin)
 	update();
 }
 
-void Text::setColour(glm::fvec3 pColour)
+void Text::setColour(glm::fvec4 pColour)
 {
 	style.setColour(pColour);
 }

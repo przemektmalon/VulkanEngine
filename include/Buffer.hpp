@@ -5,7 +5,7 @@
 class Buffer
 {
 public:
-	Buffer() {}
+	Buffer() : buffer(0), memory(0), size(0), usage(0), memFlags(0) {}
 	~Buffer() {}
 
 	void create(VkDeviceSize pSize, VkBufferUsageFlags pUsage, VkMemoryPropertyFlags pMemFlags);

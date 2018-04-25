@@ -3,8 +3,10 @@
 #include "Font.hpp"
 #include "Rect.hpp"
 #include "Model.hpp"
+#include "Buffer.hpp"
+#include "OverlayElement.hpp"
 
-class Text
+class Text : public OverlayElement
 {
 public:
 
@@ -12,8 +14,8 @@ public:
 
 	struct Style
 	{
-		Style() : font(0), charSize(16), originPreDef(TopLeft), origin(0, 0), colour(glm::fvec3(1, 1, 1)) {}
-		Style(Font* pFont, u16 pCharSize = 16, Origin pOriginPreDef = TopLeft, glm::ivec2 pOrigin = glm::ivec2(0, 0), glm::fvec3 pColour = glm::fvec3(1, 1, 1)) :
+		Style() : font(0), charSize(16), originPreDef(TopLeft), origin(0, 0), colour(glm::fvec4(1, 1, 1, 1)) {}
+		Style(Font* pFont, u16 pCharSize = 16, Origin pOriginPreDef = TopLeft, glm::ivec2 pOrigin = glm::ivec2(0, 0), glm::fvec4 pColour = glm::fvec4(1, 1, 1, 1)) :
 			font(pFont),
 			charSize(pCharSize),
 			originPreDef(pOriginPreDef),
@@ -23,22 +25,28 @@ public:
 		u16 charSize;
 		Origin originPreDef;
 		glm::ivec2 origin;
-		glm::fvec3 colour;
+		glm::fvec4 colour;
 
 		void setFont(Font* pFont);
 		void setCharSize(u16 pCharSize);
 		void setOrigin(Origin pOrigin);
 		void setOrigin(glm::ivec2 pOrigin);
-		void setColour(glm::fvec3 pColour);
+		void setColour(glm::fvec4 pColour);
 	};
 
-	Text() {}
-	Text(Font* pFont) : style(pFont) {}
-	Text(Font* pFont, u16 pCharSize) : style(pFont, pCharSize) {}
+	Text()
+	{
+		pushConstData = new glm::fvec4;
+		pushConstSize = sizeof(glm::fvec4);
+	}
+	Text(Font* pFont) : style(pFont) { Text(); }
+	Text(Font* pFont, u16 pCharSize) : style(pFont, pCharSize) { Text(); }
 
 	void update();
 
 	void draw(VkCommandBuffer cmd);
+
+	void cleanup();
 
 	void setFont(Font* pFont);
 	void setCharSize(u16 pCharSize);
@@ -46,7 +54,7 @@ public:
 	void setPosition(glm::fvec2 pPos);
 	void setOrigin(Origin pOrigin);
 	void setOrigin(glm::ivec2 pOrigin);
-	void setColour(glm::fvec3 pColour);
+	void setColour(glm::fvec4 pColour);
 
 	Font* getFont() { return style.font; }
 	u16 getCharSize() { return style.charSize; }
@@ -54,6 +62,7 @@ public:
 	glm::fvec2 getPosition() { return position; }
 	frect getBounds() { return bounds; }
 	Style getStyle() { return style; }
+	GlyphContainer* getGlyphs() { return glyphs; }
 
 private:
 
@@ -68,4 +77,5 @@ private:
 	GlyphContainer* glyphs;
 
 	std::vector<Vertex2D> verts;
+	Buffer vertsBuffer;
 };

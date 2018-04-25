@@ -60,7 +60,7 @@ void Renderer::createShadowDescriptorSetLayouts()
 	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 	layoutInfo.pBindings = bindings.data();
 
-	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pointShadowDescriptorSetLayout));
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &shadowDescriptorSetLayout));
 }
 
 void Renderer::createShadowPipeline()
@@ -158,7 +158,7 @@ void Renderer::createShadowPipeline()
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &pointShadowDescriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 1;
 	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
@@ -205,7 +205,7 @@ void Renderer::createShadowPipeline()
 
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &pointShadowDescriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 1;
 	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
@@ -221,14 +221,14 @@ void Renderer::createShadowPipeline()
 
 void Renderer::createShadowDescriptorSets()
 {
-	VkDescriptorSetLayout layouts[] = { pointShadowDescriptorSetLayout };
+	VkDescriptorSetLayout layouts[] = { shadowDescriptorSetLayout };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool;
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
-	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &pointShadowDescriptorSet));
+	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &shadowDescriptorSet));
 }
 
 void Renderer::updateShadowDescriptorSets()
@@ -241,7 +241,7 @@ void Renderer::updateShadowDescriptorSets()
 	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
 
 	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[0].dstSet = pointShadowDescriptorSet;
+	descriptorWrites[0].dstSet = shadowDescriptorSet;
 	descriptorWrites[0].dstBinding = 0;
 	descriptorWrites[0].dstArrayElement = 0;
 	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -259,7 +259,7 @@ void Renderer::createShadowCommands()
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &pointShadowCommandBuffer));
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &shadowCommandBuffer));
 }
 
 void Renderer::updateShadowCommands()
@@ -268,7 +268,7 @@ void Renderer::updateShadowCommands()
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-	VK_CHECK_RESULT(vkBeginCommandBuffer(pointShadowCommandBuffer, &beginInfo));
+	VK_CHECK_RESULT(vkBeginCommandBuffer(shadowCommandBuffer, &beginInfo));
 
 	for (auto& l : lightManager.pointLights)
 	{
@@ -285,24 +285,24 @@ void Renderer::updateShadowCommands()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		VK_VALIDATE(vkCmdBeginRenderPass(pointShadowCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+		VK_VALIDATE(vkCmdBeginRenderPass(shadowCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		VK_VALIDATE(vkCmdBindPipeline(pointShadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipeline));
+		VK_VALIDATE(vkCmdBindPipeline(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipeline));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(pointShadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipelineLayout, 0, 1, &pointShadowDescriptorSet, 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipelineLayout, 0, 1, &shadowDescriptorSet, 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
-		VK_VALIDATE(vkCmdBindVertexBuffers(pointShadowCommandBuffer, 0, 1, vertexBuffers, offsets));
-		VK_VALIDATE(vkCmdBindIndexBuffer(pointShadowCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
+		VK_VALIDATE(vkCmdBindVertexBuffers(shadowCommandBuffer, 0, 1, vertexBuffers, offsets));
+		VK_VALIDATE(vkCmdBindIndexBuffer(shadowCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
 
 		auto pos = l.getPosition();
 		glm::fvec4 push(pos.x, pos.y, pos.z, l.getRadius());
 
-		VK_VALIDATE(vkCmdPushConstants(pointShadowCommandBuffer, pointShadowPipelineLayout, VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fvec4), &push));
-		VK_VALIDATE(vkCmdDrawIndexedIndirect(pointShadowCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand)));
+		VK_VALIDATE(vkCmdPushConstants(shadowCommandBuffer, pointShadowPipelineLayout, VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fvec4), &push));
+		VK_VALIDATE(vkCmdDrawIndexedIndirect(shadowCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
-		VK_VALIDATE(vkCmdEndRenderPass(pointShadowCommandBuffer));
+		VK_VALIDATE(vkCmdEndRenderPass(shadowCommandBuffer));
 	}
 
 	for (auto& l : lightManager.spotLights)
@@ -320,16 +320,16 @@ void Renderer::updateShadowCommands()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		VK_VALIDATE(vkCmdBeginRenderPass(pointShadowCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+		VK_VALIDATE(vkCmdBeginRenderPass(shadowCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		VK_VALIDATE(vkCmdBindPipeline(pointShadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipeline));
+		VK_VALIDATE(vkCmdBindPipeline(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipeline));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(pointShadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipelineLayout, 0, 1, &pointShadowDescriptorSet, 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipelineLayout, 0, 1, &shadowDescriptorSet, 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
-		VK_VALIDATE(vkCmdBindVertexBuffers(pointShadowCommandBuffer, 0, 1, vertexBuffers, offsets));
-		VK_VALIDATE(vkCmdBindIndexBuffer(pointShadowCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
+		VK_VALIDATE(vkCmdBindVertexBuffers(shadowCommandBuffer, 0, 1, vertexBuffers, offsets));
+		VK_VALIDATE(vkCmdBindIndexBuffer(shadowCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
 
 		float push[(4*4)+4+1];
 		glm::fmat4 pv = l.getProjView();
@@ -341,13 +341,13 @@ void Renderer::updateShadowCommands()
 		push[19] = 0;
 		push[20] = l.getRadius() * 2.f;
 
-		VK_VALIDATE(vkCmdPushConstants(pointShadowCommandBuffer, spotShadowPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(float) + sizeof(glm::fvec3), &push));
-		VK_VALIDATE(vkCmdDrawIndexedIndirect(pointShadowCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand)));
+		VK_VALIDATE(vkCmdPushConstants(shadowCommandBuffer, spotShadowPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(float) + sizeof(glm::fvec3), &push));
+		VK_VALIDATE(vkCmdDrawIndexedIndirect(shadowCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
-		VK_VALIDATE(vkCmdEndRenderPass(pointShadowCommandBuffer));
+		VK_VALIDATE(vkCmdEndRenderPass(shadowCommandBuffer));
 	}
 
-	VK_CHECK_RESULT(vkEndCommandBuffer(pointShadowCommandBuffer));
+	VK_CHECK_RESULT(vkEndCommandBuffer(shadowCommandBuffer));
 }
 
 void Renderer::destroyShadowRenderPass()
@@ -358,7 +358,7 @@ void Renderer::destroyShadowRenderPass()
 
 void Renderer::destroyShadowDescriptorSetLayouts()
 {
-	VK_VALIDATE(vkDestroyDescriptorSetLayout(device, pointShadowDescriptorSetLayout, 0));
+	VK_VALIDATE(vkDestroyDescriptorSetLayout(device, shadowDescriptorSetLayout, 0));
 }
 
 void Renderer::destroyShadowPipeline()
@@ -373,10 +373,10 @@ void Renderer::destroyShadowPipeline()
 
 void Renderer::destroyShadowDescriptorSets()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool, 1, &pointShadowDescriptorSet));
+	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool, 1, &shadowDescriptorSet));
 }
 
 void Renderer::destroyShadowCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &pointShadowCommandBuffer));
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &shadowCommandBuffer));
 }

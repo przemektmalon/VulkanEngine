@@ -175,11 +175,17 @@ void Renderer::createScreenDescriptorSetLayouts()
 	colLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	colLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[] = { colLayoutBinding };
+	VkDescriptorSetLayoutBinding overLayoutBinding = {};
+	overLayoutBinding.binding = 1;
+	overLayoutBinding.descriptorCount = 1;
+	overLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	overLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutBinding bindings[] = { colLayoutBinding, overLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 1;
+	layoutInfo.bindingCount = 2;
 	layoutInfo.pBindings = bindings;
 
 	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &screenDescriptorSetLayout));
@@ -344,7 +350,13 @@ void Renderer::updateScreenDescriptorSets()
 	colInfoScreen.sampler = textureSampler;
 	colInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	colInfoScreen.imageView = pbrOutput.getImageViewHandle();
-	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
+
+	VkDescriptorImageInfo overInfoScreen;
+	overInfoScreen.sampler = textureSampler;
+	overInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	overInfoScreen.imageView = overlayColAttachment.getImageViewHandle();
+
+	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
 
 	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[0].dstSet = screenDescriptorSet;
@@ -353,6 +365,14 @@ void Renderer::updateScreenDescriptorSets()
 	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptorWrites[0].descriptorCount = 1;
 	descriptorWrites[0].pImageInfo = &colInfoScreen;
+
+	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[1].dstSet = screenDescriptorSet;
+	descriptorWrites[1].dstBinding = 1;
+	descriptorWrites[1].dstArrayElement = 0;
+	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrites[1].descriptorCount = 1;
+	descriptorWrites[1].pImageInfo = &overInfoScreen;
 
 	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }

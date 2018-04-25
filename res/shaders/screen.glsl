@@ -22,13 +22,18 @@ void main() {
 #ifdef FRAGMENT ////////////////////////////////////////////////////
 
 layout(binding = 0) uniform sampler2D colSampler;
+layout(binding = 1) uniform sampler2D overlaySampler;
 
 layout(location = 0) in vec2 fragTexCoord;
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = texture(colSampler, fragTexCoord);
+
+	vec4 scene = texture(colSampler, fragTexCoord);
+	vec4 overlay = texture(overlaySampler, fragTexCoord);
+
+    outColor.rgb = (1.f - overlay.a) * scene.rgb + (overlay.a * overlay.rgb);
 }
 
 #endif

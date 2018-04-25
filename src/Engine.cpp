@@ -54,7 +54,32 @@ void Engine::start()
 
 	PROFILE_START("assets");
 
-	Engine::assets.loadAssets("/res/resources.xml");
+	assets.loadAssets("/res/resources.xml");
+
+	Text* t = new Text;
+	t->setFont(Engine::assets.getFont("consola"));
+	t->setColour(glm::fvec4(0.8, 0.6, 0.2, 1));
+	t->setCharSize(64);
+	t->setPosition(glm::fvec2(10, 10));
+	t->setString("Great");
+	
+	renderer->overlayElems.push_back(t);
+
+	t = new Text;
+	t->setFont(Engine::assets.getFont("consola"));
+	t->setColour(glm::fvec4(0.8, 0.1, 0.1, 1));
+	t->setCharSize(128);
+	t->setPosition(glm::fvec2(500, 50));
+	t->setString("Vulkan");
+	renderer->overlayElems.push_back(t);
+
+	t = new Text;
+	t->setFont(Engine::assets.getFont("consola"));
+	t->setColour(glm::fvec4(0.8, 0.8, 0.5, 1));
+	t->setCharSize(32);
+	t->setPosition(glm::fvec2(50, 300));
+	t->setString("Engine");
+	renderer->overlayElems.push_back(t);
 
 	PROFILE_END("assets");
 
@@ -64,6 +89,7 @@ void Engine::start()
 	renderer->updateShadowDescriptorSets();
 	renderer->updatePBRDescriptorSets();
 	renderer->updateScreenDescriptorSets();
+	renderer->updateOverlayDescriptorSets();
 
 	PROFILE_END("descsets");
 
@@ -92,8 +118,8 @@ void Engine::start()
 		world.modelMap["ground"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, -1, 0));
 		world.modelMap["ground"]->setMaterial(assets.getMaterial("marble"));
 
-		world.addModelInstance("monkey");
-		world.modelMap["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
+		//world.addModelInstance("monkey");
+		//world.modelMap["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
 	}
 
 	PROFILE_END("world");
@@ -107,6 +133,7 @@ void Engine::start()
 	renderer->updateShadowCommands();
 	renderer->updatePBRCommands();
 	renderer->updateScreenCommands();
+	renderer->updateOverlayCommands();
 
 	PROFILE_END("cmds");
 

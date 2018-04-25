@@ -48,7 +48,7 @@ public:
 
 	void load(u16 pCharSize, FT_Face pFace);
 
-	void release() {}
+	void release() { if (glyphs) glyphs->destroy(); }
 
 private:
 
@@ -69,13 +69,14 @@ class Font : public Asset
 {
 	friend class AssetManager;
 public:
-	Font() {}
+	Font() : ftFace(0) {}
 	~Font() {}
 
 	GlyphContainer* requestGlyphs(u16 pCharSize, Text* pUser);
 	void releaseGlyphs(u16 pCharSize, Text* pUser);
 
 	void loadToRAM(void* pCreateStruct = 0, AllocFunc alloc = malloc);
+	void cleanupGPU();
 
 private:
 

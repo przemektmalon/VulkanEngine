@@ -10,6 +10,9 @@
 #include "Lights.hpp"
 #include "PointShadowShader.hpp"
 #include "SpotShadowShader.hpp"
+#include "TextShader.hpp"
+#include "Text.hpp"
+#include "OverlayElement.hpp"
 
 struct CameraUBOData {
 	glm::fmat4 view;
@@ -60,6 +63,7 @@ public:
 	VkSemaphore screenFinishedSemaphore;
 	VkSemaphore pbrFinishedSemaphore;
 	VkSemaphore shadowFinishedSemaphore;
+	VkSemaphore overlayFinishedSemaphore;
 
 	// Samplers
 	VkSampler textureSampler;
@@ -80,6 +84,7 @@ public:
 	ScreenShader screenShader;
 	PointShadowShader pointShadowShader;
 	SpotShadowShader spotShadowShader;
+	TextShader textShader;
 
 	/// --------------------
 	/// GBuffer pipeline
@@ -154,21 +159,15 @@ public:
 	VkPipelineLayout spotShadowPipelineLayout;
 
 	// Descriptors
-	VkDescriptorSetLayout pointShadowDescriptorSetLayout;
-	VkDescriptorSet pointShadowDescriptorSet;
-
-	VkDescriptorSetLayout spotShadowDescriptorSetLayout;
-	VkDescriptorSet spotShadowDescriptorSet;
+	VkDescriptorSetLayout shadowDescriptorSetLayout;
+	VkDescriptorSet shadowDescriptorSet;
 
 	// Render pass
 	VkRenderPass pointShadowRenderPass;
-
 	VkRenderPass spotShadowRenderPass;
 
 	// Command buffer
-	VkCommandBuffer pointShadowCommandBuffer;
-
-	VkCommandBuffer spotShadowCommandBuffer;
+	VkCommandBuffer shadowCommandBuffer;
 
 	/// --------------------
 	/// PBR shading pipeline
@@ -249,6 +248,48 @@ public:
 	// Command buffers
 	std::vector<VkCommandBuffer> screenCommandBuffers;
 	
+	/// --------------------
+	/// Overlay pipeline
+	/// --------------------
+
+	// Functions
+	void createOverlayAttachments();
+	void createOverlayRenderPass();
+	void createOverlayDescriptorSetLayouts();
+	void createOverlayPipeline();
+	void createOverlayFramebuffers();
+	void createOverlayDescriptorSets();
+	void createOverlayCommands();
+
+	void updateOverlayDescriptorSets();
+	void updateOverlayCommands();
+
+	void destroyOverlayAttachments();
+	void destroyOverlayRenderPass();
+	void destroyOverlayDescriptorSetLayouts();
+	void destroyOverlayPipeline();
+	void destroyOverlayFramebuffers();
+	void destroyOverlayDescriptorSets();
+	void destroyOverlayCommands();
+
+	// Pipeline objets
+	VkPipeline overlayPipeline;
+	VkPipelineLayout overlayPipelineLayout;
+
+	// Descriptors
+	VkDescriptorSetLayout overlayDescriptorSetLayout;
+	VkDescriptorSet overlayDescriptorSet;
+
+	// Render pass
+	VkRenderPass overlayRenderPass;
+
+	// Framebuffers and attachments
+	VkFramebuffer overlayFramebuffer;
+	Texture overlayColAttachment;
+	Texture overlayDepthAttachment;
+
+	// Command buffer
+	VkCommandBuffer overlayCommandBuffer;
 
 	// GPU Memory management
 	// Joint vertex/index buffer
@@ -271,6 +312,8 @@ public:
 	// Draw buffers
 	Buffer drawCmdBuffer;
 	void populateDrawCmdBuffer();
+
+	std::vector<OverlayElement*> overlayElems;
 
 	// Uniform buffers
 	CameraUBOData cameraUBOData;

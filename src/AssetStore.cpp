@@ -9,6 +9,8 @@ void AssetStore::cleanup()
 	for (auto t = textures.begin(); t != textures.end(); ++t) {
 		t->second.destroy();
 	}
+	for (auto& f : fonts)
+		f.second.cleanupGPU();
 }
 
 void AssetStore::loadAssets(std::string assetListFilePath)
@@ -138,9 +140,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		model.lodLimits = lodLimits;
 
 		model.prepare(lodPaths, name);
-		model.loadToRAM();
 		model.material = getMaterial(material);
-		model.loadToGPU(); /// TODO: load only whats needed to GPU, determined by world scripts ?
 	}
 
 	// Models -----------------------------------------------------------------------
