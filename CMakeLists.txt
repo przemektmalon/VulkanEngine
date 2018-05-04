@@ -123,6 +123,21 @@ endif()
 
 
 ################################################################
+################    SET FREETYPE INCLUDE AND LIBRARY
+################################################################
+
+if(NOT LIB_FREETYPE_INCLUDE_DIR)
+	message(WARNING "Freetype include dir not found please specify it with -DLIB_FREETYPE_INCLUDE_DIR='Path to your freetype include dir' or use the cmake-gui to set it")
+	set(LIB_FREETYPE_INCLUDE_DIR "" CACHE PATH "Path to your freetype include folder")
+endif()
+if(NOT LIB_FREETYPE_LIB_DEBUG)
+	message(WARNING "Freetype library not found please specify it with -DLIB_FREETYPE_INCLUDE_LIB_[DEBUG/RELEASE]='Path to your freetype DEBUG and RELEASE lib files' or use the cmake-gui to set it")
+	set(LIB_FREETYPE_LIB_DEBUG "" CACHE FILEPATH "Path to your freetype debug library")
+	set(LIB_FREETYPE_LIB_RELEASE "" CACHE FILEPATH "Path to your freetype release library")
+endif()
+
+
+################################################################
 ################    SET SOME CMAKE VARIABLES
 ################################################################
 
@@ -146,7 +161,7 @@ endif()
 ################    SPECIFY INCLUDE DIRECTORIES
 ################################################################
 
-include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR} ${LIB_ASSIMP_INCLUDE_DIR})
+include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_FREETYPE_INCLUDE_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR} ${LIB_ASSIMP_INCLUDE_DIR})
 
 
 
@@ -172,7 +187,9 @@ target_link_libraries (VulkanEngine
 target_link_libraries (VulkanEngine
     debug ${LIB_SHADERC_DEBUG}
     optimized ${LIB_SHADERC_RELEASE})
-
+target_link_libraries (VulkanEngine
+    debug ${LIB_FREETYPE_LIB_DEBUG}
+    optimized ${LIB_FREETYPE_LIB_RELEASE})
 
 ################################################################
 ################    SET MSVC STARTUP PROJECT AND WORKING DIR
