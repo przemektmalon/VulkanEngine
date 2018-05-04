@@ -2,7 +2,7 @@
 #include "PCH.hpp"
 #include "Shader.hpp"
 
-class TextShader
+class TextShader : public ShaderProgram
 {
 public:
 	TextShader() : vertexModule(ShaderModule::Vertex, "/res/shaders/text.glsl"), fragmentModule(ShaderModule::Fragment, "/res/shaders/text.glsl") {}
@@ -46,6 +46,11 @@ public:
 	VkPipelineShaderStageCreateInfo* const getShaderStageCreateInfos()
 	{
 		return shaderStageCreateInfos;
+	}
+
+	int getNumStages()
+	{
+		return 2;
 	}
 
 private:

@@ -13,6 +13,8 @@
 #include "TextShader.hpp"
 #include "Text.hpp"
 #include "OverlayElement.hpp"
+#include "OverlayRenderer.hpp"
+#include "CombineOverlaysShader.hpp"
 
 struct CameraUBOData {
 	glm::fmat4 view;
@@ -43,6 +45,9 @@ public:
 
 	void reloadShaders();
 
+	OverlayRenderer overlayRenderer;
+	OLayer layer;
+
 	// Device, queues, swap chain
 	VkDevice device;
 	VkQueue graphicsQueue;
@@ -64,6 +69,7 @@ public:
 	VkSemaphore pbrFinishedSemaphore;
 	VkSemaphore shadowFinishedSemaphore;
 	VkSemaphore overlayFinishedSemaphore;
+	VkSemaphore overlayCombineFinishedSemaphore;
 
 	// Samplers
 	VkSampler textureSampler;
@@ -85,6 +91,7 @@ public:
 	PointShadowShader pointShadowShader;
 	SpotShadowShader spotShadowShader;
 	TextShader textShader;
+	CombineOverlaysShader combineOverlaysShader;
 
 	/// --------------------
 	/// GBuffer pipeline
@@ -253,43 +260,27 @@ public:
 	/// --------------------
 
 	// Functions
-	void createOverlayAttachments();
-	void createOverlayRenderPass();
-	void createOverlayDescriptorSetLayouts();
-	void createOverlayPipeline();
-	void createOverlayFramebuffers();
-	void createOverlayDescriptorSets();
-	void createOverlayCommands();
+	/*
+
+	
+	
 
 	void updateOverlayDescriptorSets();
-	void updateOverlayCommands();
 
-	void destroyOverlayAttachments();
-	void destroyOverlayRenderPass();
-	void destroyOverlayDescriptorSetLayouts();
-	void destroyOverlayPipeline();
-	void destroyOverlayFramebuffers();
 	void destroyOverlayDescriptorSets();
-	void destroyOverlayCommands();
-
+	
 	// Pipeline objets
-	VkPipeline overlayPipeline;
-	VkPipelineLayout overlayPipelineLayout;
+
 
 	// Descriptors
-	VkDescriptorSetLayout overlayDescriptorSetLayout;
+	
 	VkDescriptorSet overlayDescriptorSet;
 
 	// Render pass
-	VkRenderPass overlayRenderPass;
-
-	// Framebuffers and attachments
-	VkFramebuffer overlayFramebuffer;
-	Texture overlayColAttachment;
-	Texture overlayDepthAttachment;
+	
 
 	// Command buffer
-	VkCommandBuffer overlayCommandBuffer;
+	*/
 
 	// GPU Memory management
 	// Joint vertex/index buffer

@@ -7,6 +7,8 @@
 
 #include "PBRImage.hpp"
 
+#include "OverlayRenderer.hpp"
+
 /*
 	@brief	Initialise enigne and sub-systems
 */
@@ -56,14 +58,17 @@ void Engine::start()
 
 	assets.loadAssets("/res/resources.xml");
 
+	uiLayer = new OLayer;
+	uiLayer->create(glm::ivec2(1000, 500));
+	uiLayer->setPosition(glm::ivec2(100, 100));
+
 	Text* t = new Text;
 	t->setFont(Engine::assets.getFont("consola"));
 	t->setColour(glm::fvec4(0.8, 0.6, 0.2, 1));
 	t->setCharSize(64);
 	t->setPosition(glm::fvec2(10, 10));
 	t->setString("Great");
-	
-	renderer->overlayElems.push_back(t);
+	uiLayer->addElement(t);
 
 	t = new Text;
 	t->setFont(Engine::assets.getFont("consola"));
@@ -71,7 +76,7 @@ void Engine::start()
 	t->setCharSize(128);
 	t->setPosition(glm::fvec2(500, 50));
 	t->setString("Vulkan");
-	renderer->overlayElems.push_back(t);
+	uiLayer->addElement(t);
 
 	t = new Text;
 	t->setFont(Engine::assets.getFont("consola"));
@@ -79,7 +84,9 @@ void Engine::start()
 	t->setCharSize(32);
 	t->setPosition(glm::fvec2(50, 300));
 	t->setString("Engine");
-	renderer->overlayElems.push_back(t);
+	uiLayer->addElement(t);
+
+	renderer->overlayRenderer.addLayer(uiLayer);
 
 	PROFILE_END("assets");
 
@@ -89,8 +96,8 @@ void Engine::start()
 	renderer->updateShadowDescriptorSets();
 	renderer->updatePBRDescriptorSets();
 	renderer->updateScreenDescriptorSets();
-	renderer->updateOverlayDescriptorSets();
-
+	renderer->overlayRenderer.updateOverlayDescriptorSets();
+	
 	PROFILE_END("descsets");
 
 	PROFILE_START("world");
@@ -133,7 +140,7 @@ void Engine::start()
 	renderer->updateShadowCommands();
 	renderer->updatePBRCommands();
 	renderer->updateScreenCommands();
-	renderer->updateOverlayCommands();
+	renderer->overlayRenderer.updateOverlayCommands();
 
 	PROFILE_END("cmds");
 
@@ -427,3 +434,4 @@ std::mt19937_64 Engine::rand;
 u64 Engine::gpuTimeStamps[4];
 bool Engine::validationWarning;
 std::string Engine::validationMessage;
+OLayer* Engine::uiLayer;

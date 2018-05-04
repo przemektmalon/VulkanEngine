@@ -2,7 +2,7 @@
 #include "PCH.hpp"
 #include "Shader.hpp"
 
-class PBRShader
+class PBRShader : public ShaderProgram
 {
 public:
 	PBRShader() : computeModule(ShaderModule::Compute, "/res/shaders/pbr.glsl") {}
@@ -34,6 +34,11 @@ public:
 	VkPipelineShaderStageCreateInfo* const getShaderStageCreateInfos()
 	{
 		return shaderStageCreateInfos;
+	}
+
+	int getNumStages()
+	{
+		return 1;
 	}
 
 private:

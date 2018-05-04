@@ -122,9 +122,9 @@ void Text::update()
 	/// TODO: reuse buffer if possible
 	if (vertsBuffer.getBuffer())
 		vertsBuffer.destroy();
-	vertsBuffer.create(verts.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	vertsBuffer.create(verts.size() * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	char* data = (char*)vertsBuffer.map();
-	memcpy(data, verts.data(), verts.size() * sizeof(Vertex));
+	memcpy(data, verts.data(), verts.size() * sizeof(Vertex2D));
 	vertsBuffer.unmap();
 
 	VkDescriptorImageInfo fontInfo = {};

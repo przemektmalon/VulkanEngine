@@ -7,6 +7,7 @@
 #include "World.hpp"
 #include "AssetStore.hpp"
 
+class OLayer;
 class Window;
 class Renderer;
 
@@ -59,4 +60,5 @@ public:
 	static u64 gpuTimeStamps[4];
 	static bool validationWarning;
 	static std::string validationMessage;
+	static OLayer* uiLayer;
 };

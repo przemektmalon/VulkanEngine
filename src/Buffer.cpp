@@ -16,7 +16,7 @@ void Buffer::create(VkDeviceSize pSize, VkBufferUsageFlags pUsage, VkMemoryPrope
 	bufferInfo.usage = usage;
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	VK_CHECK_RESULT(vkCreateBuffer(Engine::renderer->device, &bufferInfo, nullptr, &buffer));
+	VK_CHECK_RESULT(vkCreateBuffer(Engine::renderer->device, &bufferInfo, nullptr, &buffer))
 
 	VkMemoryRequirements memRequirements;
 	VK_VALIDATE(vkGetBufferMemoryRequirements(Engine::renderer->device, buffer, &memRequirements));

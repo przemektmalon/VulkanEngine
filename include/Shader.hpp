@@ -39,3 +39,18 @@ private:
 	void setIntStage();
 	void determineLanguage();
 };
+
+class ShaderProgram
+{
+public:
+
+	virtual VkPipelineShaderStageCreateInfo * const getShaderStageCreateInfos()
+	{
+		return nullptr;
+	}
+
+	virtual int getNumStages()
+	{
+		return 0;
+	}
+};

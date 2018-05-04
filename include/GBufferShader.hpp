@@ -2,7 +2,7 @@
 #include "PCH.hpp"
 #include "Shader.hpp"
 
-class GBufferShader
+class GBufferShader : public ShaderProgram
 {
 public:
 	GBufferShader() : vertexModule(ShaderModule::Vertex, "/res/shaders/gbuffer.glsl"), fragmentModule(ShaderModule::Fragment, "/res/shaders/gbuffer.glsl") {}
@@ -46,6 +46,11 @@ public:
 	VkPipelineShaderStageCreateInfo* const getShaderStageCreateInfos()
 	{
 		return shaderStageCreateInfos;
+	}
+
+	int getNumStages()
+	{
+		return 2;
 	}
 
 private:

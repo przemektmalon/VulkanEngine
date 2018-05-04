@@ -34,13 +34,13 @@ public:
 		void setColour(glm::fvec4 pColour);
 	};
 
-	Text()
+	Text() : OverlayElement(OverlayElement::Text)
 	{
 		pushConstData = new glm::fvec4;
 		pushConstSize = sizeof(glm::fvec4);
 	}
-	Text(Font* pFont) : style(pFont) { Text(); }
-	Text(Font* pFont, u16 pCharSize) : style(pFont, pCharSize) { Text(); }
+	Text(Font* pFont) : style(pFont), OverlayElement(OverlayElement::Text) { Text(); }
+	Text(Font* pFont, u16 pCharSize) : style(pFont, pCharSize), OverlayElement(OverlayElement::Text) { Text(); }
 
 	void update();
 

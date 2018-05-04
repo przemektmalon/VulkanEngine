@@ -21,6 +21,7 @@ void Renderer::initialise()
 	createSemaphores();
 
 	lightManager.init();
+	textShader.compile();
 
 	// Swap chain
 	createScreenSwapChain();
@@ -29,32 +30,27 @@ void Renderer::initialise()
 	createGBufferAttachments();
 	createPBRAttachments();
 	createScreenAttachments();
-	createOverlayAttachments();
 	
 	// Pipeline render passes
 	createGBufferRenderPass();
 	createShadowRenderPass();
 	createScreenRenderPass();
-	createOverlayRenderPass();
-
+	
 	// Pipeline descriptor set layouts
 	createGBufferDescriptorSetLayouts();
 	createShadowDescriptorSetLayouts();
 	createPBRDescriptorSetLayouts();
 	createScreenDescriptorSetLayouts();
-	createOverlayDescriptorSetLayouts();
-
+	
 	// Pipeline objects
 	createGBufferPipeline();
 	createShadowPipeline();
 	createPBRPipeline();
 	createScreenPipeline();
-	createOverlayPipeline();
 	
 	// Pipeline framebuffers
 	createGBufferFramebuffers();
 	createScreenFramebuffers();
-	createOverlayFramebuffers();
 
 	// Buffers for models, screen quad, uniforms
 	createDataBuffers();
@@ -64,14 +60,19 @@ void Renderer::initialise()
 	createShadowDescriptorSets();
 	createPBRDescriptorSets();
 	createScreenDescriptorSets();
-	createOverlayDescriptorSets();
 
 	// Pipeline commands
 	createGBufferCommands();
 	createShadowCommands();
 	createPBRCommands();
 	createScreenCommands();
-	createOverlayCommands();
+	
+	overlayRenderer.createOverlayRenderPass();
+	overlayRenderer.createOverlayDescriptorSetLayouts();
+	overlayRenderer.createOverlayDescriptorSets();
+	overlayRenderer.createOverlayPipeline();
+	overlayRenderer.createOverlayAttachmentsFramebuffers();
+	overlayRenderer.createOverlayCommands();
 
 	for (int i = 0; i < 5; ++i)
 	{
@@ -216,15 +217,7 @@ void Renderer::cleanup()
 		destroyScreenSwapChain();
 	}
 
-	// Overlay pipeline
-	{
-		destroyOverlayAttachments();
-		destroyOverlayRenderPass();
-		destroyOverlayDescriptorSetLayouts();
-		destroyOverlayPipeline();
-		destroyOverlayFramebuffers();
-		destroyOverlayCommands();
-	}
+	overlayRenderer.cleanup();
 
 	VK_VALIDATE(vkDestroyDescriptorPool(device, descriptorPool, nullptr));
 	VK_VALIDATE(vkDestroyCommandPool(device, commandPool, 0));
@@ -240,6 +233,7 @@ void Renderer::cleanup()
 	VK_VALIDATE(vkDestroySemaphore(device, screenFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, shadowFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, overlayFinishedSemaphore, 0));
+	VK_VALIDATE(vkDestroySemaphore(device, overlayCombineFinishedSemaphore, 0));
 
 	cameraUBO.destroy();
 	transformUBO.destroy();
@@ -248,6 +242,9 @@ void Renderer::cleanup()
 	screenQuadBuffer.destroy();
 
 	lightManager.cleanup();
+	
+	combineOverlaysShader.destroy();
+	textShader.destroy();
 
 	VK_VALIDATE(vkDestroyDevice(device, 0));
 }
@@ -325,14 +322,23 @@ void Renderer::render()
 	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 0;
 	submitInfo.pWaitDstStageMask = waitStages2;
-	submitInfo.pCommandBuffers = &overlayCommandBuffer;
+	submitInfo.pCommandBuffers = &overlayRenderer.overlayCommandBuffer;
 	submitInfo.pSignalSemaphores = &overlayFinishedSemaphore;
+
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
+
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = &overlayFinishedSemaphore;
+	submitInfo.pWaitDstStageMask = waitStages2;
+	submitInfo.pCommandBuffers = &overlayRenderer.overlayCombineCommandBuffer;
+	submitInfo.pSignalSemaphores = &overlayCombineFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
 	
 	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	VkSemaphore waitSems[] = { imageAvailableSemaphore, pbrFinishedSemaphore, overlayFinishedSemaphore };
+	VkSemaphore waitSems[] = { imageAvailableSemaphore, pbrFinishedSemaphore, overlayCombineFinishedSemaphore };
 	submitInfo.pWaitSemaphores = waitSems;
 	submitInfo.waitSemaphoreCount = 3;
 	submitInfo.pWaitDstStageMask = waitStages3;
@@ -655,6 +661,7 @@ void Renderer::createSemaphores()
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &screenFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &shadowFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayFinishedSemaphore));
+	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayCombineFinishedSemaphore));
 }
 
 /*

@@ -2,7 +2,7 @@
 #include "PCH.hpp"
 #include "Shader.hpp"
 
-class PointShadowShader
+class PointShadowShader : public ShaderProgram
 {
 public:
 	PointShadowShader() : geometryModule(ShaderModule::Geometry, "/res/shaders/pointShadow.glsl"), vertexModule(ShaderModule::Vertex, "/res/shaders/pointShadow.glsl"), fragmentModule(ShaderModule::Fragment, "/res/shaders/pointShadow.glsl") {}
@@ -58,6 +58,11 @@ public:
 	VkPipelineShaderStageCreateInfo* const getShaderStageCreateInfos()
 	{
 		return shaderStageCreateInfos;
+	}
+
+	int getNumStages()
+	{
+		return 3;
 	}
 
 private:

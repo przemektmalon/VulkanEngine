@@ -354,7 +354,7 @@ void Renderer::updateScreenDescriptorSets()
 	VkDescriptorImageInfo overInfoScreen;
 	overInfoScreen.sampler = textureSampler;
 	overInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	overInfoScreen.imageView = overlayColAttachment.getImageViewHandle();
+	overInfoScreen.imageView = overlayRenderer.combinedLayers.getImageViewHandle();
 
 	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
 
