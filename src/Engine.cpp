@@ -57,33 +57,18 @@ void Engine::start()
 	PROFILE_START("assets");
 
 	assets.loadAssets("/res/resources.xml");
-
-	uiLayer = new OLayer;
-	uiLayer->create(glm::ivec2(1000, 500));
-	uiLayer->setPosition(glm::ivec2(100, 100));
-
+	
 	Text* t = new Text;
 	t->setFont(Engine::assets.getFont("consola"));
-	t->setColour(glm::fvec4(0.8, 0.6, 0.2, 1));
-	t->setCharSize(64);
-	t->setPosition(glm::fvec2(10, 10));
-	t->setString("Great");
-	uiLayer->addElement(t);
-
-	t = new Text;
-	t->setFont(Engine::assets.getFont("consola"));
-	t->setColour(glm::fvec4(0.8, 0.1, 0.1, 1));
-	t->setCharSize(128);
-	t->setPosition(glm::fvec2(500, 50));
-	t->setString("Vulkan");
-	uiLayer->addElement(t);
-
-	t = new Text;
-	t->setFont(Engine::assets.getFont("consola"));
-	t->setColour(glm::fvec4(0.8, 0.8, 0.5, 1));
-	t->setCharSize(32);
-	t->setPosition(glm::fvec2(50, 300));
-	t->setString("Engine");
+	t->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
+	t->setCharSize(20);
+	t->setString(" ");
+	t->setPosition(glm::fvec2(0, 0));
+	
+	
+	uiLayer = new OLayer;
+	uiLayer->create(glm::ivec2(1280, 720));
+	uiLayer->setPosition(glm::ivec2(0, 0));
 	uiLayer->addElement(t);
 
 	renderer->overlayRenderer.addLayer(uiLayer);
@@ -203,6 +188,7 @@ void Engine::start()
 		}
 		
 		// Rendering and engine logic
+		renderer->overlayRenderer.updateOverlayCommands();
 		renderer->updateCameraBuffer();
 		renderer->populateDrawCmdBuffer();
 		renderer->render();
@@ -233,10 +219,10 @@ void Engine::start()
 		fpsDisplay += frameTime.getSeconds();
 		if (fpsDisplay > 1.f)
 		{
-			printf("GBuffer pass: %f\n", double(Engine::gpuTimeStamps[1] - Engine::gpuTimeStamps[0]) * 0.000001);
-			printf("PBR pass    : %f\n", double(Engine::gpuTimeStamps[2] - Engine::gpuTimeStamps[1]) * 0.000001);
-			printf("Screen pass : %f\n", double(Engine::gpuTimeStamps[3] - Engine::gpuTimeStamps[2]) * 0.000001);
-			printf("FPS         : %f\n", double(frames) / fpsDisplay);
+			t->setString("GBuffer pass: " + std::to_string(double(Engine::gpuTimeStamps[1] - Engine::gpuTimeStamps[0]) * 0.000001) + "\n" +
+				"PBR pass    : " + std::to_string(double(Engine::gpuTimeStamps[2] - Engine::gpuTimeStamps[1]) * 0.000001) + "\n" +
+				"Screen pass : " + std::to_string(double(Engine::gpuTimeStamps[3] - Engine::gpuTimeStamps[2]) * 0.000001) + "\n" +
+				"FPS         : " + std::to_string(double(frames) / fpsDisplay));
 			fpsDisplay = 0.f;
 			frames = 0;
 		}

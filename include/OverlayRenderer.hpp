@@ -53,6 +53,15 @@ public:
 		quadBuffer.unmap();
 	}
 
+	bool needsDrawUpdate()
+	{
+		bool ret = false;
+		for (auto& map : elements)
+			for (auto& el : map.second)
+				ret |= el->needsDrawUpdate();
+		return ret;
+	}
+
 private:
 
 	std::unordered_map<ShaderProgram*, std::vector<OverlayElement*>> elements;

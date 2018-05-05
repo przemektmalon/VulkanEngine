@@ -511,7 +511,7 @@ void OverlayRenderer::createOverlayCommands()
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = Engine::renderer->commandPool;
+	allocInfo.commandPool = Engine::renderer->resettableCommandPool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
@@ -539,6 +539,13 @@ void OverlayRenderer::updateOverlayDescriptorSets()
 
 void OverlayRenderer::updateOverlayCommands()
 {
+	bool update = false;
+	for (auto l : layers)
+		update |= l->needsDrawUpdate();
+
+	if (!update)
+		return;
+
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -639,8 +646,8 @@ void OverlayRenderer::updateOverlayCommands()
 
 void OverlayRenderer::destroyOverlayCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->commandPool, 1, &overlayCommandBuffer));
-	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->commandPool, 1, &overlayCombineCommandBuffer));
+	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->resettableCommandPool, 1, &overlayCommandBuffer));
+	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->resettableCommandPool, 1, &overlayCombineCommandBuffer));
 }
 
 void OverlayRenderer::destroyOverlayDescriptorSetLayouts()

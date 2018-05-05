@@ -60,6 +60,7 @@ public:
 	// Memory pools
 	VkDescriptorPool descriptorPool;
 	VkCommandPool commandPool;
+	VkCommandPool resettableCommandPool;
 	VkQueryPool queryPool;
 
 	// Semaphores

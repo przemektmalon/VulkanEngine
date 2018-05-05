@@ -3,6 +3,13 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
+Text::Text() : OverlayElement(OverlayElement::Text)
+{
+	pushConstData = new glm::fvec4;
+	pushConstSize = sizeof(glm::fvec4);
+	drawUpdate = true;
+}
+
 void Text::Style::setFont(Font * pFont)
 {
 	font = pFont;
@@ -119,13 +126,29 @@ void Text::update()
 
 	memcpy(pushConstData, &style.colour, sizeof(style.colour));
 
+	drawUpdate = true;
+
+	static bool descMade = false;
+
+	if (descMade)
+	{
+		char* data = (char*)vertsBuffer.map();
+		memcpy(data, verts.data(), verts.size() * sizeof(Vertex2D));
+		vertsBuffer.unmap();
+		return;
+	}
+	descMade = true;
+
 	/// TODO: reuse buffer if possible
 	if (vertsBuffer.getBuffer())
 		vertsBuffer.destroy();
-	vertsBuffer.create(verts.size() * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	/// TODO: Were guessing upper bound. Implement a more sophistocated approach
+	vertsBuffer.create(2000 * 6 * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	char* data = (char*)vertsBuffer.map();
 	memcpy(data, verts.data(), verts.size() * sizeof(Vertex2D));
 	vertsBuffer.unmap();
+
+
 
 	VkDescriptorImageInfo fontInfo = {};
 	fontInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

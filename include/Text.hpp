@@ -34,11 +34,7 @@ public:
 		void setColour(glm::fvec4 pColour);
 	};
 
-	Text() : OverlayElement(OverlayElement::Text)
-	{
-		pushConstData = new glm::fvec4;
-		pushConstSize = sizeof(glm::fvec4);
-	}
+	Text();
 	Text(Font* pFont) : style(pFont), OverlayElement(OverlayElement::Text) { Text(); }
 	Text(Font* pFont, u16 pCharSize) : style(pFont, pCharSize), OverlayElement(OverlayElement::Text) { Text(); }
 
@@ -78,4 +74,6 @@ private:
 
 	std::vector<Vertex2D> verts;
 	Buffer vertsBuffer;
+
+	
 };

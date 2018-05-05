@@ -10,10 +10,12 @@ public:
 	OverlayElement(Type pType);
 	virtual void draw(VkCommandBuffer cmd) {}
 	virtual void cleanup() {}
+	bool needsDrawUpdate() { return drawUpdate; }
 	void* getPushConstData() { return pushConstData; }
 	int getPushConstSize() { return pushConstSize; }
 	VkDescriptorSet getDescriptorSet() { return descSet; }
 	ShaderProgram* getShader() { return shader; }
+
 
 protected:
 	void* pushConstData; /// TODO: free in derived
@@ -24,4 +26,6 @@ protected:
 	VkDescriptorSet descSet;
 
 	ShaderProgram* shader;
+
+	bool drawUpdate;
 };

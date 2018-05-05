@@ -221,6 +221,7 @@ void Renderer::cleanup()
 
 	VK_VALIDATE(vkDestroyDescriptorPool(device, descriptorPool, nullptr));
 	VK_VALIDATE(vkDestroyCommandPool(device, commandPool, 0));
+	VK_VALIDATE(vkDestroyCommandPool(device, resettableCommandPool, 0));
 	VK_VALIDATE(vkDestroyQueryPool(device, queryPool, 0));
 
 	VK_VALIDATE(vkDestroySampler(device, textureSampler, nullptr));
@@ -534,6 +535,12 @@ void Renderer::createCommandPool()
 	poolInfo.queueFamilyIndex = 0;
 
 	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool));
+
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex = 0;
+	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &resettableCommandPool));
 }
 
 void Renderer::createQueryPool()
