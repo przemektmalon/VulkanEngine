@@ -45,6 +45,15 @@ public:
 
 	void reloadShaders();
 
+	enum GPUTimeStamps { 
+		BEGIN_GBUFFER,			END_GBUFFER, 
+		BEGIN_SHADOW,			END_SHADOW, 
+		BEGIN_PBR,				END_PBR, 
+		BEGIN_OVERLAY,			END_OVERLAY, 
+		BEGIN_OVERLAY_COMBINE,	END_OVERLAY_COMBINE, 
+		BEGIN_SCREEN,			END_SCREEN, 
+		NUM_GPU_TIMESTAMPS };
+
 	OverlayRenderer overlayRenderer;
 	OLayer layer;
 
@@ -255,33 +264,6 @@ public:
 
 	// Command buffers
 	std::vector<VkCommandBuffer> screenCommandBuffers;
-	
-	/// --------------------
-	/// Overlay pipeline
-	/// --------------------
-
-	// Functions
-	/*
-
-	
-	
-
-	void updateOverlayDescriptorSets();
-
-	void destroyOverlayDescriptorSets();
-	
-	// Pipeline objets
-
-
-	// Descriptors
-	
-	VkDescriptorSet overlayDescriptorSet;
-
-	// Render pass
-	
-
-	// Command buffer
-	*/
 
 	// GPU Memory management
 	// Joint vertex/index buffer

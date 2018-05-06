@@ -139,10 +139,13 @@ void Engine::start()
 	Time frameTime;
 	double fpsDisplay = 0.f;
 	int frames = 0;
+	std::vector<float> times;
 	while (engineRunning)
 	{
-		frameTime = clock.time();
+		PROFILE_START("msgevent");
 
+		frameTime = clock.time();
+		
 		while (window->processMessages()) { /* Invoke timer ? */ }
 		
 #ifdef _WIN32
@@ -186,12 +189,23 @@ void Engine::start()
 			}
 			}
 		}
+
+		PROFILE_END("msgevent");
 		
+		PROFILE_START("setuprender");
+
 		// Rendering and engine logic
 		renderer->overlayRenderer.updateOverlayCommands();
 		renderer->updateCameraBuffer();
 		renderer->populateDrawCmdBuffer();
+
+		PROFILE_END("setuprender");
+
+		PROFILE_START("submitrender");
+
 		renderer->render();
+
+		PROFILE_END("submitrender");
 
 		frameTime = clock.time() - frameTime;
 
@@ -217,16 +231,42 @@ void Engine::start()
 		// FPS display
 		++frames;
 		fpsDisplay += frameTime.getSeconds();
-		if (fpsDisplay > 1.f)
+		times.push_back(frameTime.getMilliSecondsf());
+		if (fpsDisplay > 0.75f)
 		{
-			t->setString("GBuffer pass: " + std::to_string(double(Engine::gpuTimeStamps[1] - Engine::gpuTimeStamps[0]) * 0.000001) + "\n" +
-				"PBR pass    : " + std::to_string(double(Engine::gpuTimeStamps[2] - Engine::gpuTimeStamps[1]) * 0.000001) + "\n" +
-				"Screen pass : " + std::to_string(double(Engine::gpuTimeStamps[3] - Engine::gpuTimeStamps[2]) * 0.000001) + "\n" +
-				"FPS         : " + std::to_string(double(frames) / fpsDisplay));
+			double gBufferTime = double(Engine::gpuTimeStamps[Renderer::END_GBUFFER] - Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER]) * 0.000001;
+			double shadowTime = double(Engine::gpuTimeStamps[Renderer::END_SHADOW] - Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW]) * 0.000001;
+			double pbrTime = double(Engine::gpuTimeStamps[Renderer::END_PBR] - Engine::gpuTimeStamps[Renderer::BEGIN_PBR]) * 0.000001;
+			double overlayTime = double(Engine::gpuTimeStamps[Renderer::END_OVERLAY] - Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY]) * 0.000001;
+			double overlayCombineTime = double(Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE] - Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE]) * 0.000001;
+			double screenTime = double(Engine::gpuTimeStamps[Renderer::END_SCREEN] - Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN]) * 0.000001;
+
+			double totalGPUTime = gBufferTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
+
+			t->setString(
+				"---------------------------\n"
+				"GBuffer pass   : " + std::to_string(gBufferTime) + "ms \n" +
+				"Shadow pass    : " + std::to_string(shadowTime) + "ms \n" +
+				"PBR pass       : " + std::to_string(pbrTime) + "ms \n" +
+				"Overlay pass   : " + std::to_string(overlayTime) + "ms \n" +
+				"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms \n" +
+				"Screen pass    : " + std::to_string(screenTime) + "ms \n" + "\n" +
+
+				"Total GPU time : " + std::to_string(totalGPUTime) + "ms \n" +
+				"GPU FPS        : " + std::to_string(1.0/(totalGPUTime*0.001)) + "\n" + "\n" +
+
+				"---------------------------\n" +
+				"User input     : " + std::to_string(PROFILE_TIME_MS("msgevent")) + "ms \n" +
+				"Set up render  : " + std::to_string(PROFILE_TIME_MS("setuprender")) + "ms \n" +
+				"Submit render  : " + std::to_string(PROFILE_TIME_MS("submitrender") - totalGPUTime) + "ms \n\n" +
+
+				"Avg frame time : " + std::to_string((fpsDisplay * 1000) / double(frames)) + "ms \n" +
+				"FPS            : " + std::to_string(double(frames) / fpsDisplay)
+			);
 			fpsDisplay = 0.f;
 			frames = 0;
+			times.clear();
 		}
-
 	}
 
 	quit();
@@ -417,7 +457,7 @@ World Engine::world;
 AssetStore Engine::assets;
 float Engine::maxDepth;
 std::mt19937_64 Engine::rand;
-u64 Engine::gpuTimeStamps[4];
+u64 Engine::gpuTimeStamps[Renderer::NUM_GPU_TIMESTAMPS];
 bool Engine::validationWarning;
 std::string Engine::validationMessage;
 OLayer* Engine::uiLayer;

@@ -401,7 +401,7 @@ void Renderer::updateScreenCommands()
 
 		VK_CHECK_RESULT(vkBeginCommandBuffer(screenCommandBuffers[i], &beginInfo));
 
-		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, queryPool, 2));
+		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, BEGIN_SCREEN));
 
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -431,7 +431,7 @@ void Renderer::updateScreenCommands()
 
 		setImageLayout(screenCommandBuffers[i], pbrOutput, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, queryPool, 3));
+		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, queryPool, END_SCREEN));
 
 		VK_CHECK_RESULT(vkEndCommandBuffer(screenCommandBuffers[i]));
 	}

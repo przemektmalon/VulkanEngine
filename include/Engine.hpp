@@ -57,7 +57,7 @@ public:
 	static Time engineStartTime;
 	static std::mt19937_64 rand;
 	static float maxDepth;
-	static u64 gpuTimeStamps[4];
+	static u64 gpuTimeStamps[12];
 	static bool validationWarning;
 	static std::string validationMessage;
 	static OLayer* uiLayer;

@@ -391,8 +391,8 @@ void Renderer::updateGBufferCommands()
 
 	VK_CHECK_RESULT(vkBeginCommandBuffer(gBufferCommandBuffer, &beginInfo));
 
-	VK_VALIDATE(vkCmdResetQueryPool(gBufferCommandBuffer, queryPool, 0, 4));
-	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, 0));
+	VK_VALIDATE(vkCmdResetQueryPool(gBufferCommandBuffer, queryPool, 0, NUM_GPU_TIMESTAMPS));
+	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, BEGIN_GBUFFER));
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -423,6 +423,8 @@ void Renderer::updateGBufferCommands()
 	VK_VALIDATE(vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
 	VK_VALIDATE(vkCmdEndRenderPass(gBufferCommandBuffer));
+
+	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, END_GBUFFER));
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(gBufferCommandBuffer));
 }

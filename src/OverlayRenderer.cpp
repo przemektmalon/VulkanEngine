@@ -552,6 +552,8 @@ void OverlayRenderer::updateOverlayCommands()
 
 	VK_CHECK_RESULT(vkBeginCommandBuffer(overlayCommandBuffer, &beginInfo));
 
+	VK_VALIDATE(vkCmdWriteTimestamp(overlayCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::BEGIN_OVERLAY));
+
 	for (auto pipeMapEntry : pipelines)
 	{
 		auto pipeline = pipeMapEntry.first->pipeline;
@@ -601,10 +603,14 @@ void OverlayRenderer::updateOverlayCommands()
 		}
 	}
 
+	VK_VALIDATE(vkCmdWriteTimestamp(overlayCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::END_OVERLAY));
+
 	VK_CHECK_RESULT(vkEndCommandBuffer(overlayCommandBuffer));
 
 
 	VK_CHECK_RESULT(vkBeginCommandBuffer(overlayCombineCommandBuffer, &beginInfo));
+
+	VK_VALIDATE(vkCmdWriteTimestamp(overlayCombineCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::BEGIN_OVERLAY_COMBINE));
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -640,6 +646,8 @@ void OverlayRenderer::updateOverlayCommands()
 	}
 
 	VK_VALIDATE(vkCmdEndRenderPass(overlayCombineCommandBuffer));
+
+	VK_VALIDATE(vkCmdWriteTimestamp(overlayCombineCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::END_OVERLAY_COMBINE));
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(overlayCombineCommandBuffer));
 }

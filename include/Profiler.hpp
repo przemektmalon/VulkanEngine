@@ -7,6 +7,7 @@
 #define PROFILE_END(name) Profiler::end(name)
 
 #define PROFILE_TIME(name) Profiler::getTime(name).getSeconds()
+#define PROFILE_TIME_MS(name) Profiler::getTime(name).getMilliSeconds()
 
 class Profiler
 {

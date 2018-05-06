@@ -365,7 +365,7 @@ void Renderer::render()
 
 	VK_CHECK_RESULT(vkQueueWaitIdle(presentQueue));
 
-	VK_CHECK_RESULT(vkGetQueryPoolResults(device, queryPool, 0, 4, sizeof(u64) * 4, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT));
+	VK_CHECK_RESULT(vkGetQueryPoolResults(device, queryPool, 0, NUM_GPU_TIMESTAMPS, sizeof(u64) * NUM_GPU_TIMESTAMPS, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT));
 }
 
 void Renderer::reloadShaders()
@@ -548,7 +548,7 @@ void Renderer::createQueryPool()
 	VkQueryPoolCreateInfo ci = {};
 	ci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
 	ci.queryType = VK_QUERY_TYPE_TIMESTAMP;
-	ci.queryCount = 4;
+	ci.queryCount = NUM_GPU_TIMESTAMPS;
 
 	VK_CHECK_RESULT(vkCreateQueryPool(device, &ci, 0, &queryPool));
 }
