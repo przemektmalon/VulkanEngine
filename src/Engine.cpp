@@ -91,10 +91,10 @@ void Engine::start()
 	{
 		std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahog", "copper" };
 
-		for (int i = 0; i < 50; ++i)
+		for (int i = 0; i < 1; ++i)
 		{
 			world.addModelInstance("pbrsphere", "hollowbox" + std::to_string(i));
-			int s = 30;
+			int s = 5;
 			int sh = s / 2;
 			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % 1000) / 100.f, s64(rand() % s) - sh);
 			//world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 5) * 2), std::floor(int(i / (int)5) * 2), 0));
@@ -182,6 +182,16 @@ void Engine::start()
 				{
 					renderer->reloadShaders();
 				}
+				if (key == Key::KC_G)
+				{
+					world.addModelInstance("pbrsphere", "dyn");
+					world.modelMap["dyn"]->transform = glm::translate(glm::scale(glm::fmat4(1), glm::fvec3(5, 5, 5)), glm::fvec3(0, 0, 0));
+					world.modelMap["dyn"]->setMaterial(assets.getMaterial("marble"));
+				}
+				if (key == Key::KC_H)
+				{
+					world.removeModelInstance("dyn");
+				}
 				break;
 			}
 			case Event::KeyUp: {
@@ -195,12 +205,15 @@ void Engine::start()
 		PROFILE_START("setuprender");
 
 		// Rendering and engine logic
-		renderer->overlayRenderer.updateOverlayCommands();
-		renderer->updateCameraBuffer();
 		renderer->populateDrawCmdBuffer();
+		renderer->updateTransformBuffer();
+		renderer->overlayRenderer.updateOverlayCommands();
+		renderer->updateShadowCommands();
+		renderer->updateGBufferCommands();
+		renderer->updateCameraBuffer();
 
 		PROFILE_END("setuprender");
-
+		
 		PROFILE_START("submitrender");
 
 		renderer->render();

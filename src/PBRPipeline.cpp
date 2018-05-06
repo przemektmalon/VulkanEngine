@@ -168,15 +168,7 @@ void Renderer::updatePBRDescriptorSets()
 	skyImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	skyImageInfo.imageView = Engine::assets.getTexture("skybox")->getImageViewHandle();
 
-	VkDescriptorBufferInfo pointLightsInfo;
-	pointLightsInfo.buffer = lightManager.pointLightsBuffer.getBuffer();
-	pointLightsInfo.offset = 0;
-	pointLightsInfo.range = 150 * sizeof(PointLight::GPUData);
-	
-	VkDescriptorBufferInfo spotLightsInfo;
-	spotLightsInfo.buffer = lightManager.spotLightsBuffer.getBuffer();
-	spotLightsInfo.offset = 0;
-	spotLightsInfo.range = 150 * sizeof(SpotLight::GPUData);
+
 
 	VkDescriptorBufferInfo lightCountsInfo;
 	lightCountsInfo.buffer = lightManager.lightCountsBuffer.getBuffer();
@@ -188,37 +180,7 @@ void Renderer::updatePBRDescriptorSets()
 	cameraInfo.offset = 0;
 	cameraInfo.range = sizeof(CameraUBOData);
 
-	VkDescriptorImageInfo pointShadowsInfo[150];
-	for (int i = 0; i < 150; ++i)
-	{
-		pointShadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		pointShadowsInfo[i].imageView = lightManager.pointLights[0].getShadowTexture()->getImageViewHandle();
-		pointShadowsInfo[i].sampler = shadowSampler;
-	}
-
-	int i = 0;
-	for (auto& s : lightManager.pointLights)
-	{
-		pointShadowsInfo[i].imageView = s.getShadowTexture()->getImageViewHandle();
-		++i;
-	}
-
-	VkDescriptorImageInfo spotShadowsInfo[150];
-	for (int i = 0; i < 150; ++i)
-	{
-		spotShadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		spotShadowsInfo[i].imageView = lightManager.spotLights[0].getShadowTexture()->getImageViewHandle();
-		spotShadowsInfo[i].sampler = shadowSampler;
-	}
-
-	i = 0;
-	for (auto& s : lightManager.spotLights)
-	{
-		spotShadowsInfo[i].imageView = s.getShadowTexture()->getImageViewHandle();
-		++i;
-	}
-
-	std::array<VkWriteDescriptorSet, 12> descriptorWrites = {};
+	std::array<VkWriteDescriptorSet, 8> descriptorWrites = {};
 
 	// We'll need:
 	// 3 Light buffers (point, spot, direction)
@@ -272,61 +234,114 @@ void Renderer::updatePBRDescriptorSets()
 
 	descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[5].dstSet = pbrDescriptorSet;
-	descriptorWrites[5].dstBinding = 10;
+	descriptorWrites[5].dstBinding = 9;
 	descriptorWrites[5].dstArrayElement = 0;
 	descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	descriptorWrites[5].descriptorCount = 1;
-	descriptorWrites[5].pBufferInfo = &pointLightsInfo;
+	descriptorWrites[5].pBufferInfo = &cameraInfo;
 
 	descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[6].dstSet = pbrDescriptorSet;
-	descriptorWrites[6].dstBinding = 11;
+	descriptorWrites[6].dstBinding = 12;
 	descriptorWrites[6].dstArrayElement = 0;
 	descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	descriptorWrites[6].descriptorCount = 1;
-	descriptorWrites[6].pBufferInfo = &spotLightsInfo;
+	descriptorWrites[6].pBufferInfo = &lightCountsInfo;
 
 	descriptorWrites[7].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWrites[7].dstSet = pbrDescriptorSet;
-	descriptorWrites[7].dstBinding = 9;
+	descriptorWrites[7].dstBinding = 5;
 	descriptorWrites[7].dstArrayElement = 0;
-	descriptorWrites[7].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrites[7].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptorWrites[7].descriptorCount = 1;
-	descriptorWrites[7].pBufferInfo = &cameraInfo;
-
-	descriptorWrites[8].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[8].dstSet = pbrDescriptorSet;
-	descriptorWrites[8].dstBinding = 12;
-	descriptorWrites[8].dstArrayElement = 0;
-	descriptorWrites[8].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorWrites[8].descriptorCount = 1;
-	descriptorWrites[8].pBufferInfo = &lightCountsInfo;
-
-	descriptorWrites[9].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[9].dstSet = pbrDescriptorSet;
-	descriptorWrites[9].dstBinding = 5;
-	descriptorWrites[9].dstArrayElement = 0;
-	descriptorWrites[9].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[9].descriptorCount = 1;
-	descriptorWrites[9].pImageInfo = &skyImageInfo;
-
-	descriptorWrites[10].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[10].dstSet = pbrDescriptorSet;
-	descriptorWrites[10].dstBinding = 13;
-	descriptorWrites[10].dstArrayElement = 0;
-	descriptorWrites[10].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[10].descriptorCount = 150;
-	descriptorWrites[10].pImageInfo = pointShadowsInfo;
-
-	descriptorWrites[11].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[11].dstSet = pbrDescriptorSet;
-	descriptorWrites[11].dstBinding = 14;
-	descriptorWrites[11].dstArrayElement = 0;
-	descriptorWrites[11].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[11].descriptorCount = 150;
-	descriptorWrites[11].pImageInfo = spotShadowsInfo;
+	descriptorWrites[7].pImageInfo = &skyImageInfo;
 
 	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
+
+	std::vector<VkWriteDescriptorSet> descriptorWrites2 = {};
+	descriptorWrites2.reserve(4);
+
+	if (lightManager.pointLights.size())
+	{
+		VkDescriptorImageInfo* pointShadowsInfo = new VkDescriptorImageInfo[lightManager.pointLights.size()];
+
+		int i = 0;
+		for (auto& s : lightManager.pointLights)
+		{
+			pointShadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			pointShadowsInfo[i].imageView = s.getShadowTexture()->getImageViewHandle();
+			pointShadowsInfo[i].sampler = shadowSampler;
+			++i;
+		}
+
+		VkDescriptorBufferInfo pointLightsInfo;
+		pointLightsInfo.buffer = lightManager.pointLightsBuffer.getBuffer();
+		pointLightsInfo.offset = 0;
+		pointLightsInfo.range = lightManager.pointLights.size() * sizeof(PointLight::GPUData);
+
+		VkWriteDescriptorSet write;
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet = pbrDescriptorSet;
+		write.dstBinding = 13;
+		write.dstArrayElement = 0;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write.descriptorCount = lightManager.pointLights.size();
+		write.pImageInfo = pointShadowsInfo;
+
+		descriptorWrites2.push_back(write);
+
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet = pbrDescriptorSet;
+		write.dstBinding = 10;
+		write.dstArrayElement = 0;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write.descriptorCount = 1;
+		write.pBufferInfo = &pointLightsInfo;
+
+		descriptorWrites2.push_back(write);
+	}
+
+	if (lightManager.spotLights.size())
+	{
+		VkDescriptorImageInfo* spotShadowsInfo = new VkDescriptorImageInfo[lightManager.spotLights.size()];
+
+		int i = 0;
+		for (auto& s : lightManager.spotLights)
+		{
+			spotShadowsInfo[i].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			spotShadowsInfo[i].imageView = s.getShadowTexture()->getImageViewHandle();
+			spotShadowsInfo[i].sampler = shadowSampler;
+			++i;
+		}
+
+		VkDescriptorBufferInfo spotLightsInfo;
+		spotLightsInfo.buffer = lightManager.spotLightsBuffer.getBuffer();
+		spotLightsInfo.offset = 0;
+		spotLightsInfo.range = lightManager.spotLights.size() * sizeof(SpotLight::GPUData);
+
+		VkWriteDescriptorSet write;
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet = pbrDescriptorSet;
+		write.dstBinding = 14;
+		write.dstArrayElement = 0;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write.descriptorCount = lightManager.spotLights.size();
+		write.pImageInfo = spotShadowsInfo;
+
+		descriptorWrites2.push_back(write);
+
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet = pbrDescriptorSet;
+		write.dstBinding = 11;
+		write.dstArrayElement = 0;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write.descriptorCount = 1;
+		write.pBufferInfo = &spotLightsInfo;
+
+		descriptorWrites2.push_back(write);
+	}
+
+	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites2.size()), descriptorWrites2.data(), 0, nullptr));
 }
 
 void Renderer::createPBRCommands()

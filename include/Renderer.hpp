@@ -24,9 +24,9 @@ struct CameraUBOData {
 	glm::fvec4 viewRays;
 };
 
-#define VERTEX_BUFFER_SIZE u64(512) * u64(1024) * u64(1024) // 512 MB
+#define VERTEX_BUFFER_SIZE u64(64) * u64(1024) * u64(1024) // 64 MB
 #define INDEX_BUFFER_BASE VERTEX_BUFFER_SIZE
-#define INDEX_BUFFER_SIZE u64(128) * u64(1024) * u64(1024) // 128 MB
+#define INDEX_BUFFER_SIZE u64(8) * u64(1024) * u64(1024) // 8 MB
 
 /*
 	@brief	Collates Vulkan objects and controls rendering pipeline
@@ -147,6 +147,7 @@ public:
 
 	// Command buffer
 	VkCommandBuffer gBufferCommandBuffer;
+	bool gBufferCmdsNeedUpdate;
 
 	/// --------------------
 	/// Shadow pipeline

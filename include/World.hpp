@@ -9,7 +9,9 @@ public:
 	void addModelInstance(ModelInstance& model, std::string instanceName = "");
 	void addModelInstance(std::string modelName, std::string instanceName = "");
 
-	std::map<std::string, ModelInstance*> modelMap; /// TODO: hashing for big worlds
+	void removeModelInstance(std::string instanceName);
 
-	std::vector<ModelInstance> models;
+	std::map<std::string, ModelInstance*> modelMap; /// TODO: better hashing for big worlds
+
+	std::list<ModelInstance> models;
 };

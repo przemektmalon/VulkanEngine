@@ -75,15 +75,15 @@ void Renderer::initialise()
 	overlayRenderer.createOverlayAttachmentsFramebuffers();
 	overlayRenderer.createOverlayCommands();
 
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < 2; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
 		int s = 30;
 		int sh = s / 2;
 		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 15) + 5, s64(r() % s) - sh));
-		glm::fvec3 col;
-		switch (i % 7)
+		glm::fvec3 col(1.0, 0.8, 1.0);
+		/*switch (i % 7)
 		{
 		case 0: {
 			col = glm::fvec3(1, 0.5, 0.5);
@@ -106,23 +106,12 @@ void Renderer::initialise()
 		case 6: {
 			col = glm::fvec3(1, 1, 1);
 			break; }
-		}
-		pl.setColour(col * glm::fvec3(1.3));
+		}*/
+		pl.setColour(col * glm::fvec3(2.3));
 		pl.setLinear(0.01);
 		pl.setQuadratic(0.01);
-		pl.setFadeStart(5);
-		pl.setFadeLength(10);
-
-		auto& sl = lightManager.addSpotLight();
-		sl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 15) + 5, s64(r() % s) - sh));
-		sl.setDirection(glm::normalize(glm::fvec3(0)-sl.getPosition()));
-		sl.setColour(col * glm::fvec3(1.2));
-		sl.setInnerSpread(44);
-		sl.setOuterSpread(45);
-		sl.setLinear(0.05);
-		sl.setQuadratic(0.05);
-		sl.setFadeStart(50);
-		sl.setFadeLength(10);
+		pl.setFadeStart(50);
+		pl.setFadeLength(5);
 	}
 
 	lightManager.updateLightCounts();
@@ -173,6 +162,9 @@ void Renderer::reInitialise()
 	overlayRenderer.updateOverlayDescriptorSets();
 
 	// Pipeline commands
+
+	gBufferCmdsNeedUpdate = true;
+
 	updateGBufferCommands();
 	updatePBRCommands();
 	updateScreenCommands();
@@ -408,8 +400,8 @@ void Renderer::reloadShaders()
 
 void Renderer::populateDrawCmdBuffer()
 {
-	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)drawCmdBuffer.map();
-	
+	VkDrawIndexedIndirectCommand* cmd = new VkDrawIndexedIndirectCommand[Engine::world.models.size()];
+
 	int i = 0;
 	
 	for (auto& m : Engine::world.models)
@@ -435,7 +427,9 @@ void Renderer::populateDrawCmdBuffer()
 		++i;
 	}
 
-	drawCmdBuffer.unmap();
+	drawCmdBuffer.setMem(cmd, Engine::world.modelMap.size() * sizeof(VkDrawIndexedIndirectCommand), 0);
+
+	delete[] cmd;
 }
 
 void Renderer::createVertexIndexBuffers()
@@ -463,7 +457,7 @@ void Renderer::pushModelDataToGPU(Model & model)
 void Renderer::createDataBuffers()
 {
 	/// TODO: set appropriate size
-	drawCmdBuffer.create(sizeof(VkDrawIndexedIndirectCommand) * 1000, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	drawCmdBuffer.create(sizeof(VkDrawIndexedIndirectCommand) * 1000, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	createVertexIndexBuffers();
 
@@ -542,13 +536,13 @@ void Renderer::createCommandPool()
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = 0;
+	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool));
 
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = 0;
-	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
+	
 	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &resettableCommandPool));
 }
 

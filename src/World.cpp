@@ -1,16 +1,20 @@
 #include "PCH.hpp"
 #include "World.hpp"
 #include "Engine.hpp"
+#include "Renderer.hpp"
 
 void World::addModelInstance(ModelInstance& model, std::string instanceName)
 {
 	model.transformIndex = models.size();
 	models.push_back(model);
 	modelMap.insert(std::make_pair(model.name, &models.back()));
+	Engine::renderer->gBufferCmdsNeedUpdate = true;
 }
 
 void World::addModelInstance(std::string modelName, std::string instanceName)
 {
+	if (modelMap.find(instanceName) != modelMap.end())
+		return;
 	ModelInstance ins;
 	auto m = Engine::assets.getModel(modelName);
 	if (!m->isAvailable(Asset::ON_RAM))
@@ -22,4 +26,22 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 		instanceName = modelName;
 	ins.name = instanceName;
 	addModelInstance(ins, instanceName);
+}
+
+void World::removeModelInstance(std::string instanceName)
+{
+	auto find = modelMap.find(instanceName);
+	if (find == modelMap.end())
+		return;
+	modelMap.erase(find);
+	for (auto itr = models.begin(); itr != models.end(); ++itr)
+	{
+		if (itr->name == instanceName)
+		{
+			models.erase(itr);
+			break;
+		}
+	}
+
+	Engine::renderer->gBufferCmdsNeedUpdate = true;
 }

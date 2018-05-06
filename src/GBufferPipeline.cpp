@@ -1,5 +1,6 @@
 #include "PCH.hpp"
 #include "Renderer.hpp"
+#include "Profiler.hpp"
 
 void Renderer::createGBufferAttachments()
 {
@@ -385,6 +386,11 @@ void Renderer::createGBufferCommands()
 
 void Renderer::updateGBufferCommands()
 {
+	if (!gBufferCmdsNeedUpdate)
+		return;
+
+	gBufferCmdsNeedUpdate = false;
+
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;

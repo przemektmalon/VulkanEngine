@@ -39,7 +39,6 @@
 		DBG_WARNING(Engine::validationMessage); \
 		Engine::validationWarning = false; \
 		Engine::validationMessage.clear(); \
-		DebugBreak(); \
 	} \
 }
 
@@ -49,7 +48,6 @@
 			DBG_WARNING(Engine::validationMessage); \
 			Engine::validationWarning = false; \
 			Engine::validationMessage.clear(); \
-			DebugBreak(); \
 	}
 
 #define VK_CHECK_RESULT(f) { \
