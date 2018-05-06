@@ -22,6 +22,7 @@ void Renderer::initialise()
 
 	lightManager.init();
 	textShader.compile();
+	combineOverlaysShader.compile();
 
 	// Swap chain
 	createScreenSwapChain();
@@ -142,15 +143,18 @@ void Renderer::reInitialise()
 	createGBufferAttachments();
 	createPBRAttachments();
 	createScreenAttachments();
-
+	
 	// Pipeline render passes
 	createGBufferRenderPass();
 	createScreenRenderPass();
+	overlayRenderer.createOverlayRenderPass();
+	overlayRenderer.createOverlayAttachmentsFramebuffers();
 
 	// Pipeline objects
 	createGBufferPipeline();
 	createPBRPipeline();
 	createScreenPipeline();
+	overlayRenderer.createOverlayPipeline();
 
 	// Pipeline framebuffers
 	createGBufferFramebuffers();
@@ -160,16 +164,19 @@ void Renderer::reInitialise()
 	createGBufferCommands();
 	createPBRCommands();
 	createScreenCommands();
-
+	overlayRenderer.createOverlayCommands();
+	
 	// Pipeline descriptor sets
 	updateGBufferDescriptorSets();
 	updatePBRDescriptorSets();
 	updateScreenDescriptorSets();
+	overlayRenderer.updateOverlayDescriptorSets();
 
 	// Pipeline commands
 	updateGBufferCommands();
 	updatePBRCommands();
 	updateScreenCommands();
+	overlayRenderer.updateOverlayCommands();
 }
 
 /*
@@ -268,6 +275,8 @@ void Renderer::cleanupForReInit()
 	destroyScreenFramebuffers();
 	destroyScreenCommands();
 	destroyScreenSwapChain();
+
+	overlayRenderer.cleanupForReInit();
 }
 
 /*

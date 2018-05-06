@@ -115,13 +115,8 @@ public:
 
 	void cleanup()
 	{
-		destroyOverlayRenderPass();
-		destroyOverlayPipeline();
-		destroyOverlayAttachmentsFramebuffers();
+		cleanupForReInit();
 		destroyOverlayDescriptorSetLayouts();
-		//destroyOverlayDescriptorSets();
-		destroyOverlayCommands();
-
 		projUBO.destroy();
 
 		for (auto pipe : pipelines)
@@ -129,6 +124,15 @@ public:
 
 		for (auto layer : layers)
 			layer->cleanup();
+	}
+
+	void cleanupForReInit()
+	{
+		destroyOverlayRenderPass();
+		destroyOverlayPipeline();
+		destroyOverlayAttachmentsFramebuffers();
+		//destroyOverlayDescriptorSets();
+		destroyOverlayCommands();
 	}
 
 	void addLayer(OLayer* layer)

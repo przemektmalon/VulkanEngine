@@ -322,8 +322,6 @@ void OverlayRenderer::createOverlayRenderPass()
 
 void OverlayRenderer::createOverlayPipeline()
 {
-	Engine::renderer->combineOverlaysShader.compile();
-
 	// Get the vertex layout format
 	auto bindingDescription = VertexNoNormal::getBindingDescription();
 	auto attributeDescriptions = VertexNoNormal::getAttributeDescriptions();

@@ -245,23 +245,23 @@ void Engine::start()
 
 			t->setString(
 				"---------------------------\n"
-				"GBuffer pass   : " + std::to_string(gBufferTime) + "ms \n" +
-				"Shadow pass    : " + std::to_string(shadowTime) + "ms \n" +
-				"PBR pass       : " + std::to_string(pbrTime) + "ms \n" +
-				"Overlay pass   : " + std::to_string(overlayTime) + "ms \n" +
-				"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms \n" +
-				"Screen pass    : " + std::to_string(screenTime) + "ms \n" + "\n" +
+				"GBuffer pass   : " + std::to_string(gBufferTime) + "ms\n" +
+				"Shadow pass    : " + std::to_string(shadowTime) + "ms\n" +
+				"PBR pass       : " + std::to_string(pbrTime) + "ms\n" +
+				"Overlay pass   : " + std::to_string(overlayTime) + "ms\n" +
+				"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms\n" +
+				"Screen pass    : " + std::to_string(screenTime) + "ms\n\n" +
 
-				"Total GPU time : " + std::to_string(totalGPUTime) + "ms \n" +
-				"GPU FPS        : " + std::to_string(1.0/(totalGPUTime*0.001)) + "\n" + "\n" +
+				"Total GPU time : " + std::to_string(totalGPUTime) + "ms\n" +
+				"GPU FPS        : " + std::to_string((int)(1.0/(totalGPUTime*0.001))) + "\n\n" +
 
 				"---------------------------\n" +
-				"User input     : " + std::to_string(PROFILE_TIME_MS("msgevent")) + "ms \n" +
-				"Set up render  : " + std::to_string(PROFILE_TIME_MS("setuprender")) + "ms \n" +
-				"Submit render  : " + std::to_string(PROFILE_TIME_MS("submitrender") - totalGPUTime) + "ms \n\n" +
+				"User input     : " + std::to_string(PROFILE_TIME_MS("msgevent")) + "ms\n" +
+				"Set up render  : " + std::to_string(PROFILE_TIME_MS("setuprender")) + "ms\n" +
+				"Submit render  : " + std::to_string(PROFILE_TIME_MS("submitrender") - totalGPUTime) + "ms\n\n" +
 
-				"Avg frame time : " + std::to_string((fpsDisplay * 1000) / double(frames)) + "ms \n" +
-				"FPS            : " + std::to_string(double(frames) / fpsDisplay)
+				"Avg frame time : " + std::to_string((fpsDisplay * 1000) / double(frames)) + "ms\n" +
+				"FPS            : " + std::to_string((int)(double(frames) / fpsDisplay))
 			);
 			fpsDisplay = 0.f;
 			frames = 0;

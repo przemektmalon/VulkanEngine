@@ -67,6 +67,9 @@ void ShaderModule::compile()
 	createInfo.pCode = spirvSource.data();
 
 	VK_CHECK_RESULT(vkCreateShaderModule(Engine::renderer->device, &createInfo, nullptr, &vkModule));
+
+	if ((int)vkModule == 0x68)
+		std::cout << std::endl;
 }
 
 void ShaderModule::destroy()

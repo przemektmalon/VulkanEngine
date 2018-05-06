@@ -44,6 +44,7 @@ void Text::update()
 
 	int numVerts = string.length() * 6;
 	
+	verts.clear();
 	verts.resize(numVerts);
 
 	glyphs = style.font->requestGlyphs(style.charSize, this);
@@ -143,7 +144,7 @@ void Text::update()
 	if (vertsBuffer.getBuffer())
 		vertsBuffer.destroy();
 	/// TODO: Were guessing upper bound. Implement a more sophistocated approach
-	vertsBuffer.create(2000 * 6 * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	vertsBuffer.create(2000 * 6 * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 	char* data = (char*)vertsBuffer.map();
 	memcpy(data, verts.data(), verts.size() * sizeof(Vertex2D));
 	vertsBuffer.unmap();
