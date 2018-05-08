@@ -15,9 +15,6 @@ public:
 
 	static void setWheelDelta(glm::ivec2 pD) { wheelDelta = pD; }
 	static glm::ivec2 getWheelDelta() { return wheelDelta; }
-
-	static void setWindowPosition(glm::ivec2 pos) { windowPosition = pos;}
-	static glm::ivec2 getWindowPosition() { return windowPosition; }
 	enum Code
 	{
 		M_NONE = 0,
