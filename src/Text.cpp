@@ -8,9 +8,11 @@ Text::Text() : OverlayElement(OverlayElement::Text)
 	pushConstData = new glm::fvec4;
 	pushConstSize = sizeof(glm::fvec4);
 	drawUpdate = true;
+	drawable = false;
 	
 	/// TODO: Were guessing upper bound. Implement a more sophistocated approach
 	vertsBuffer.create(2000 * 6 * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+	vertsBuffer.setMem(0, 2000 * 6 * sizeof(Vertex2D), 0);
 }
 
 void Text::Style::setFont(Font * pFont)
@@ -42,9 +44,14 @@ void Text::update()
 {
 	glyphs = style.font->requestGlyphs(style.charSize, this);
 	bounds.zero();
+
+	drawable = false;
+
 	if (style.charSize == 0) { return; }
 	if (string.length() == 0) { return; }
 	if (style.font == nullptr) { return; }
+
+	drawable = true;
 
 	int numVerts = string.length() * 6;
 
@@ -139,10 +146,13 @@ void Text::update()
 
 void Text::draw(VkCommandBuffer cmd)
 {
-	VkDeviceSize offsets[] = { 0 };
-	VkBuffer buffer[] = { vertsBuffer.getBuffer() };
-	VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, buffer, offsets));
-	VK_VALIDATE(vkCmdDraw(cmd, verts.size(), 1, 0, 0));
+	if (drawable)
+	{
+		VkDeviceSize offsets[] = { 0 };
+		VkBuffer buffer[] = { vertsBuffer.getBuffer() };
+		VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, buffer, offsets));
+		VK_VALIDATE(vkCmdDraw(cmd, verts.size(), 1, 0, 0));
+	}
 }
 
 void Text::cleanup()
