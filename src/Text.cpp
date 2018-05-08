@@ -190,6 +190,7 @@ void Text::setString(std::string pStr)
 void Text::setPosition(glm::fvec2 pPos)
 {
 	position = pPos;
+	update();
 }
 
 void Text::setOrigin(Origin pOrigin)

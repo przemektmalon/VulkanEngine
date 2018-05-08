@@ -125,26 +125,28 @@ void Engine::start()
 	PROFILE_END("cmds");
 
 	std::cout << std::endl;
-	DBG_INFO("Initialisation time:     " << PROFILE_TIME("init") << " seconds");
-	DBG_INFO("Asset load time:         " << PROFILE_TIME("assets") << " seconds");
-	DBG_INFO("Descriptor sets time:    " << PROFILE_TIME("descsets") << " seconds");
-	DBG_INFO("World loading time:      " << PROFILE_TIME("world") << " seconds");
-	DBG_INFO("Command submission time: " << PROFILE_TIME("cmds") << " seconds");
+	DBG_INFO("Initialisation time     : " << PROFILE_TIME("init") << " seconds");
+	DBG_INFO("Asset load time         : " << PROFILE_TIME("assets") << " seconds");
+	DBG_INFO("Descriptor sets time    : " << PROFILE_TIME("descsets") << " seconds");
+	DBG_INFO("World loading time      : " << PROFILE_TIME("world") << " seconds");
+	DBG_INFO("Command submission time : " << PROFILE_TIME("cmds") << " seconds");
 	
+	console = new Console();
+	console->create();
 
 	Text* t = new Text;
 	t->setFont(Engine::assets.getFont("consola"));
 	t->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	t->setCharSize(20);
-	t->setString(" ");
+	t->setString("");
 	t->setPosition(glm::fvec2(0, 330));
 
 	uiLayer = new OLayer;
 	uiLayer->create(glm::ivec2(1280, 720));
-	uiLayer->setPosition(glm::ivec2(0, 0));
 	uiLayer->addElement(t);
 
 	renderer->overlayRenderer.addLayer(uiLayer);
+	renderer->overlayRenderer.addLayer(console->getLayer());
 
 	Time frameStart;
 	Time frameTime; frameTime.setMicroSeconds(0);
@@ -166,6 +168,11 @@ void Engine::start()
 		Event ev;
 		while (window->eventQ.pollEvent(ev)) {
 			switch (ev.type) {
+			case(Event::TextInput):
+			{
+				console->input(ev.eventUnion.textInputEvent.character);
+				break;
+			}
 			case(Event::MouseDown):
 			{
 				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
@@ -524,3 +531,4 @@ u64 Engine::gpuTimeStamps[Renderer::NUM_GPU_TIMESTAMPS];
 bool Engine::validationWarning;
 std::string Engine::validationMessage;
 OLayer* Engine::uiLayer;
+Console* Engine::console;

@@ -220,6 +220,5 @@ void ModelInstance::makePhysicsObject()
 	physicsObject->setDamping(linearDamping, angularDamping);
 	physicsObject->setFriction(friction);
 	physicsObject->setRestitution(restitution);
-	physicsObject->rigidBody->forceActivationState(DISABLE_DEACTIVATION);
 	Engine::physicsWorld.addRigidBody(physicsObject);
 }

@@ -7,6 +7,7 @@
 #include "World.hpp"
 #include "AssetStore.hpp"
 #include "PhysicsWorld.hpp"
+#include "Console.hpp"
 
 class OLayer;
 class Window;
@@ -49,6 +50,7 @@ public:
 	static Renderer* renderer;
 	static Camera camera;
 	static PhysicsWorld physicsWorld;
+	static Console* console;
 
 	static VkInstance vkInstance;
 	static VkPhysicalDevice vkPhysicalDevice;
