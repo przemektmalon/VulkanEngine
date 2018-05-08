@@ -315,6 +315,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		Event keyEvent = Engine::window->constructKeyEvent(wParam, Event::KeyDown);
 		Engine::window->eventQ.pushEvent(keyEvent);
+
+		Event textEvent(Event::TextInput);
+		textEvent.constructText(keyEvent.eventUnion.keyEvent.key, keyEvent.eventUnion.keyEvent.shift);
+		if (textEvent.eventUnion.textInputEvent.character != 0)
+			Engine::window->eventQ.pushEvent(textEvent);
+
 		break;
 	}
 	case WM_KEYUP:
