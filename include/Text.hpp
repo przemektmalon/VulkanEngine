@@ -62,6 +62,8 @@ public:
 
 private:
 
+	void updateDescriptorSet();
+
 	Style style;
 
 	std::string string;

@@ -8,6 +8,9 @@ Text::Text() : OverlayElement(OverlayElement::Text)
 	pushConstData = new glm::fvec4;
 	pushConstSize = sizeof(glm::fvec4);
 	drawUpdate = true;
+	
+	/// TODO: Were guessing upper bound. Implement a more sophistocated approach
+	vertsBuffer.create(2000 * 6 * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 }
 
 void Text::Style::setFont(Font * pFont)
@@ -37,17 +40,17 @@ void Text::Style::setColour(glm::fvec4 pColour)
 
 void Text::update()
 {
+	glyphs = style.font->requestGlyphs(style.charSize, this);
 	bounds.zero();
 	if (style.charSize == 0) { return; }
 	if (string.length() == 0) { return; }
 	if (style.font == nullptr) { return; }
 
 	int numVerts = string.length() * 6;
-	
+
 	verts.clear();
 	verts.resize(numVerts);
 
-	glyphs = style.font->requestGlyphs(style.charSize, this);
 	auto glyphsTex = glyphs->getTexture();
 
 	int index = 0;
@@ -63,7 +66,7 @@ void Text::update()
 
 	glm::ivec2 glyphPos = glyphs->getPosition(*p);
 	glm::ivec2 glyphSize = glyphs->getSize(*p);
-	 
+
 	glm::fvec2 botLeft(vertPos.x + glyphPos.x, vertPos.y + ascender + (glyphSize.y - glyphPos.y));
 	glm::fvec2 topRight(vertPos.x + glyphPos.x + glyphSize.x, vertPos.y + ascender - glyphPos.y);
 
@@ -101,7 +104,7 @@ void Text::update()
 				topLeft.x,  topLeft.y,  		glyphCoords.x,				glyphCoords.y,				// Top-left
 				botLeft.x,  botLeft.y,  		glyphCoords.x,				glyphCoords.y + cOffset.y,	// Bot-left
 			};
-			memcpy((char*)(verts.data())+(sizeof(vertices) * index), vertices, sizeof(vertices));
+			memcpy((char*)(verts.data()) + (sizeof(vertices) * index), vertices, sizeof(vertices));
 
 			if (botLeft.x < minX)
 				minX = botLeft.x;
@@ -129,44 +132,9 @@ void Text::update()
 
 	drawUpdate = true;
 
-	static bool descMade = false;
-
-	if (descMade)
-	{
-		char* data = (char*)vertsBuffer.map();
-		memcpy(data, verts.data(), verts.size() * sizeof(Vertex2D));
-		vertsBuffer.unmap();
-		return;
-	}
-	descMade = true;
-
-	/// TODO: reuse buffer if possible
-	if (vertsBuffer.getBuffer())
-		vertsBuffer.destroy();
-	/// TODO: Were guessing upper bound. Implement a more sophistocated approach
-	vertsBuffer.create(2000 * 6 * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 	char* data = (char*)vertsBuffer.map();
 	memcpy(data, verts.data(), verts.size() * sizeof(Vertex2D));
 	vertsBuffer.unmap();
-
-
-
-	VkDescriptorImageInfo fontInfo = {};
-	fontInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	fontInfo.imageView = glyphs->getTexture()->getImageViewHandle();
-	fontInfo.sampler = Engine::renderer->textureSampler;
-
-	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
-
-	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[0].dstSet = descSet;
-	descriptorWrites[0].dstBinding = 0;
-	descriptorWrites[0].dstArrayElement = 0;
-	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[0].descriptorCount = 1;
-	descriptorWrites[0].pImageInfo = &fontInfo;
-
-	VK_VALIDATE(vkUpdateDescriptorSets(Engine::renderer->device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }
 
 void Text::draw(VkCommandBuffer cmd)
@@ -191,6 +159,7 @@ void Text::setFont(Font * pFont)
 
 	style.setFont(pFont);
 	update();
+	updateDescriptorSet();
 }
 
 void Text::setCharSize(u16 pCharSize)
@@ -199,6 +168,7 @@ void Text::setCharSize(u16 pCharSize)
 	style.setCharSize(pCharSize);
 	style.font->requestGlyphs(pCharSize, this);
 	update();
+	updateDescriptorSet();
 }
 
 void Text::setString(std::string pStr)
@@ -227,4 +197,24 @@ void Text::setOrigin(glm::ivec2 pOrigin)
 void Text::setColour(glm::fvec4 pColour)
 {
 	style.setColour(pColour);
+}
+
+void Text::updateDescriptorSet()
+{
+	VkDescriptorImageInfo fontInfo = {};
+	fontInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	fontInfo.imageView = glyphs->getTexture()->getImageViewHandle();
+	fontInfo.sampler = Engine::renderer->textureSampler;
+
+	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
+
+	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrites[0].dstSet = descSet;
+	descriptorWrites[0].dstBinding = 0;
+	descriptorWrites[0].dstArrayElement = 0;
+	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrites[0].descriptorCount = 1;
+	descriptorWrites[0].pImageInfo = &fontInfo;
+
+	VK_VALIDATE(vkUpdateDescriptorSets(Engine::renderer->device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
 }
