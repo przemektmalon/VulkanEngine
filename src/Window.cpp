@@ -105,6 +105,8 @@ void Window::create(WindowCreateInfo * c)
 
 void Window::resize(u32 newResX, u32 newResY)
 {
+	resX = newResX;
+	resY = newResY;
 #ifdef _WIN32
 	SetWindowPos(win32WindowHandle, 0, 0, 0, newResX, newResY, SWP_NOOWNERZORDER | SWP_NOZORDER);
 #endif
@@ -375,14 +377,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					eventType = Event::MouseDown;
 					Event mouseEvent(eventType);
-					mouseEvent.constructMouse(mouseCode, mPos, glm::ivec2(0), 0);
+					if (lMouseClick)
+						mouseEvent.constructMouse(Mouse::M_LEFT, mPos, glm::ivec2(0), 0);
+					else if (rMouseClick)
+						mouseEvent.constructMouse(Mouse::M_RIGHT, mPos, glm::ivec2(0), 0);
+					else
+						mouseEvent.constructMouse(Mouse::M_MIDDLE, mPos, glm::ivec2(0), 0);
 					Engine::window->eventQ.pushEvent(mouseEvent);		// Send mouse down event
 				}
 				else if (anyMouseRelease)
 				{
 					eventType = Event::MouseUp;
 					Event mouseEvent(eventType);
-					mouseEvent.constructMouse(mouseCode, mPos, glm::ivec2(0), 0);
+					if (lMouseRelease)
+						mouseEvent.constructMouse(Mouse::M_LEFT, mPos, glm::ivec2(0), 0);
+					else if (rMouseRelease)
+						mouseEvent.constructMouse(Mouse::M_RIGHT, mPos, glm::ivec2(0), 0);
+					else
+						mouseEvent.constructMouse(Mouse::M_MIDDLE, mPos, glm::ivec2(0), 0);
 					Engine::window->eventQ.pushEvent(mouseEvent);		// Send mouse up event
 				}
 
