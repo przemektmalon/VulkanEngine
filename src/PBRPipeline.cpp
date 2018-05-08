@@ -279,7 +279,7 @@ void Renderer::updatePBRDescriptorSets()
 		pointLightsInfo.offset = 0;
 		pointLightsInfo.range = lightManager.pointLights.size() * sizeof(PointLight::GPUData);
 
-		VkWriteDescriptorSet write;
+		VkWriteDescriptorSet write = {};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write.dstSet = pbrDescriptorSet;
 		write.dstBinding = 13;
@@ -319,7 +319,7 @@ void Renderer::updatePBRDescriptorSets()
 		spotLightsInfo.offset = 0;
 		spotLightsInfo.range = lightManager.spotLights.size() * sizeof(SpotLight::GPUData);
 
-		VkWriteDescriptorSet write;
+		VkWriteDescriptorSet write = {};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write.dstSet = pbrDescriptorSet;
 		write.dstBinding = 14;
