@@ -21,6 +21,10 @@ public:
 	void move(glm::fvec3 move) { targetPos += move; }
 	void rotate(float roll, float pitch, float yaw) { targetRoll += roll; targetPitch += pitch; targetYaw += yaw; }
 
+	float getFOV() { return fov; }
+	float getAspect() { return aspect; }
+	float getNearPlane() { return nearClip; }
+	float getFarPlane() { return farClip; }
 	glm::fvec3 getDirectionVector();
 	glm::fvec3 getPosition() { return pos; }
 	glm::quat getQuaternion() { return qRot; }
