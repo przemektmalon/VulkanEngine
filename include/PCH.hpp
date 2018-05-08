@@ -27,6 +27,7 @@
 #include "glm/vec4.hpp"
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/quaternion.hpp"
+#include "glm/gtx/quaternion.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/matrix_transform_2d.hpp"
@@ -240,4 +241,6 @@
 
 #include <regex>
 
-///  Thread support ?
+///  Thread support
+
+#include <thread>

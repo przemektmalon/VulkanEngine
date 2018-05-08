@@ -51,27 +51,13 @@ void Engine::start()
 
 	renderer = new Renderer();
 	renderer->initialise();
+	physicsWorld.create();
 
 	PROFILE_END("init");
 
 	PROFILE_START("assets");
 
 	assets.loadAssets("/res/resources.xml");
-	
-	Text* t = new Text;
-	t->setFont(Engine::assets.getFont("consola"));
-	t->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
-	t->setCharSize(20);
-	t->setString(" ");
-	t->setPosition(glm::fvec2(0, 0));
-	
-	
-	uiLayer = new OLayer;
-	uiLayer->create(glm::ivec2(1280, 720));
-	uiLayer->setPosition(glm::ivec2(0, 0));
-	uiLayer->addElement(t);
-
-	renderer->overlayRenderer.addLayer(uiLayer);
 
 	PROFILE_END("assets");
 
@@ -91,24 +77,33 @@ void Engine::start()
 	{
 		std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahog", "copper" };
 
-		for (int i = 0; i < 1; ++i)
+		for (int i = 0; i < 40; ++i)
 		{
-			world.addModelInstance("pbrsphere", "hollowbox" + std::to_string(i));
-			int s = 5;
+			world.addModelInstance("hollowbox", "hollowbox" + std::to_string(i));
+			int s = 100;
 			int sh = s / 2;
-			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % 1000) / 100.f, s64(rand() % s) - sh);
+			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % 1000) / 5.f + 50.f, s64(rand() % s) - sh);
 			//world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 5) * 2), std::floor(int(i / (int)5) * 2), 0));
-			world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(), pos);
+			world.modelMap["hollowbox" + std::to_string(i)]->transform.setTranslation(pos);
+			world.modelMap["hollowbox" + std::to_string(i)]->transform.setScale(glm::fvec3(10));
+			world.modelMap["hollowbox" + std::to_string(i)]->transform.updateMatrix();
 			world.modelMap["hollowbox" + std::to_string(i)]->setMaterial(assets.getMaterial(materialList[i % 6]));
+			world.modelMap["hollowbox" + std::to_string(i)]->makePhysicsObject();
 		}
 
 		world.addModelInstance("pbrsphere");
-		world.modelMap["pbrsphere"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(4, 0, 0));
+		world.modelMap["pbrsphere"]->transform.setTranslation(glm::fvec3(4, 0, 0));
+		world.modelMap["pbrsphere"]->transform.setScale(glm::fvec3(10));
+		world.modelMap["pbrsphere"]->transform.updateMatrix();
 		world.modelMap["pbrsphere"]->setMaterial(assets.getMaterial("marble"));
+		world.modelMap["pbrsphere"]->makePhysicsObject();
 
 		world.addModelInstance("ground");
-		world.modelMap["ground"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, -1, 0));
+		world.modelMap["ground"]->transform.setTranslation(glm::fvec3(0, 0, 0));
+		world.modelMap["ground"]->transform.setScale(glm::fvec3(10));
+		world.modelMap["ground"]->transform.updateMatrix();
 		world.modelMap["ground"]->setMaterial(assets.getMaterial("marble"));
+		world.modelMap["ground"]->makePhysicsObject();
 
 		//world.addModelInstance("monkey");
 		//world.modelMap["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
@@ -136,7 +131,23 @@ void Engine::start()
 	DBG_INFO("World loading time:      " << PROFILE_TIME("world") << " seconds");
 	DBG_INFO("Command submission time: " << PROFILE_TIME("cmds") << " seconds");
 	
-	Time frameTime;
+
+	Text* t = new Text;
+	t->setFont(Engine::assets.getFont("consola"));
+	t->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
+	t->setCharSize(20);
+	t->setString(" ");
+	t->setPosition(glm::fvec2(0, 330));
+
+	uiLayer = new OLayer;
+	uiLayer->create(glm::ivec2(1280, 720));
+	uiLayer->setPosition(glm::ivec2(0, 0));
+	uiLayer->addElement(t);
+
+	renderer->overlayRenderer.addLayer(uiLayer);
+
+	Time frameStart;
+	Time frameTime; frameTime.setMicroSeconds(0);
 	double fpsDisplay = 0.f;
 	int frames = 0;
 	std::vector<float> times;
@@ -144,7 +155,7 @@ void Engine::start()
 	{
 		PROFILE_START("msgevent");
 
-		frameTime = clock.time();
+		frameStart = clock.time();
 		
 		while (window->processMessages()) { /* Invoke timer ? */ }
 		
@@ -155,6 +166,28 @@ void Engine::start()
 		Event ev;
 		while (window->eventQ.pollEvent(ev)) {
 			switch (ev.type) {
+			case(Event::MouseDown):
+			{
+				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
+				{
+					glm::fvec3 p = camera.getPosition();
+					btVector3 camPos(p.x, p.y, p.z);
+
+					btVector3 rayFrom = camPos;
+					btVector3 rayTo = physicsWorld.getRayTo(int(ev.eventUnion.mouseEvent.position.x), int(ev.eventUnion.mouseEvent.position.y));
+
+					physicsWorld.pickBody(rayFrom, rayTo);
+				}
+				break;
+			}
+			case(Event::MouseUp):
+			{
+				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
+				{
+					physicsWorld.removePickingConstraint();
+				}
+				break;
+			}
 			case(Event::MouseMove):
 			{
 				if (ev.eventUnion.mouseEvent.code & Mouse::M_RIGHT)
@@ -199,6 +232,13 @@ void Engine::start()
 			}
 			}
 		}
+		physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
+		
+		auto stepPhysics = [&](Time& time) -> void {
+			physicsWorld.step(time);
+		};
+
+		std::thread physThread(stepPhysics, frameTime);
 
 		PROFILE_END("msgevent");
 		
@@ -220,9 +260,15 @@ void Engine::start()
 
 		PROFILE_END("submitrender");
 
-		frameTime = clock.time() - frameTime;
+		PROFILE_START("physics");
 
-		float camSpeed = 5.f;
+		physThread.join();
+		//physicsWorld.step(frameTime);
+		physicsWorld.updateModels();
+
+		PROFILE_END("physics");
+
+		float camSpeed = 100.f;
 
 		auto move = glm::fvec3(glm::fvec4(0, 0, camSpeed * frameTime.getSeconds(), 1) * camera.getMatYaw());
 		camera.move(-move * float(Keyboard::isKeyPressed('W')));
@@ -271,7 +317,8 @@ void Engine::start()
 				"---------------------------\n" +
 				"User input     : " + std::to_string(PROFILE_TIME_MS("msgevent")) + "ms\n" +
 				"Set up render  : " + std::to_string(PROFILE_TIME_MS("setuprender")) + "ms\n" +
-				"Submit render  : " + std::to_string(PROFILE_TIME_MS("submitrender") - totalGPUTime) + "ms\n\n" +
+				"Submit render  : " + std::to_string(PROFILE_TIME_MS("submitrender") - totalGPUTime) + "ms\n" +
+				"Physics        : " + std::to_string(PROFILE_TIME_MS("physics")) + "ms\n\n" +
 
 				"Avg frame time : " + std::to_string((fpsDisplay * 1000) / double(frames)) + "ms\n" +
 				"FPS            : " + std::to_string((int)(double(frames) / fpsDisplay))
@@ -280,6 +327,8 @@ void Engine::start()
 			frames = 0;
 			times.clear();
 		}
+
+		frameTime = clock.time() - frameStart;
 	}
 
 	quit();
@@ -460,6 +509,7 @@ Clock Engine::clock;
 Window* Engine::window;
 Renderer* Engine::renderer;
 VkInstance Engine::vkInstance;
+PhysicsWorld Engine::physicsWorld;
 VkPhysicalDevice Engine::vkPhysicalDevice = VK_NULL_HANDLE;
 std::vector<PhysicalDeviceDetails> Engine::physicalDevicesDetails;
 int Engine::physicalDeviceIndex;

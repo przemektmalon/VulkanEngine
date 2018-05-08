@@ -75,13 +75,13 @@ void Renderer::initialise()
 	overlayRenderer.createOverlayAttachmentsFramebuffers();
 	overlayRenderer.createOverlayCommands();
 
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < 5; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
-		int s = 30;
+		int s = 300;
 		int sh = s / 2;
-		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 15) + 5, s64(r() % s) - sh));
+		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 50, s64(r() % s) - sh));
 		glm::fvec3 col(1.0, 0.8, 1.0);
 		/*switch (i % 7)
 		{
@@ -108,10 +108,10 @@ void Renderer::initialise()
 			break; }
 		}*/
 		pl.setColour(col * glm::fvec3(2.3));
-		pl.setLinear(0.01);
-		pl.setQuadratic(0.01);
-		pl.setFadeStart(50);
-		pl.setFadeLength(5);
+		pl.setLinear(0.001);
+		pl.setQuadratic(0.001);
+		pl.setFadeStart(200);
+		pl.setFadeLength(50);
 	}
 
 	lightManager.updateLightCounts();
@@ -406,7 +406,7 @@ void Renderer::populateDrawCmdBuffer()
 	
 	for (auto& m : Engine::world.models)
 	{
-		glm::fvec3 modelPos = glm::fvec3(m.transform[3].x, m.transform[3].y, m.transform[3].z);
+		glm::fvec3 modelPos = m.transform.getTranslation();
 		float distanceToCam = glm::length(Engine::camera.getPosition() - modelPos);
 
 		int lodIndex = 0;
@@ -759,7 +759,7 @@ void Renderer::updateTransformBuffer()
 	int i = 0;
 	for (auto& m : Engine::world.models)
 	{
-		transform[i] = m.transform;
+		transform[i] = m.transform.getTransformMat();
 		++i;
 	}
 

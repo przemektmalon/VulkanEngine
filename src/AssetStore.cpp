@@ -101,6 +101,9 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		auto name = xml.getString(xml.firstNode(modelNode, "name"));
 		auto material = xml.getString(xml.firstNode(modelNode, "material"));
 		auto physics = xml.getString(xml.firstNode(modelNode, "physics"));
+		if (physics.length() != 0)
+			if (physics[0] == '_')
+				physics = modelFolder + (physics.c_str() + 1);
 
 		std::vector<std::string> lodPaths;
 		std::vector<u32> lodLimits;

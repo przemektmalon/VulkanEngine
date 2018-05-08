@@ -6,6 +6,7 @@
 #include "Camera.hpp"
 #include "World.hpp"
 #include "AssetStore.hpp"
+#include "PhysicsWorld.hpp"
 
 class OLayer;
 class Window;
@@ -47,6 +48,7 @@ public:
 	static Window* window;
 	static Renderer* renderer;
 	static Camera camera;
+	static PhysicsWorld physicsWorld;
 
 	static VkInstance vkInstance;
 	static VkPhysicalDevice vkPhysicalDevice;
@@ -61,4 +63,5 @@ public:
 	static bool validationWarning;
 	static std::string validationMessage;
 	static OLayer* uiLayer;
+	
 };

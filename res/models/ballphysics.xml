@@ -1,0 +1,15 @@
+<physics>
+
+	<mass>10</mass>
+	<friction>0.01</friction>
+	<restitution>0.95</restitution>
+	<lineardamping>0.025</lineardamping>
+	<angulardamping>0.05</angulardamping>
+
+	<compound>false</compound>
+
+	<shape type="sphere">
+		<radius>1</radius>
+	</shape>
+
+</physics>

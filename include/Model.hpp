@@ -2,6 +2,8 @@
 #include "PCH.hpp"
 #include "Material.hpp"
 #include "Asset.hpp"
+#include "PhysicsObject.hpp"
+#include "Transform.hpp"
 
 struct Vertex
 {
@@ -144,13 +146,18 @@ class ModelInstance
 {
 public:
 	std::string name;
-	glm::fmat4 transform;
+	Transform transform;
+	//glm::fmat4 transform;
 	Model * model;
 	u32 transformIndex; // Index into gpu transform buffer
 
 	Material* material;
 
-	void setModel(Model* m);
+	PhysicsObject* physicsObject;
 
+	void setModel(Model* m);
 	void setMaterial(Material* pMaterial);
+
+	void makePhysicsObject(btCollisionShape* collisionShape, float mass);
+	void makePhysicsObject();
 };

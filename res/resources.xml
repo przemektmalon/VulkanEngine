@@ -140,28 +140,30 @@
 		<limit>0</limit>
 
 		<material>marble</material>
-		<physics></physics>
+		<physics>_ballphysics.xml</physics>
 	</model>
 
 	<model>
-		<path>_ball2.obj</path>
+		<path>_ball.obj</path>
 		<name>pbrsphere</name>
+
 		<material>bamboo</material>
-		<physics></physics>
+		<physics>_ballphysics.xml</physics>
 	</model>
 
 	<model>
 		<path>_hollowbox.obj</path>
 		<name>hollowbox</name>
+
 		<material>bamboo</material>
-		<physics></physics>
+		<physics>_hollowboxphysics.xml</physics>
 	</model>
 
 	<model>
 		<path>_ground.obj</path>
 		<name>ground</name>
 		<material>dirt</material>
-		<physics></physics>
+		<physics>_groundphysics.xml</physics>
 	</model>
 
 	<font>
