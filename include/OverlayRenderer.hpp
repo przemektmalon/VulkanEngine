@@ -169,6 +169,15 @@ public:
 		}
 	}
 
+	void removeLayer(OLayer* layer)
+	{
+		for (auto pipesItr = pipelines.begin(); pipesItr != pipelines.end(); ++pipesItr)
+		{
+			pipesItr->second.erase(layer);
+		}
+		layers.erase(layer);
+	}
+
 	VkRenderPass getRenderPass() { return overlayRenderPass; }
 	VkDescriptorSetLayout getDescriptorSetLayout() { return overlayDescriptorSetLayout; }
 
