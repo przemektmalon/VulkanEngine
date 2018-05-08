@@ -14,6 +14,12 @@ GlyphContainer* Font::requestGlyphs(u16 pCharSize, Text * pUser)
 	}
 	else
 	{
+		if (find->second.size() == 0)
+		{
+			auto ret = loadGlyphs(pCharSize);
+			useTrack.insert(std::make_pair(pCharSize, std::set<Text*>({ pUser })));
+			return ret;
+		}
 		find->second.insert(pUser);
 		return &glyphContainers.at(pCharSize);
 	}
@@ -31,7 +37,9 @@ void Font::releaseGlyphs(u16 pCharSize, Text* pUser)
 		find->second.erase(pUser);
 		if (find->second.size() == 0)
 		{
-			glyphContainers.erase(pCharSize);
+			auto find = glyphContainers.find(pCharSize);
+			find->second.release();
+			glyphContainers.erase(find);
 		}
 	}
 }
