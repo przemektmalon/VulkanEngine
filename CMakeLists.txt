@@ -78,6 +78,42 @@ endif()
 
 
 ################################################################
+################    SET BULLET INCLUDES
+################################################################
+
+if(NOT LIB_BULLET_INCLUDE_DIR)
+	message(WARNING "Bullet library not found please specify it with -DLIB_BULLET_INCLUDE_DIR='Path to your bullet include dir' or use the cmake-gui to set it")
+	set(LIB_BULLET_INCLUDE_DIR "" CACHE PATH "Path to your bullet include folder")
+endif()
+if(NOT LIB_BULLET_COLLISION_LIBRARY_DEBUG)
+	message(WARNING "Debug bullet collision library not found please specify it with -DLIB_BULLET_COLLISION_LIBRARY_DEBUG='Path to your bullet collision library' or use the cmake-gui to set it")
+	set(LIB_BULLET_COLLISION_LIBRARY_DEBUG "" CACHE FILEPATH "Path to your debug bullet collision library")
+endif()
+if(NOT LIB_BULLET_COLLISION_LIBRARY_RELEASE)
+	message(WARNING "Release bullet collision library not found please specify it with -DLIB_BULLET_COLLISION_LIBRARY_RELEASE='Path to your bullet collision library' or use the cmake-gui to set it")
+	set(LIB_BULLET_COLLISION_LIBRARY_RELEASE "" CACHE FILEPATH "Path to your release bullet collision library")
+endif()
+
+if(NOT LIB_BULLET_DYNAMICS_LIBRARY_DEBUG)
+	message(WARNING "Debug bullet dynamics library not found please specify it with -DLIB_BULLET_DYNAMICS_LIBRARY_DEBUG='Path to your bullet dynamics library' or use the cmake-gui to set it")
+	set(LIB_BULLET_DYNAMICS_LIBRARY_DEBUG "" CACHE FILEPATH "Path to your debug bullet dynamics library")
+endif()
+if(NOT LIB_BULLET_DYNAMICS_LIBRARY_RELEASE)
+	message(WARNING "Release bullet dynamics library not found please specify it with -DLIB_BULLET_DYNAMICS_LIBRARY_RELEASE='Path to your bullet dynamics library' or use the cmake-gui to set it")
+	set(LIB_BULLET_DYNAMICS_LIBRARY_RELEASE "" CACHE FILEPATH "Path to your release bullet dynamics library")
+endif()
+
+if(NOT LIB_BULLET_MATH_LIBRARY_DEBUG)
+	message(WARNING "Debug bullet math library not found please specify it with -DLIB_BULLET_MATH_LIBRARY_DEBUG='Path to your bullet math library' or use the cmake-gui to set it")
+	set(LIB_BULLET_MATH_LIBRARY_DEBUG "" CACHE FILEPATH "Path to your debug bullet math library")
+endif()
+if(NOT LIB_BULLET_MATH_LIBRARY_RELEASE)
+	message(WARNING "Release bullet math library not found please specify it with -DLIB_BULLET_MATH_LIBRARY_RELEASE='Path to your bullet math library' or use the cmake-gui to set it")
+	set(LIB_BULLET_MATH_LIBRARY_RELEASE "" CACHE FILEPATH "Path to your release bullet math library")
+endif()
+
+
+################################################################
 ################    SET GLM INCLUDES
 ################################################################
 
@@ -161,7 +197,7 @@ endif()
 ################    SPECIFY INCLUDE DIRECTORIES
 ################################################################
 
-include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_FREETYPE_INCLUDE_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR} ${LIB_ASSIMP_INCLUDE_DIR})
+include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_BULLET_INCLUDE_DIR} ${LIB_FREETYPE_INCLUDE_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR} ${LIB_ASSIMP_INCLUDE_DIR})
 
 
 
@@ -190,6 +226,16 @@ target_link_libraries (VulkanEngine
 target_link_libraries (VulkanEngine
     debug ${LIB_FREETYPE_LIB_DEBUG}
     optimized ${LIB_FREETYPE_LIB_RELEASE})
+
+target_link_libraries (VulkanEngine
+    debug ${LIB_BULLET_COLLISION_LIBRARY_DEBUG}
+    optimized ${LIB_BULLET_COLLISION_LIBRARY_RELEASE})
+target_link_libraries (VulkanEngine
+    debug ${LIB_BULLET_DYNAMICS_LIBRARY_DEBUG}
+    optimized ${LIB_BULLET_DYNAMICS_LIBRARY_RELEASE})
+target_link_libraries (VulkanEngine
+    debug ${LIB_BULLET_MATH_LIBRARY_DEBUG}
+    optimized ${LIB_BULLET_MATH_LIBRARY_RELEASE})
 
 ################################################################
 ################    SET MSVC STARTUP PROJECT AND WORKING DIR
