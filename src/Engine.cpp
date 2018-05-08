@@ -77,7 +77,7 @@ void Engine::start()
 	{
 		std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahog", "copper" };
 
-		for (int i = 0; i < 40; ++i)
+		for (int i = 0; i < 4; ++i)
 		{
 			world.addModelInstance("hollowbox", "hollowbox" + std::to_string(i));
 			int s = 100;
@@ -135,6 +135,7 @@ void Engine::start()
 	console->create();
 
 	Text* t = new Text;
+	t->setName("stats");
 	t->setFont(Engine::assets.getFont("consola"));
 	t->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	t->setCharSize(20);
@@ -170,7 +171,7 @@ void Engine::start()
 			switch (ev.type) {
 			case(Event::TextInput):
 			{
-				console->input(ev.eventUnion.textInputEvent.character);
+				console->inputChar(ev.eventUnion.textInputEvent.character);
 				break;
 			}
 			case(Event::MouseDown):
@@ -309,7 +310,9 @@ void Engine::start()
 
 			double totalGPUTime = gBufferTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
 
-			t->setString(
+			auto stats = (Text*)uiLayer->getElement("stats");
+
+			stats->setString(
 				"---------------------------\n"
 				"GBuffer pass   : " + std::to_string(gBufferTime) + "ms\n" +
 				"Shadow pass    : " + std::to_string(shadowTime) + "ms\n" +

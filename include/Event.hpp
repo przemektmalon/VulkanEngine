@@ -52,7 +52,7 @@ struct Event
 	void constructText(Key pKey, bool pShift)
 	{
 		unsigned char c = pKey.code;
-		if (c == Key::KC_BACKSPACE || c == Key::KC_DELETE)
+		if (c == Key::KC_BACKSPACE || c == Key::KC_DELETE || c == Key::KC_ENTER)
 		{
 			eventUnion.textInputEvent.character = c;
 			return;

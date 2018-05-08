@@ -99,6 +99,23 @@ void OLayer::addElement(OverlayElement * el)
 		// Elements using required shader exist, add element to their list
 		shaderFind->second.push_back(el);
 	}
+
+	auto nameFind = elementLabels.find(el->getName());
+	if (nameFind == elementLabels.end())
+		elementLabels.insert(std::make_pair(el->getName(), el));
+	else
+	{
+		std::string newName = el->getName();
+		newName += std::to_string(Engine::clock.now());
+		nameFind = elementLabels.find(newName);
+		u64 i = 1;
+		while (nameFind != elementLabels.end())
+		{
+			newName = el->getName() + std::to_string(Engine::clock.now() + i);
+			nameFind = elementLabels.find(newName);
+		}
+		elementLabels.insert(std::make_pair(el->getName(), el));
+	}
 }
 
 void Pipeline::create(PipelineRequirements pipelineReqs)

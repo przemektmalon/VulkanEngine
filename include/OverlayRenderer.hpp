@@ -21,9 +21,28 @@ public:
 	void cleanup();
 
 	void addElement(OverlayElement* el);
+	OverlayElement* getElement(std::string pName)
+	{
+		auto find = elementLabels.find(pName);
+		if (find == elementLabels.end())
+		{
+			DBG_WARNING("Layer element not found: " << pName);
+			return 0;
+		}
+		return find->second;
+	}
 	void removeElement(OverlayElement* el)
 	{
-		/// TODO: implement
+		auto find = elements.find(el->getShader());
+		if (find != elements.end())
+		{
+			for (auto itr = find->second.begin(); itr != find->second.end(); ++itr)
+			{
+				if (*itr == el)
+					itr = find->second.erase(itr);
+			}
+		}
+		elementLabels.erase(el->getName());
 	}
 
 	Texture* getColour() { return &colAttachment; }
@@ -65,6 +84,7 @@ public:
 private:
 
 	std::unordered_map<ShaderProgram*, std::vector<OverlayElement*>> elements;
+	std::unordered_map<std::string, OverlayElement*> elementLabels;
 
 	VkFramebuffer framebuffer;
 	Texture colAttachment;

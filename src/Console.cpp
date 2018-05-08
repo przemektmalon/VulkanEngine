@@ -7,33 +7,73 @@
 void Console::create()
 {
 	layer = new OLayer();
-	text = new Text();
+	layer->create(glm::ivec2(Engine::window->resX, 300));
 
-	layer->create(glm::ivec2(Engine::window->resX, 600));
+	input = new Text();
 
-	text->setFont(Engine::assets.getFont("consola"));
-	text->setColour(glm::fvec4(0.1, 0.9, 0.1, 1.0));
-	text->setCharSize(20);
-	text->setString("CONSOLE");
-	text->setPosition(glm::fvec2(100, 100));
+	input->setName("constext");
+	input->setFont(Engine::assets.getFont("consola"));
+	input->setColour(glm::fvec4(0.1, 0.9, 0.1, 1.0));
+	input->setCharSize(20);
+	input->setString("");
+	input->setPosition(glm::fvec2(10, 250));
 	
-	layer->addElement(text);
+	layer->addElement(input);
 }
 
-void Console::input(char input)
+void Console::inputChar(char c)
 {
-	char c = input;
-	std::string s; s = text->getString();
+	std::string s; s = input->getString();
 	
-	if (c == 8)
+	if (c == 8) // backspace
 	{
 		if (s.length() > 0)
 			s.erase(s.size() - 1, 1);
+	}
+	else if (c == 13) // enter
+	{
+		/// TODO: process command
+		if (output.size() == historyLimit)
+		{
+			auto t = output.back();
+			t->cleanup();
+			layer->removeElement(t);
+			delete t;
+			output.pop_back();
+			history.pop_back();
+		}
+		input->setColour(glm::fvec4(0.9, 0.9, 0.9, 1.0));
+		history.push_front(input->getString());
+		output.push_front(input);
+
+		input = new Text();
+
+		input->setFont(Engine::assets.getFont("consola"));
+		input->setColour(glm::fvec4(0.1, 0.9, 0.1, 1.0));
+		input->setCharSize(20);
+		input->setString("");
+		input->setPosition(glm::fvec2(10, 250));
+
+		layer->addElement(input);
+
+		updatePositions();
+
+		return;
 	}
 	else
 	{
 		s.append(&c, 1);
 	}
 
-	text->setString(s);
+	input->setString(s);
+}
+
+void Console::updatePositions()
+{
+	int y = 250 - input->getGlyphs()->getHeight();
+	for (auto line : output)
+	{
+		line->setPosition(glm::fvec2(10, y));
+		y -= input->getGlyphs()->getHeight();
+	}
 }

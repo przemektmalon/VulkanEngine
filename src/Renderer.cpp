@@ -645,7 +645,7 @@ void Renderer::createDescriptorPool()
 	poolSizes[8].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[8].descriptorCount = 2;
 	poolSizes[9].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[9].descriptorCount = 300;
+	poolSizes[9].descriptorCount = 400;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -654,6 +654,19 @@ void Renderer::createDescriptorPool()
 	poolInfo.maxSets = 15;
 
 	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool));
+
+	std::array<VkDescriptorPoolSize, 1> poolSizesFreeable = {};
+	poolSizesFreeable[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizesFreeable[0].descriptorCount = 50;
+
+	VkDescriptorPoolCreateInfo poolInfoFreeable = {};
+	poolInfoFreeable.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfoFreeable.poolSizeCount = static_cast<uint32_t>(poolSizesFreeable.size());
+	poolInfoFreeable.pPoolSizes = poolSizesFreeable.data();
+	poolInfoFreeable.maxSets = 50;
+	poolInfoFreeable.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfoFreeable, nullptr, &freeableDescriptorPool));
 }
 
 /*

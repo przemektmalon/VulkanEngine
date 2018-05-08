@@ -7,19 +7,26 @@
 class Console
 {
 public:
-	Console() : active(false), text(0), layer(0) {}
+	Console() : active(false), layer(0) {}
 
 	void create();
 
-	void input(char input);
+	void inputChar(char c);
+
 	void toggle() { active = !active; }
 	bool isActive() { return active; }
 	OLayer* getLayer() { return layer; }
 
 private:
 
-	OLayer* layer;
-	Text* text;
-	bool active;
+	void updatePositions();
 
+	OLayer* layer;
+
+	Text* input;
+	std::list<Text*> output;
+	std::list<std::string> history;
+
+	bool active;
+	const int historyLimit = 10;
 };

@@ -8,6 +8,9 @@ public:
 	enum Type { Text, Poly };
 
 	OverlayElement(Type pType);
+	~OverlayElement();
+	void setName(std::string pName) { name = pName; }
+	std::string getName() { return name; }
 	virtual void draw(VkCommandBuffer cmd) {}
 	virtual void cleanup() {}
 	bool needsDrawUpdate() { return drawUpdate; }
@@ -21,6 +24,7 @@ protected:
 	void* pushConstData; /// TODO: free in derived
 	int pushConstSize;
 
+	std::string name;
 	Type type;
 
 	VkDescriptorSet descSet;

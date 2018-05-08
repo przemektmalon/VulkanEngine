@@ -68,6 +68,7 @@ public:
 
 	// Memory pools
 	VkDescriptorPool descriptorPool;
+	VkDescriptorPool freeableDescriptorPool;
 	VkCommandPool commandPool;
 	VkCommandPool resettableCommandPool;
 	VkQueryPool queryPool;
