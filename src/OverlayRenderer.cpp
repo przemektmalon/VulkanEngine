@@ -65,6 +65,8 @@ void OLayer::create(glm::ivec2 pResolution)
 	wds.dstSet = imageDescriptor;
 
 	vkUpdateDescriptorSets(Engine::renderer->device, 1, &wds, 0, 0);
+
+	setPosition(glm::ivec2(0, 0));
 }
 
 void OLayer::cleanup()
