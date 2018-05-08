@@ -102,7 +102,7 @@ void Buffer::setMem(void * src, VkDeviceSize pSize, VkDeviceSize offset)
 {
 	if (pSize + offset > size)
 		DBG_WARNING("Attempting to write out of buffer bounds");
-	if (memFlags | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	if (memFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 	{
 		const auto r = Engine::renderer;
 		r->createStagingBuffer(pSize);
@@ -110,10 +110,19 @@ void Buffer::setMem(void * src, VkDeviceSize pSize, VkDeviceSize offset)
 		r->stagingBuffer.copyTo(this , pSize, 0, offset);
 		r->destroyStagingBuffer();
 	}
-	else if ((memFlags | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memFlags | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+	else if ((memFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
 	{
 		auto d = map(offset, pSize);
 		memcpy(d, src, pSize);
 		unmap();
 	}
+}
+
+void Buffer::setMem(int src, VkDeviceSize size, VkDeviceSize offset)
+{
+	/// TODO: 4 byte alignment assumed (and expected by  vulkan). Check for this ?
+	int* mem = new int[size/4];
+	memset(mem, src, size);
+	setMem(mem, size, offset);
+	delete[] mem;
 }
