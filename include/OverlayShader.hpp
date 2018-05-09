@@ -2,10 +2,10 @@
 #include "PCH.hpp"
 #include "Shader.hpp"
 
-class TextShader : public ShaderProgram
+class OverlayShader : public ShaderProgram
 {
 public:
-	TextShader() : vertexModule(ShaderModule::Vertex, "/res/shaders/text.glsl"), fragmentModule(ShaderModule::Fragment, "/res/shaders/text.glsl") {}
+	OverlayShader() : vertexModule(ShaderModule::Vertex, "/res/shaders/overlay.glsl"), fragmentModule(ShaderModule::Fragment, "/res/shaders/overlay.glsl") {}
 
 	void compile()
 	{

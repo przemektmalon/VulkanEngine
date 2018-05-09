@@ -12,8 +12,9 @@ OverlayElement::OverlayElement(Type pType) : type(pType)
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
-	if (type == Text)
-		shader = &Engine::renderer->textShader;
+	shader = &Engine::renderer->overlayShader;
+		
+	depth = 0;
 
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(Engine::renderer->device, &allocInfo, &descSet));
 }

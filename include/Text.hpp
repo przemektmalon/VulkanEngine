@@ -76,6 +76,4 @@ private:
 
 	std::vector<Vertex2D> verts;
 	Buffer vertsBuffer;
-
-	bool drawable;
 };

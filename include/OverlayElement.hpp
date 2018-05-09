@@ -18,7 +18,10 @@ public:
 	int getPushConstSize() { return pushConstSize; }
 	VkDescriptorSet getDescriptorSet() { return descSet; }
 	ShaderProgram* getShader() { return shader; }
-
+	void setDepth(float pDepth) { depth = pDepth; depthUpdate = true; }
+	float getDepth() { return depth; }
+	bool needsDepthUpdate() { return depthUpdate; }
+	Type getType() { return type; }
 
 protected:
 	void* pushConstData; /// TODO: free in derived
@@ -31,5 +34,13 @@ protected:
 
 	ShaderProgram* shader;
 
+	float depth;
+	bool depthUpdate;
 	bool drawUpdate;
+	bool drawable;
 };
+
+inline bool compareOverlayElements(OverlayElement* lhs, OverlayElement* rhs)
+{
+	return lhs->getDepth() < rhs->getDepth();
+}

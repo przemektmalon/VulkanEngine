@@ -9,7 +9,6 @@
 struct PipelineRequirements
 {
 	int width, height;
-	ShaderProgram* shader;
 };
 
 class OLayer
@@ -33,14 +32,10 @@ public:
 	}
 	void removeElement(OverlayElement* el)
 	{
-		auto find = elements.find(el->getShader());
-		if (find != elements.end())
+		for (auto itr = elements.begin(); itr != elements.end(); ++itr)
 		{
-			for (auto itr = find->second.begin(); itr != find->second.end(); ++itr)
-			{
-				if (*itr == el)
-					itr = find->second.erase(itr);
-			}
+			if (*itr == el)
+				itr = elements.erase(itr);
 		}
 		elementLabels.erase(el->getName());
 	}
@@ -75,15 +70,25 @@ public:
 	bool needsDrawUpdate()
 	{
 		bool ret = false;
-		for (auto& map : elements)
-			for (auto& el : map.second)
-				ret |= el->needsDrawUpdate();
+		bool sortDepth = false;
+		for (auto& el : elements)
+		{
+			sortDepth = el->needsDepthUpdate();
+			ret |= el->needsDrawUpdate() | sortDepth;
+		}
+		if (sortDepth)
+			sortByDepths();
 		return ret;
 	}
 
 private:
 
-	std::unordered_map<ShaderProgram*, std::vector<OverlayElement*>> elements;
+	void sortByDepths()
+	{
+		std::sort(elements.begin(), elements.end(), compareOverlayElements);
+	}
+
+	std::vector<OverlayElement*> elements;
 	std::unordered_map<std::string, OverlayElement*> elementLabels;
 
 	VkFramebuffer framebuffer;
@@ -139,11 +144,15 @@ public:
 		destroyOverlayDescriptorSetLayouts();
 		projUBO.destroy();
 
-		for (auto pipe : pipelines)
-			pipe.first->destroy();
+		for (auto l : layers)
+			for (auto p : l.second)
+				p.first->destroy();
 
-		for (auto layer : layers)
+		for (auto layer : layersSet)
 			layer->cleanup();
+
+		layers.empty();
+		layersSet.empty();
 	}
 
 	void cleanupForReInit()
@@ -157,45 +166,46 @@ public:
 
 	void addLayer(OLayer* layer)
 	{
-		for (auto& shader : layer->elements)
+		auto find = layers.find(layer);
+		std::unordered_map<Pipeline*,std::vector<OverlayElement*>*>* pipeMap;
+		if (find == layers.end())
 		{
-			auto pipeFound = pipelines.end();
-			for (auto pipe = pipelines.begin(); pipe != pipelines.end(); ++pipe)
+			// Layer not found
+			// Insert layer and map of pipelines and corresponding element lists
+			pipeMap = &layers.insert(std::make_pair(layer, std::unordered_map<Pipeline*, std::vector<OverlayElement*>*>())).first->second;
+
+			// For our layer add required pipelines and their corresponding element lists
+			auto pipeFound = pipeMap->end();
+			for (auto pipe = pipeMap->begin(); pipe != pipeMap->end(); ++pipe)
 			{
 				auto pipeReqs = pipe->first->requirements;
-				if (pipeReqs.shader == shader.first &&
-					pipeReqs.width == layer->resolution.x &&
+				if (pipeReqs.width == layer->resolution.x &&
 					pipeReqs.height == layer->resolution.y)
 				{
 					pipeFound = pipe;
 					break;
 				}
 			}
-			if (pipeFound != pipelines.end())
+			if (pipeFound != pipeMap->end())
 			{
-				pipeFound->second.insert(std::make_pair(layer,&shader.second));
+				/// TODO: Pipe exists, so elements added, we shouldnt get here, do we need this check or go straight to 'else'?
 			}
 			else
 			{
-				auto& insertPipe = pipelines.insert(std::make_pair(new Pipeline(), std::unordered_map<OLayer*, std::vector<OverlayElement*>*>()));
-				insertPipe.first->second.insert(std::make_pair(layer, &shader.second));
+				auto& insertPipe = pipeMap->insert(std::make_pair(new Pipeline(), &layer->elements));
 				PipelineRequirements reqs;
 				reqs.width = layer->resolution.x;
 				reqs.height = layer->resolution.y;
-				reqs.shader = shader.first;
 				insertPipe.first->first->create(reqs);
 			}
-			layers.insert(layer);
+			layersSet.insert(layer);
 		}
 	}
 
 	void removeLayer(OLayer* layer)
 	{
-		for (auto pipesItr = pipelines.begin(); pipesItr != pipelines.end(); ++pipesItr)
-		{
-			pipesItr->second.erase(layer);
-		}
 		layers.erase(layer);
+		layersSet.erase(layer);
 	}
 
 	VkRenderPass getRenderPass() { return overlayRenderPass; }
@@ -217,8 +227,8 @@ private:
 
 	Buffer projUBO;
 
-	std::unordered_map<Pipeline*, std::unordered_map<OLayer*,std::vector<OverlayElement*>*>> pipelines;
-	std::set<OLayer*> layers;
+	std::unordered_map<OLayer*, std::unordered_map<Pipeline*,std::vector<OverlayElement*>*>> layers;
+	std::set<OLayer*> layersSet;
 	
 	VkDescriptorSetLayout overlayDescriptorSetLayout;
 	VkRenderPass overlayRenderPass;

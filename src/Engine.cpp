@@ -219,20 +219,6 @@ void Engine::start()
 					window->resize(1280, 720);
 					renderer->reInitialise();
 				}
-				if (key == Key::KC_P)
-				{
-					renderer->reloadShaders();
-				}
-				if (key == Key::KC_G)
-				{
-					world.addModelInstance("pbrsphere", "dyn");
-					world.modelMap["dyn"]->transform = glm::translate(glm::scale(glm::fmat4(1), glm::fvec3(5, 5, 5)), glm::fvec3(0, 0, 0));
-					world.modelMap["dyn"]->setMaterial(assets.getMaterial("marble"));
-				}
-				if (key == Key::KC_H)
-				{
-					world.removeModelInstance("dyn");
-				}
 				break;
 			}
 			case Event::KeyUp: {
@@ -395,6 +381,7 @@ void Engine::createVulkanInstance()
 #endif
 #ifdef ENABLE_VULKAN_VALIDATION
 	enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+	
 #endif
 
 	VkInstanceCreateInfo instInfo = {};

@@ -10,7 +10,7 @@
 #include "Lights.hpp"
 #include "PointShadowShader.hpp"
 #include "SpotShadowShader.hpp"
-#include "TextShader.hpp"
+#include "OverlayShader.hpp"
 #include "Text.hpp"
 #include "OverlayElement.hpp"
 #include "OverlayRenderer.hpp"
@@ -101,7 +101,7 @@ public:
 	ScreenShader screenShader;
 	PointShadowShader pointShadowShader;
 	SpotShadowShader spotShadowShader;
-	TextShader textShader;
+	OverlayShader overlayShader;
 	CombineOverlaysShader combineOverlaysShader;
 
 	/// --------------------

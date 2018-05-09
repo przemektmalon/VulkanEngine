@@ -76,28 +76,25 @@ void OLayer::cleanup()
 	//VK_VALIDATE(vkFreeDescriptorSets(Engine::renderer->device, Engine::renderer->descriptorPool, 1, &imageDescriptor));
 	VK_VALIDATE(vkDestroyFramebuffer(Engine::renderer->device, framebuffer, 0));
 	quadBuffer.destroy();
-	for (auto programsList : elements)
+	for (auto element : elements)
 	{
-		for (auto element : programsList.second)
-		{
-			element->cleanup();
-			delete element;
-		}
+		element->cleanup();
+		delete element;
 	}
 }
 
 void OLayer::addElement(OverlayElement * el)
 {
-	auto shaderFind = elements.find(el->getShader());
-	if (shaderFind == elements.end())
+	auto find = std::find(elements.begin(), elements.end(), el);
+	if (find == elements.end())
 	{
 		// No element with required shader exists, add vector for this type of shader
-		elements.insert(std::make_pair(el->getShader(), std::vector<OverlayElement*>(1, el)));
+		elements.push_back(el);
 	}
 	else
 	{
-		// Elements using required shader exist, add element to their list
-		shaderFind->second.push_back(el);
+		// Elements already exists
+		/// TODO: log error ?
 	}
 
 	auto nameFind = elementLabels.find(el->getName());
@@ -114,7 +111,7 @@ void OLayer::addElement(OverlayElement * el)
 			newName = el->getName() + std::to_string(Engine::clock.now() + i);
 			nameFind = elementLabels.find(newName);
 		}
-		elementLabels.insert(std::make_pair(el->getName(), el));
+		elementLabels.insert(std::make_pair(newName, el));
 	}
 }
 
@@ -182,12 +179,12 @@ void Pipeline::create(PipelineRequirements pipelineReqs)
 
 	VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorBlendAttachment.blendEnable = VK_FALSE;
+	colorBlendAttachment.blendEnable = VK_TRUE;
 	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
 	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
 	VkPipelineColorBlendStateCreateInfo colorBlending = {};
@@ -211,10 +208,14 @@ void Pipeline::create(PipelineRequirements pipelineReqs)
 	depthStencil.minDepthBounds = 0.0f;
 	depthStencil.maxDepthBounds = 1000.0f; /// WATCH: whether we need to alter this
 
-	VkPushConstantRange pushConstantRange = {};
-	pushConstantRange.offset = 0;
-	pushConstantRange.size = sizeof(glm::fmat4) + sizeof(glm::fvec4);
-	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	VkPushConstantRange pushConstantRanges[2];
+	pushConstantRanges[0].offset = 0;
+	pushConstantRanges[0].size = sizeof(glm::fmat4) + sizeof(glm::fvec4);
+	pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	pushConstantRanges[1].offset = sizeof(glm::fmat4) + sizeof(glm::fvec4);
+	pushConstantRanges[1].size = sizeof(glm::fvec4) + sizeof(int);
+	pushConstantRanges[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 
 	// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources)
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
@@ -222,8 +223,8 @@ void Pipeline::create(PipelineRequirements pipelineReqs)
 	pipelineLayoutInfo.setLayoutCount = 1;
 	auto descSetLayout = Engine::renderer->overlayRenderer.getDescriptorSetLayout();
 	pipelineLayoutInfo.pSetLayouts = &descSetLayout;
-	pipelineLayoutInfo.pushConstantRangeCount = 1;
-	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+	pipelineLayoutInfo.pushConstantRangeCount = 2;
+	pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges;
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(Engine::renderer->device, &pipelineLayoutInfo, nullptr, &layout));
 
@@ -231,7 +232,7 @@ void Pipeline::create(PipelineRequirements pipelineReqs)
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.stageCount = 2;
-	pipelineInfo.pStages = requirements.shader->getShaderStageCreateInfos();
+	pipelineInfo.pStages = Engine::renderer->overlayShader.getShaderStageCreateInfos();
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &inputAssembly;
 	pipelineInfo.pViewportState = &viewportState;
@@ -409,7 +410,7 @@ void OverlayRenderer::createOverlayPipeline()
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	colorBlendAttachment.blendEnable = VK_TRUE;
 	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
 	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
@@ -569,7 +570,7 @@ void OverlayRenderer::updateOverlayDescriptorSets()
 void OverlayRenderer::updateOverlayCommands()
 {
 	bool update = false;
-	for (auto l : layers)
+	for (auto l : layersSet)
 		update |= l->needsDrawUpdate();
 
 	if (!update)
@@ -583,53 +584,59 @@ void OverlayRenderer::updateOverlayCommands()
 
 	VK_VALIDATE(vkCmdWriteTimestamp(overlayCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::BEGIN_OVERLAY));
 
-	for (auto pipeMapEntry : pipelines)
+	for (auto layerMap : layers)
 	{
-		auto pipeline = pipeMapEntry.first->pipeline;
-		auto pipelineLayout = pipeMapEntry.first->layout;
-		auto& layers = pipeMapEntry.second;
+		OLayer* layer = layerMap.first;
 
-		for (auto layerMapEntry : layers)
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = overlayRenderPass;
+		renderPassInfo.framebuffer = layer->framebuffer;
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent.width = layer->resolution.x;
+		renderPassInfo.renderArea.extent.height = layer->resolution.y;
+
+		std::array<VkClearValue, 2> clearValues = {};
+		clearValues[0].color = { 0, 0, 0, 0 };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
+
+		VK_VALIDATE(vkCmdBeginRenderPass(overlayCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+
+		for (auto pipeMap : layerMap.second)
 		{
-			auto layer = layerMapEntry.first;
-			auto elementList = layerMapEntry.second;
+			auto pipe = pipeMap.first;
 
-			VkRenderPassBeginInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = overlayRenderPass;
-			renderPassInfo.framebuffer = layer->framebuffer;
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent.width = layer->resolution.x;
-			renderPassInfo.renderArea.extent.height = layer->resolution.y;
+			auto& elements = *pipeMap.second;
 
-			std::array<VkClearValue, 2> clearValues = {};
-			clearValues[0].color = { 0, 0, 0, 0 };
-			clearValues[1].depthStencil = { 1.0f, 0 };
+			VK_VALIDATE(vkCmdBindPipeline(overlayCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe->pipeline));
 
-			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-			renderPassInfo.pClearValues = clearValues.data();
-
-			VK_VALIDATE(vkCmdBeginRenderPass(overlayCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
-
-			VK_VALIDATE(vkCmdBindPipeline(overlayCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline));
-
-			for (auto element : *elementList)
+			for (auto element : elements)
 			{
 				float push[20];
-				glm::fmat4 proj = glm::ortho<float>(0, layer->resolution.x, 0, layer->resolution.y, -1, 1);
-				memcpy(push, &proj[0][0], sizeof(proj));
-				memcpy(push + 16, element->getPushConstData(), element->getPushConstSize());
+				glm::fmat4 proj = glm::ortho<float>(0, layer->resolution.x, 0, layer->resolution.y, -10, 10);
+				memcpy(push, &proj[0][0], sizeof(glm::fmat4));
+				float depth = element->getDepth();
+				memcpy(push + 16, &depth, sizeof(float));
+				VK_VALIDATE(vkCmdPushConstants(overlayCommandBuffer, pipe->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4), push));
 
-				VK_VALIDATE(vkCmdPushConstants(overlayCommandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4), &push));
+				float push2[5];
+				glm::fvec4 c = *(glm::fvec4*)element->getPushConstData();
+				memcpy(push2, &c[0], sizeof(glm::fvec4));
+				int t = element->getType();
+				memcpy(push2 + 4, &t, sizeof(int));
+				VK_VALIDATE(vkCmdPushConstants(overlayCommandBuffer, pipe->layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::fmat4) + sizeof(glm::fvec4), sizeof(glm::fvec4) + sizeof(int), push2));
 
 				VkDescriptorSet descSet = element->getDescriptorSet();
-				VK_VALIDATE(vkCmdBindDescriptorSets(overlayCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descSet, 0, nullptr));
+				VK_VALIDATE(vkCmdBindDescriptorSets(overlayCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe->layout, 0, 1, &descSet, 0, nullptr));
 
 				element->draw(overlayCommandBuffer);
 			}
-
-			VK_VALIDATE(vkCmdEndRenderPass(overlayCommandBuffer));
 		}
+
+		VK_VALIDATE(vkCmdEndRenderPass(overlayCommandBuffer));
 	}
 
 	VK_VALIDATE(vkCmdWriteTimestamp(overlayCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::END_OVERLAY));
@@ -663,7 +670,7 @@ void OverlayRenderer::updateOverlayCommands()
 	
 	VK_VALIDATE(vkCmdBindDescriptorSets(overlayCombineCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, overlayPipelineLayout, 1, 1, &overlayCombineDescriptorSet, 0, nullptr));
 
-	for (auto layer : layers)
+	for (auto layer : layersSet)
 	{
 		VK_VALIDATE(vkCmdBindDescriptorSets(overlayCombineCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, overlayPipelineLayout, 0, 1, &layer->imageDescriptor, 0, nullptr));
 

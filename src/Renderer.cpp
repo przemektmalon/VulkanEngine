@@ -21,7 +21,7 @@ void Renderer::initialise()
 	createSemaphores();
 
 	lightManager.init();
-	textShader.compile();
+	overlayShader.compile();
 	combineOverlaysShader.compile();
 
 	// Swap chain
@@ -219,6 +219,7 @@ void Renderer::cleanup()
 	overlayRenderer.cleanup();
 
 	VK_VALIDATE(vkDestroyDescriptorPool(device, descriptorPool, nullptr));
+	VK_VALIDATE(vkDestroyDescriptorPool(device, freeableDescriptorPool, nullptr));
 	VK_VALIDATE(vkDestroyCommandPool(device, commandPool, 0));
 	VK_VALIDATE(vkDestroyCommandPool(device, resettableCommandPool, 0));
 	VK_VALIDATE(vkDestroyQueryPool(device, queryPool, 0));
@@ -244,7 +245,7 @@ void Renderer::cleanup()
 	lightManager.cleanup();
 	
 	combineOverlaysShader.destroy();
-	textShader.destroy();
+	overlayShader.destroy();
 
 	VK_VALIDATE(vkDestroyDevice(device, 0));
 }
@@ -515,8 +516,8 @@ void Renderer::createLogicalDevice()
 		dci.ppEnabledLayerNames = 0;
 	#endif
 	dci.enabledExtensionCount = 1;
-	auto deviceExtension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-	dci.ppEnabledExtensionNames = &deviceExtension;
+	const char* deviceExtensions[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	dci.ppEnabledExtensionNames = deviceExtensions;
 	dci.pEnabledFeatures = &pdf;
 
 	VK_CHECK_RESULT(vkCreateDevice(Engine::vkPhysicalDevice, &dci, 0, &device));

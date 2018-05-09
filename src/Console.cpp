@@ -7,7 +7,7 @@
 void Console::create()
 {
 	layer = new OLayer();
-	layer->create(glm::ivec2(Engine::window->resX, 300));
+	layer->create(glm::ivec2(Engine::window->resX, 272));
 
 	input = new Text();
 
@@ -18,7 +18,26 @@ void Console::create()
 	input->setString("");
 	input->setPosition(glm::fvec2(10, 250));
 	
+	input->setDepth(2);
+
 	layer->addElement(input);
+
+	backs[0] = new UIPolygon();
+	backs[1] = new UIPolygon();
+
+	backs[0]->setTexture(Engine::assets.getTexture("blank"));
+	backs[1]->setTexture(Engine::assets.getTexture("blank"));
+
+	backs[0]->setColour(glm::fvec4(0.1, 0.1, 0.1, 0.99f));
+	backs[1]->setColour(glm::fvec4(0.05, 0.05, 0.05, 0.99f));
+
+	backs[0]->setDepth(1);
+	backs[1]->setDepth(1);
+
+	layer->addElement(backs[0]);
+	layer->addElement(backs[1]);
+	
+	updateBacks();
 }
 
 void Console::inputChar(char c)
@@ -53,6 +72,7 @@ void Console::inputChar(char c)
 		input->setCharSize(20);
 		input->setString("");
 		input->setPosition(glm::fvec2(10, 250));
+		input->setDepth(2);
 
 		layer->addElement(input);
 
@@ -76,4 +96,30 @@ void Console::updatePositions()
 		line->setPosition(glm::fvec2(10, y));
 		y -= input->getGlyphs()->getHeight();
 	}
+}
+
+void Console::updateBacks()
+{
+	int w = Engine::window->resX, h = 247;
+	std::vector<Vertex2D> verts;
+
+	verts.push_back({ { 0, 0 },{ 0, 0 } });
+	verts.push_back({ { 0, h },{ 0, 1 } });
+	verts.push_back({ { w, 0 },{ 1, 0 } });
+	verts.push_back({ { 0, h },{ 0, 1 } });
+	verts.push_back({ { w, h },{ 1, 1 } });
+	verts.push_back({ { w, 0 },{ 1, 0 } });
+	backs[0]->setVerts(verts);
+
+	verts.clear();
+
+	verts.push_back({ { 0, h },{ 0, 0 } });
+	verts.push_back({ { 0, h+25 },{ 0, 1 } });
+	verts.push_back({ { w, h },{ 1, 0 } });
+	verts.push_back({ { 0, h+25 },{ 0, 1 } });
+	verts.push_back({ { w, h+25 },{ 1, 1 } });
+	verts.push_back({ { w, h },{ 1, 0 } });
+	backs[1]->setVerts(verts);
+
+	verts.clear();
 }

@@ -2,18 +2,32 @@
 #include "PCH.hpp"
 #include "OverlayElement.hpp"
 #include "Model.hpp"
+#include "Buffer.hpp"
 
-class Polygon : public OverlayElement
+class UIPolygon : public OverlayElement
 {
 public:
-
-	Polygon();
+	UIPolygon() : OverlayElement(Poly) 
+	{
+		pushConstData = new glm::fvec4(1,1,1,1);
+		pushConstSize = sizeof(glm::fvec4);
+		drawable = false;
+	}
 
 	void draw(VkCommandBuffer cmd);
 
-	
+	void cleanup();
+
+	void setTexture(Texture* tex);
+	void setVerts(std::vector<Vertex2D>& v);
+	void setColour(glm::fvec4 colour);
 
 private:
 
+	void updateDescriptorSet();
+
 	std::vector<Vertex2D> verts;
+	Buffer vertsBuffer;
+	Texture* texture;
+	glm::fvec4 colour;
 };
