@@ -67,7 +67,6 @@ void Engine::start()
 	renderer->updateShadowDescriptorSets();
 	renderer->updatePBRDescriptorSets();
 	renderer->updateScreenDescriptorSets();
-	renderer->overlayRenderer.updateOverlayDescriptorSets();
 	
 	PROFILE_END("descsets");
 

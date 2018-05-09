@@ -159,7 +159,6 @@ void Renderer::reInitialise()
 	updateGBufferDescriptorSets();
 	updatePBRDescriptorSets();
 	updateScreenDescriptorSets();
-	overlayRenderer.updateOverlayDescriptorSets();
 
 	// Pipeline commands
 
@@ -325,7 +324,7 @@ void Renderer::render()
 	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 0;
 	submitInfo.pWaitDstStageMask = waitStages2;
-	submitInfo.pCommandBuffers = &overlayRenderer.overlayCommandBuffer;
+	submitInfo.pCommandBuffers = &overlayRenderer.elementCommandBuffer;
 	submitInfo.pSignalSemaphores = &overlayFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
@@ -334,7 +333,7 @@ void Renderer::render()
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = &overlayFinishedSemaphore;
 	submitInfo.pWaitDstStageMask = waitStages2;
-	submitInfo.pCommandBuffers = &overlayRenderer.overlayCombineCommandBuffer;
+	submitInfo.pCommandBuffers = &overlayRenderer.combineCommandBuffer;
 	submitInfo.pSignalSemaphores = &overlayCombineFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));

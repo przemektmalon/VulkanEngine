@@ -8,7 +8,7 @@ layout(location = 1) in vec2 inTexCoord;
 
 layout(location = 0) out vec2 fragTexCoord;
 
-layout(set = 1, binding = 1) uniform Proj {
+layout(push_constant) uniform Proj {
 	mat4 proj;
 } mat;
 
