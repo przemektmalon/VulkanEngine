@@ -1,7 +1,8 @@
 def updateCamera()
 {
-	var mv = fvec4(0, 0, 100*getFrameTime(), 1) * camera.getMatYaw();
-	var m = fvec3(mv);
+	auto& camera = getCamera();
+	auto mv = fvec4(0, 0, 100*getFrameTime(), 1) * camera.getMatYaw();
+	auto m = fvec3(mv);
 
 	if (isKeyPressed('W'))
 	{
@@ -9,7 +10,7 @@ def updateCamera()
 	}
 	if (isKeyPressed('A'))
 	{
-		var mc = cross(m,fvec3(0,1,0));
+		auto mc = cross(m,fvec3(0,1,0));
 		camera.move(mc);
 	}
 	if (isKeyPressed('S'))
@@ -18,7 +19,7 @@ def updateCamera()
 	}
 	if (isKeyPressed('D'))
 	{
-		var mc = cross(m,fvec3(0,1,0));
+		auto mc = cross(m,fvec3(0,1,0));
 		camera.move(mc.negate());
 	}
 	if (isKeyPressed('R'))

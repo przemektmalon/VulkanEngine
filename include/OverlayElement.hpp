@@ -11,7 +11,7 @@ public:
 	~OverlayElement();
 	void setName(std::string pName) { name = pName; }
 	std::string getName() { return name; }
-	virtual void draw(VkCommandBuffer cmd) {}
+	virtual void render(VkCommandBuffer cmd) {}
 	virtual void cleanup() {}
 	void* getPushConstData() { return pushConstData; }
 	int getPushConstSize() { return pushConstSize; }
@@ -24,6 +24,10 @@ public:
 	bool needsDepthUpdate() { return depthUpdate; }
 	bool needsDrawUpdate() { return drawUpdate; }
 	void setUpdated() { depthUpdate = false; drawUpdate = false; }
+
+	void setDoDraw(bool pDoDraw) { draw = pDoDraw; drawUpdate = true; }
+	bool doDraw() { return draw; }
+	void toggleDoDraw() { setDoDraw(!doDraw()); }
 
 protected:
 	void* pushConstData; /// TODO: free in derived
@@ -40,6 +44,7 @@ protected:
 	bool depthUpdate;
 	bool drawUpdate;
 	bool drawable;
+	bool draw;
 };
 
 inline bool compareOverlayElements(OverlayElement* lhs, OverlayElement* rhs)

@@ -3,7 +3,12 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
-void UIPolygon::draw(VkCommandBuffer cmd)
+void UIPolygon::reserveBuffer(int numVerts)
+{
+	vertsBuffer.create(numVerts * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+}
+
+void UIPolygon::render(VkCommandBuffer cmd)
 {
 	if (drawable)
 	{
@@ -27,8 +32,6 @@ void UIPolygon::setTexture(Texture * tex)
 
 void UIPolygon::setVerts(std::vector<Vertex2D>& v)
 {
-	/// TODO: Destroy old buffers
-	vertsBuffer.create(v.size() * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 	verts = v;
 	vertsBuffer.setMem(verts.data(), verts.size() * sizeof(Vertex2D), 0);
 	drawable = true;

@@ -681,6 +681,9 @@ void OverlayRenderer::updateOverlayCommands()
 
 		for (auto element : elements)
 		{
+			if (!element->doDraw())
+				continue;
+
 			float push[20];
 			glm::fmat4 proj = glm::ortho<float>(0, layer->resolution.x, 0, layer->resolution.y, -10, 10);
 			memcpy(push, &proj[0][0], sizeof(glm::fmat4));
@@ -698,7 +701,7 @@ void OverlayRenderer::updateOverlayCommands()
 			VkDescriptorSet descSet = element->getDescriptorSet();
 			VK_VALIDATE(vkCmdBindDescriptorSets(elementCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipelineLayout, 0, 1, &descSet, 0, nullptr));
 
-			element->draw(elementCommandBuffer);
+			element->render(elementCommandBuffer);
 		}
 
 		VK_VALIDATE(vkCmdEndRenderPass(elementCommandBuffer));

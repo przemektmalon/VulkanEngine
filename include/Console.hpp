@@ -8,10 +8,10 @@
 class Console
 {
 public:
-	Console() : active(false), layer(0) {}
+	Console() : active(false), layer(0), timeSinceBlink(0) {}
 
 	void create();
-
+	void update();
 	void inputChar(char c);
 
 	void toggle() { active = !active; layer->setDoDraw(active); }
@@ -28,9 +28,12 @@ private:
 	Text* input;
 	std::list<Text*> output;
 	std::list<std::string> history;
+	std::string oldText;
 
 	UIPolygon* backs[2];
+	UIPolygon* blinker;
 
+	float timeSinceBlink;
 	bool active;
 	const int historyLimit = 10;
 };

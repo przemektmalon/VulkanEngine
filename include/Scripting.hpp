@@ -13,8 +13,6 @@ static ChaiScript chai;
 // Adds our c++ functions and types to chaiscript
 static void initChai()
 {
-	chai.add(user_type<Transform>(), "Transform");
-
 	glm::fvec2(*add2Func)(const glm::fvec2&, const glm::fvec2&) = glm::operator+;
 	glm::fvec2(*sub2Func)(const glm::fvec2&, const glm::fvec2&) = glm::operator-;
 	glm::fvec2(*mul2Func)(const glm::fvec2&, const glm::fvec2&) = glm::operator*;
@@ -99,7 +97,7 @@ static void initChai()
 	{
 		ModulePtr m = ModulePtr(new chaiscript::Module());
 		utility::add_class<glm::fmat4>(*m,
-			"fvec4",
+			"fmat4",
 			{ constructor<glm::fmat4()>(),
 			constructor<glm::fmat4(const glm::fmat4 &)>() }, {
 			//{ { fun(&mat4GetRowFunc), "getRow" },
@@ -119,14 +117,33 @@ static void initChai()
 		);
 		chai.add(m);
 	}
+	{
+		ModulePtr m = ModulePtr(new chaiscript::Module());
+		utility::add_class<Transform>(*m,
+			"Transform",
+			{ constructor<Transform()>() },
+			{ { fun(&Transform::getTransformMat), "getTransformMat" },
+			{ fun(&Transform::setTransformMat), "setTransformMat" },
+			{ fun(&Transform::getInverseTransformMat), "getInverseTransformMat" },
+			{ fun(&Transform::setTranslation), "setTranslation" },
+			{ fun(&Transform::getTranslation), "getTranslation" }, 
+			{ fun(&Transform::translate), "translate" }, 
+			{ fun(&Transform::setQuat), "setQuat" }, 
+			{ fun(&Transform::getQuat), "getQuat" }, 
+			{ fun(&Transform::setScale), "setScale" }, 
+			{ fun(&Transform::getScale), "getScale" },
+			{ fun(&Transform::setOrigin), "setOrigin" },
+			{ fun(&Transform::getOrigin), "getOrigin" },
+			{ fun(&Transform::updateMatrix), "updateMatrix" } }
+		);
+		chai.add(m);
+	}
 
 	glm::fvec3 (*crossFunc)(const glm::fvec3&, const glm::fvec3&) = glm::cross;
 
 	chai.add(fun(crossFunc), "cross");
 
 	bool(*isKeyPressedFunc)(char) = Keyboard::isKeyPressed;
-
-	chai.add_global(var(std::ref(Engine::camera)), "camera");
 
 	chai.add(fun(isKeyPressedFunc), "isKeyPressed");
 

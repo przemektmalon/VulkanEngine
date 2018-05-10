@@ -11,7 +11,7 @@ class OLayer
 	friend class OverlayRenderer;
 public:
 
-	OLayer() : draw(true), needsUpdate(true) {}
+	OLayer() : render(true), needsUpdate(true) {}
 
 	void create(glm::ivec2 resolution);
 	void cleanup();
@@ -30,8 +30,8 @@ public:
 	bool needsDrawUpdate();
 	void setUpdated();
 
-	bool doDraw() { return draw; }
-	void setDoDraw(bool doDraw) { draw = doDraw; needsUpdate = true; }
+	bool doDraw() { return render; }
+	void setDoDraw(bool doDraw) { render = doDraw; needsUpdate = true; }
 
 private:
 
@@ -51,7 +51,7 @@ private:
 	glm::fvec2 resolution;
 	float depth;
 	
-	bool draw;
+	bool render;
 	bool needsUpdate;
 
 	VkDescriptorSet imageDescriptor;

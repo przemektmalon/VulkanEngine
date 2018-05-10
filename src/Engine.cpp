@@ -141,7 +141,7 @@ void Engine::start()
 	t->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	t->setCharSize(20);
 	t->setString("");
-	t->setPosition(glm::fvec2(0, 330));
+	t->setPosition(glm::fvec2(0, 310));
 
 	uiLayer = new OLayer;
 	uiLayer->create(glm::ivec2(1280, 720));
@@ -271,6 +271,10 @@ void Engine::start()
 
 		float camSpeed = 100.f;
 
+		PROFILE_START("scripts");
+
+		console->update();
+
 		try {
 			scriptEvalString("updateCamera()");
 		}
@@ -278,6 +282,8 @@ void Engine::start()
 		{
 			std::cout << e.what() << std::endl;
 		}
+
+		PROFILE_END("scripts");
 
 		// FPS display
 		++frames;
@@ -312,7 +318,8 @@ void Engine::start()
 				"User input     : " + std::to_string(PROFILE_TIME_MS("msgevent")) + "ms\n" +
 				"Set up render  : " + std::to_string(PROFILE_TIME_MS("setuprender")) + "ms\n" +
 				"Submit render  : " + std::to_string(PROFILE_TIME_MS("submitrender") - totalGPUTime) + "ms\n" +
-				"Physics        : " + std::to_string(PROFILE_TIME_MS("physics")) + "ms\n\n" +
+				"Physics        : " + std::to_string(PROFILE_TIME_MS("physics")) + "ms\n" +
+				"Scripts        : " + std::to_string(PROFILE_TIME_MS("scripts")) + "ms\n\n" +
 
 				"Avg frame time : " + std::to_string((fpsDisplay * 1000) / double(frames)) + "ms\n" +
 				"FPS            : " + std::to_string((int)(double(frames) / fpsDisplay))

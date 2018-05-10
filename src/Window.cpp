@@ -154,7 +154,7 @@ bool Window::processMessages()
 
 Event Window::constructKeyEvent(u8 keyCode, Event::Type eventType)
 {
-	auto check = [](u8 pKey) -> bool { return Keyboard::isKeyPressed(pKey); };
+	auto check = [](u8 pKey) -> bool { return Keyboard::isKeyPressed((Key)pKey); };
 	Event newEvent(eventType);
 	newEvent.constructKey(keyCode,
 		check(Key::KC_RIGHT_SHIFT) || check(Key::KC_LEFT_SHIFT), 

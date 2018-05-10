@@ -88,6 +88,14 @@ void Text::update()
 			vertPos.x = tpos.x;
 			vertPos.y += style.charSize;
 		}
+		else if (*p == ' ') // Include trailing spaces in bounds calculation
+		{
+			int spaceAdvance = glyphs->getAdvance(*p).x;
+			float advancedX = vertPos.x + glyphPos.x + spaceAdvance;
+			if (advancedX > maxX)
+				maxX = advancedX;
+			vertPos.x += glyphs->getAdvance(*p).x;
+		}
 		else
 		{
 			glm::ivec2 glyphPos = glyphs->getPosition(*p);
@@ -144,7 +152,7 @@ void Text::update()
 	vertsBuffer.unmap();
 }
 
-void Text::draw(VkCommandBuffer cmd)
+void Text::render(VkCommandBuffer cmd)
 {
 	if (drawable)
 	{

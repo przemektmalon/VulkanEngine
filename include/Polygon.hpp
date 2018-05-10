@@ -7,14 +7,16 @@
 class UIPolygon : public OverlayElement
 {
 public:
-	UIPolygon() : OverlayElement(Poly) 
+	UIPolygon() : OverlayElement(Poly)
 	{
 		pushConstData = new glm::fvec4(1,1,1,1);
 		pushConstSize = sizeof(glm::fvec4);
 		drawable = false;
 	}
 
-	void draw(VkCommandBuffer cmd);
+	void reserveBuffer(int numVerts);
+
+	void render(VkCommandBuffer cmd);
 
 	void cleanup();
 

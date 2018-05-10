@@ -40,7 +40,7 @@ public:
 
 	void update();
 
-	void draw(VkCommandBuffer cmd);
+	void render(VkCommandBuffer cmd);
 
 	void cleanup();
 

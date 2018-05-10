@@ -3,7 +3,7 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
-OverlayElement::OverlayElement(Type pType) : type(pType)
+OverlayElement::OverlayElement(Type pType) : type(pType), draw(true)
 {
 	VkDescriptorSetLayout layouts[] = { Engine::renderer->overlayRenderer.getDescriptorSetLayout() };
 	VkDescriptorSetAllocateInfo allocInfo = {};
