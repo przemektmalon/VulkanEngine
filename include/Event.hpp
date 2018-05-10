@@ -34,7 +34,7 @@ struct Event
 			MouseCode code;
 			glm::ivec2 position;
 			glm::ivec2 move;
-			int delta;
+			s16 wheelDelta;
 		};
 		mouse_struct mouseEvent;
 	} eventUnion;
@@ -44,9 +44,9 @@ struct Event
 		eventUnion.keyEvent.key = pKey; eventUnion.keyEvent.shift = pShift; eventUnion.keyEvent.alt = pAlt; eventUnion.keyEvent.sys = pSys; eventUnion.keyEvent.ctrl = pCtrl; eventUnion.keyEvent.caps = pCaps;
 	}
 
-	void constructMouse(MouseCode pCode, glm::ivec2 pPos, glm::ivec2 pMove, int pDelta)
+	void constructMouse(MouseCode pCode, glm::ivec2 pPos, glm::ivec2 pMove, s16 pDelta)
 	{
-		eventUnion.mouseEvent.code = pCode; eventUnion.mouseEvent.position = pPos; eventUnion.mouseEvent.move = pMove; eventUnion.mouseEvent.delta = pDelta;
+		eventUnion.mouseEvent.code = pCode; eventUnion.mouseEvent.position = pPos; eventUnion.mouseEvent.move = pMove; eventUnion.mouseEvent.wheelDelta = pDelta;
 	}
 
 	void constructText(Key pKey, bool pShift)
@@ -252,7 +252,7 @@ public:
 	MouseCode getCode() { return eventUnion.mouseEvent.code; }
 	glm::ivec2 getPosition() { return eventUnion.mouseEvent.position; }
 	glm::fvec2 getMove() { return eventUnion.mouseEvent.move; }
-	int getDelta() { return eventUnion.mouseEvent.delta; }
+	int getDelta() { return eventUnion.mouseEvent.wheelDelta; }
 
 private:
 	void setPosition(glm::ivec2 pPos) { eventUnion.mouseEvent.position = pPos; }

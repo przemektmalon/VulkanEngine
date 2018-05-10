@@ -182,6 +182,11 @@ void Engine::start()
 				console->inputChar(ev.eventUnion.textInputEvent.character);
 				break;
 			}
+			case(Event::MouseWheel):
+			{
+				console->scroll(ev.eventUnion.mouseEvent.wheelDelta);
+				break;
+			}
 			case(Event::MouseDown):
 			{
 				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)

@@ -8,12 +8,13 @@
 class Console
 {
 public:
-	Console() : active(false), layer(0), timeSinceBlink(0), blinkerPosition(1), oldBlinkerPosition(1) {}
+	Console() : active(false), layer(0), timeSinceBlink(0), blinkerPosition(1), oldBlinkerPosition(1), scrollPosition(0) {}
 
 	void create();
 	void update();
 	void inputChar(char c);
 	void moveBlinker(Key k);
+	void scroll(s16 wheelDelta);
 
 	void toggle() { active = !active; layer->setDoDraw(active); }
 	bool isActive() { return active; }
@@ -34,9 +35,10 @@ private:
 	UIPolygon* backs[2];
 	UIPolygon* blinker;
 
+	float scrollPosition;
 	int blinkerPosition;
 	int oldBlinkerPosition;
 	float timeSinceBlink;
 	bool active;
-	const int historyLimit = 10;
+	const int historyLimit = 30;
 };

@@ -18,7 +18,7 @@ void Console::create()
 	input->setString("> ");
 	input->setPosition(glm::fvec2(3, 253));
 	
-	input->setDepth(2);
+	input->setDepth(4);
 
 	layer->addElement(input);
 
@@ -32,10 +32,10 @@ void Console::create()
 	backs[1]->setTexture(Engine::assets.getTexture("blank"));
 
 	backs[0]->setColour(glm::fvec4(0.1, 0.1, 0.1, 0.9f));
-	backs[1]->setColour(glm::fvec4(0.05, 0.05, 0.05, 0.9f));
+	backs[1]->setColour(glm::fvec4(0.05, 0.05, 0.05, 1.f));
 
 	backs[0]->setDepth(1);
-	backs[1]->setDepth(1);
+	backs[1]->setDepth(3);
 
 	layer->addElement(backs[0]);
 	layer->addElement(backs[1]);
@@ -45,7 +45,7 @@ void Console::create()
 	blinker->reserveBuffer(6);
 	blinker->setTexture(Engine::assets.getTexture("blank"));
 	blinker->setColour(glm::fvec4(0.9, 0.9, 0.9, 1.f));
-	blinker->setDepth(3);
+	blinker->setDepth(5);
 
 	update();
 
@@ -131,6 +131,7 @@ void Console::inputChar(char c)
 		auto outputString = input->getString();
 		outputString.replace(0, 1, "$");
 		output.front()->setString(outputString);
+		output.front()->setDepth(2);
 
 		input = new Text();
 
@@ -139,10 +140,11 @@ void Console::inputChar(char c)
 		input->setCharSize(20);
 		input->setString("> ");
 		input->setPosition(glm::fvec2(3, 253));
-		input->setDepth(2);
+		input->setDepth(4);
 
 		layer->addElement(input);
 
+		scrollPosition = 0;
 		blinkerPosition = 1;
 		updatePositions();
 
@@ -169,9 +171,23 @@ void Console::moveBlinker(Key k)
 	}
 }
 
+void Console::scroll(s16 wheelDelta)
+{
+	if (wheelDelta > 0)
+	{
+		scrollPosition = std::min((std::max((float)output.size(), 10.f) - 10.f) * (input->getGlyphs()->getHeight() + 2), scrollPosition + 10.f);
+		updatePositions();
+	}
+	else
+	{
+		scrollPosition = std::max(0.f, scrollPosition - 10.f);
+		updatePositions();
+	}
+}
+
 void Console::updatePositions()
 {
-	int y = 251 - input->getGlyphs()->getHeight();
+	int y = 251 - input->getGlyphs()->getHeight() + scrollPosition;
 	for (auto line : output)
 	{
 		line->setPosition(glm::fvec2(3, y));

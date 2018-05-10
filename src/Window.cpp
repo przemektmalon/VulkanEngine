@@ -346,6 +346,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			const auto buttonFlag = raw->data.mouse.usButtonFlags;
 
+			if (buttonFlag == RI_MOUSE_WHEEL)
+			{
+				Event::Type eventType = Event::MouseWheel;
+				Event mouseEvent(eventType);
+				mouseEvent.constructMouse(0, glm::ivec2(Mouse::getWindowPosition(Engine::window)), glm::ivec2(0,0), raw->data.mouse.usButtonData);
+				Engine::window->eventQ.pushEvent(mouseEvent);
+				break;
+			}
+			
 			const auto anyMouseClick = (RI_MOUSE_LEFT_BUTTON_DOWN | RI_MOUSE_RIGHT_BUTTON_DOWN | RI_MOUSE_MIDDLE_BUTTON_DOWN) & buttonFlag;
 			const auto lMouseClick = RI_MOUSE_LEFT_BUTTON_DOWN & buttonFlag;
 			const auto rMouseClick = RI_MOUSE_RIGHT_BUTTON_DOWN & buttonFlag;
