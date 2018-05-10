@@ -17,6 +17,9 @@ public:
 	void update();
 
 	void setFOV(float pFOV);
+	void setPosition(glm::fvec3 pPos);
+	void lockView(glm::fvec3 pLookAt);
+	void freeView();
 
 	void move(glm::fvec3 move) { targetPos += move; }
 	void rotate(float roll, float pitch, float yaw) { targetRoll += roll; targetPitch += pitch; targetYaw += yaw; }
@@ -62,6 +65,8 @@ private:
 
 	float nearClip, farClip;
 	float fov, aspect;
+	bool locked;
+	glm::fvec3 lockPos;
 
 	float turnLerpFactor;
 	float moveLerpFactor;

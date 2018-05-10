@@ -131,6 +131,7 @@ void Console::inputChar(char c)
 		output.push_front(input);
 		auto outputString = input->getString();
 		outputString.replace(0, 1, "$");
+
 		output.front()->setString(outputString);
 		output.front()->setDepth(2);
 
@@ -147,10 +148,81 @@ void Console::inputChar(char c)
 
 		if (s.length() > 2)
 		{
-			std::string result("$ Success!");
-			glm::fvec4 col(0.9, 0.9, 0.9, 1.0);
+			std::string result("$ Done");
+			glm::fvec4 col(0.1, 0.1, 0.9, 1.0);
 			try {
-				Engine::scriptEnv.evalString(std::string(s.c_str() + 2));
+				
+				// Submit command and get boxed return value
+				auto ret = Engine::scriptEnv.evalString(std::string(s.c_str() + 2));
+
+				// Get boxed values type info
+				auto& retVal = ret.get();
+				auto& typeInfo = retVal.type();
+
+				auto sh_string = std::make_shared<std::string const>();
+				auto sh_string_nonconst = std::make_shared<std::string>();
+
+				chaiscript::detail::Any any_string(sh_string);
+				chaiscript::detail::Any any_string_nonconst(sh_string_nonconst);
+
+				// Print correctly stringified value
+				if (typeInfo == any_string.type())
+				{
+					decltype(sh_string) valPtr = retVal.cast<decltype(sh_string)>();
+					result = std::string("$ ") + *valPtr;
+				}
+				else if (typeInfo == any_string_nonconst.type())
+				{
+					decltype(sh_string_nonconst) valPtr = retVal.cast<decltype(sh_string_nonconst)>();
+					result = std::string("$ ") + *valPtr;
+				}
+				else
+				{
+					result = std::string("$ Done ( ") + typeInfo.name() + " )";
+				}
+
+
+				// Macros for checking equality of type infos
+				/// TODO: Watch this for cross compiler errors !
+#define CHECK_PRINT_TYPE_INFO(TYPE) \
+	auto sh_##TYPE## = std::make_shared < ##TYPE## >(); \
+	chaiscript::detail::Any any_##TYPE## ( sh_##TYPE## ); \
+	if (typeInfo == any_##TYPE##.type() ) { \
+		decltype( sh_##TYPE## ) valPtr = retVal.cast<decltype( sh_##TYPE## )>(); \
+		result = std::string("$ ") + std::to_string(*valPtr); }
+
+#define CHECK_PRINT_CONST_TYPE_INFO(TYPE) \
+	auto sh_const_##TYPE## = std::make_shared < ##TYPE const>(); \
+	chaiscript::detail::Any any_const_##TYPE## ( sh_const_##TYPE## ); \
+	if (typeInfo == any_const_##TYPE##.type() ) { \
+		decltype( sh_const_##TYPE## ) valPtr = retVal.cast<decltype( sh_const_##TYPE## )>(); \
+		result = std::string("$ ") + std::to_string(*valPtr); }
+
+				// Signed integers
+				CHECK_PRINT_TYPE_INFO(s8);
+				CHECK_PRINT_CONST_TYPE_INFO(s8);
+				CHECK_PRINT_TYPE_INFO(s16);
+				CHECK_PRINT_CONST_TYPE_INFO(s16);
+				CHECK_PRINT_TYPE_INFO(s32);
+				CHECK_PRINT_CONST_TYPE_INFO(s32);
+				CHECK_PRINT_TYPE_INFO(s64);
+				CHECK_PRINT_CONST_TYPE_INFO(s64);
+
+				// Unsigned integers
+				CHECK_PRINT_TYPE_INFO(u8);
+				CHECK_PRINT_CONST_TYPE_INFO(u8);
+				CHECK_PRINT_TYPE_INFO(u16);
+				CHECK_PRINT_CONST_TYPE_INFO(u16);
+				CHECK_PRINT_TYPE_INFO(u32);
+				CHECK_PRINT_CONST_TYPE_INFO(u32);
+				CHECK_PRINT_TYPE_INFO(u64);
+				CHECK_PRINT_CONST_TYPE_INFO(u64);
+
+				// Floating
+				CHECK_PRINT_TYPE_INFO(float);
+				CHECK_PRINT_CONST_TYPE_INFO(float);
+				CHECK_PRINT_TYPE_INFO(double);
+				CHECK_PRINT_CONST_TYPE_INFO(double);
 			}
 			catch (chaiscript::exception::eval_error e)
 			{
@@ -166,7 +238,6 @@ void Console::inputChar(char c)
 				layer->removeElement(t);
 				delete t;
 				output.pop_back();
-				history.pop_back();
 			}
 
 			res->setFont(Engine::assets.getFont("consola"));
@@ -211,7 +282,7 @@ void Console::scroll(s16 wheelDelta)
 {
 	if (wheelDelta > 0)
 	{
-		scrollPosition = std::min((std::max((float)output.size(), 10.f) - 10.f) * (input->getGlyphs()->getHeight() + 2), scrollPosition + 10.f);
+		scrollPosition = std::min((std::max((float)output.size(), 10.f) - 10.f) * (input->getGlyphs()->getHeight() + 2), scrollPosition + 22.f);
 		updatePositions();
 	}
 	else

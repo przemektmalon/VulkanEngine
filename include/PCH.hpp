@@ -31,6 +31,7 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/matrix_transform_2d.hpp"
+#include "glm/gtx/vector_angle.hpp"
 
 #include "btBulletDynamicsCommon.h"
 #include "btBulletDynamicsCommon.h"
@@ -38,6 +39,7 @@
 
 #define CHAISCRIPT_NO_THREADS
 #include "chaiscript/chaiscript.hpp"
+#include <typeinfo>
 
 #define ENABLE_VULKAN_VALIDATION
 

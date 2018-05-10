@@ -12,9 +12,9 @@ public:
 	// Adds our c++ functions and types to chaiscript
 	void initChai();
 
-	void evalFile(std::string path);
+	Boxed_Value evalFile(std::string path);
 
-	void evalString(std::string script);
+	Boxed_Value evalString(std::string script);
 };
 
 

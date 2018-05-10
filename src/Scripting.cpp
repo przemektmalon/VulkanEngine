@@ -112,7 +112,11 @@ void ScriptEnv::initChai()
 			{ constructor<Camera()>() },
 			{ { fun(&Camera::move), "move" },
 			{ fun(&Camera::update), "update" },
-			{ fun(&Camera::getMatYaw), "getMatYaw", } }
+			{ fun(&Camera::getMatYaw), "getMatYaw", },
+			{ fun(&Camera::setFOV), "setFOV" },
+			{ fun(&Camera::setPosition), "setPosition" },
+			{ fun(&Camera::lockView), "lockView"},
+			{ fun(&Camera::freeView), "freeView"}, }
 		);
 		chai.add(m);
 	}
@@ -172,12 +176,12 @@ void ScriptEnv::initChai()
 	chai.add(fun([]()->World& { return Engine::world; }), "getWorld");
 }
 
-void ScriptEnv::evalFile(std::string path)
+Boxed_Value ScriptEnv::evalFile(std::string path)
 {
-	chai.eval_file(path);
+	return chai.eval_file(path);
 }
 
-void ScriptEnv::evalString(std::string script)
+Boxed_Value ScriptEnv::evalString(std::string script)
 {
-	chai.eval(script);
+	return chai.eval(script);
 }
