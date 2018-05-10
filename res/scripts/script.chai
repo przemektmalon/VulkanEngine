@@ -1,3 +1,9 @@
+def addSphere()
+{
+	auto& world = getWorld();
+	world.addModel("pbrsphere","pbrsphere");
+}
+
 def updateCamera()
 {
 	auto& camera = getCamera();

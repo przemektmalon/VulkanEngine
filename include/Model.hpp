@@ -157,7 +157,8 @@ public:
 
 	void setModel(Model* m);
 	void setMaterial(Material* pMaterial);
+	Transform& getTransform() { return transform; }
 
-	void makePhysicsObject(btCollisionShape* collisionShape, float mass);
+	//void makePhysicsObject(btCollisionShape* collisionShape, float mass);
 	void makePhysicsObject();
 };

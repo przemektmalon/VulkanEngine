@@ -8,6 +8,7 @@
 #include "AssetStore.hpp"
 #include "PhysicsWorld.hpp"
 #include "Console.hpp"
+#include "Scripting.hpp"
 
 class OLayer;
 class Window;
@@ -51,6 +52,7 @@ public:
 	static Camera camera;
 	static PhysicsWorld physicsWorld;
 	static Console* console;
+	static ScriptEnv scriptEnv;
 
 	static VkInstance vkInstance;
 	static VkPhysicalDevice vkPhysicalDevice;
@@ -66,5 +68,4 @@ public:
 	static bool validationWarning;
 	static std::string validationMessage;
 	static OLayer* uiLayer;
-	
 };

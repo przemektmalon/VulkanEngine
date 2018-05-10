@@ -91,13 +91,13 @@ void ModelInstance::setMaterial(Material* pMaterial)
 	material = pMaterial;
 }
 
-void ModelInstance::makePhysicsObject(btCollisionShape * collisionShape, float mass)
+/*void ModelInstance::makePhysicsObject(btCollisionShape * collisionShape, float mass)
 {
 	physicsObject = new PhysicsObject();
 	physicsObject->instance = this;
 	physicsObject->create(transform.getTranslation(), transform.getQuat(), collisionShape, mass);
 	Engine::physicsWorld.addRigidBody(physicsObject);
-}
+}*/
 
 void ModelInstance::makePhysicsObject()
 {

@@ -7,8 +7,6 @@
 #include "PBRImage.hpp"
 #include "OverlayRenderer.hpp"
 
-#include "Scripting.hpp"
-
 /*
 	@brief	Initialise enigne and sub-systems
 */
@@ -53,7 +51,7 @@ void Engine::start()
 	renderer->initialise();
 	physicsWorld.create();
 
-	initChai();
+	scriptEnv.initChai();
 
 	PROFILE_END("init");
 
@@ -92,14 +90,14 @@ void Engine::start()
 			world.modelMap["hollowbox" + std::to_string(i)]->makePhysicsObject();
 		}
 
-		world.addModelInstance("pbrsphere");
+		world.addModelInstance("pbrsphere", "pbrsphere");
 		world.modelMap["pbrsphere"]->transform.setTranslation(glm::fvec3(4, 0, 0));
 		world.modelMap["pbrsphere"]->transform.setScale(glm::fvec3(10));
 		world.modelMap["pbrsphere"]->transform.updateMatrix();
 		world.modelMap["pbrsphere"]->setMaterial(assets.getMaterial("marble"));
 		world.modelMap["pbrsphere"]->makePhysicsObject();
 
-		world.addModelInstance("ground");
+		world.addModelInstance("ground", "ground");
 		world.modelMap["ground"]->transform.setTranslation(glm::fvec3(0, 0, 0));
 		world.modelMap["ground"]->transform.setScale(glm::fvec3(10));
 		world.modelMap["ground"]->transform.updateMatrix();
@@ -150,12 +148,13 @@ void Engine::start()
 	renderer->overlayRenderer.addLayer(uiLayer);
 	renderer->overlayRenderer.addLayer(console->getLayer());
 
-	File scriptFile; scriptFile.open("./res/scripts/script.chai");
+	scriptEnv.evalFile("./res/scripts/script.chai");
+	/*File scriptFile; scriptFile.open("./res/scripts/script.chai");
 	std::string scriptString; 
 	scriptString.resize(scriptFile.getSize());
 	scriptFile.readFile((char*)scriptString.data());
 	scriptFile.close();
-	scriptEvalString(scriptString);
+	scriptEvalString(scriptString);*/
 
 	Time frameStart;
 	frameTime.setMicroSeconds(0);
@@ -284,7 +283,7 @@ void Engine::start()
 		console->update();
 
 		try {
-			scriptEvalString("updateCamera()");
+			scriptEnv.evalString("updateCamera()");
 		}
 		catch (chaiscript::exception::eval_error e)
 		{
@@ -536,3 +535,4 @@ std::string Engine::validationMessage;
 OLayer* Engine::uiLayer;
 Console* Engine::console;
 Time Engine::frameTime;
+ScriptEnv Engine::scriptEnv;

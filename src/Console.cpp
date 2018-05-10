@@ -3,6 +3,7 @@
 #include "Console.hpp"
 #include "Engine.hpp"
 #include "Window.hpp"
+#include "Scripting.hpp"
 
 void Console::create()
 {
@@ -143,6 +144,41 @@ void Console::inputChar(char c)
 		input->setDepth(4);
 
 		layer->addElement(input);
+
+		if (s.length() > 2)
+		{
+			std::string result("$ Success!");
+			glm::fvec4 col(0.9, 0.9, 0.9, 1.0);
+			try {
+				Engine::scriptEnv.evalString(std::string(s.c_str() + 2));
+			}
+			catch (chaiscript::exception::eval_error e)
+			{
+				result = "$ " + std::string(e.what());
+				col = glm::fvec4(0.9, 0.1, 0.1, 1.0);
+			}
+			auto res = new Text();
+
+			if (output.size() == historyLimit)
+			{
+				auto t = output.back();
+				t->cleanup();
+				layer->removeElement(t);
+				delete t;
+				output.pop_back();
+				history.pop_back();
+			}
+
+			res->setFont(Engine::assets.getFont("consola"));
+			res->setColour(col);
+			res->setCharSize(20);
+			res->setString(result);
+			res->setDepth(2);
+
+			layer->addElement(res);
+			output.push_front(res);
+		}
+			
 
 		scrollPosition = 0;
 		blinkerPosition = 1;

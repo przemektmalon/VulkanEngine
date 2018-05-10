@@ -125,6 +125,17 @@ endif()
 
 
 ################################################################
+################    SET CHAISCRIPT INCLUDES
+################################################################
+
+if(NOT LIB_CHAI_INCLUDE_DIR)
+	message(WARNING "Chaiscript library not found please specify it with -DLIB_CHAI_INCLUDE_DIR='Path to your chaiscript include dir' or use the cmake-gui to set it")
+	set(LIB_CHAI_INCLUDE_DIR "" CACHE PATH "Path to your chaiscript include folder")
+endif()
+
+
+
+################################################################
 ################    SET ASSIMP & ZLIB INCLUDE AND LIBRARY
 ################################################################
 

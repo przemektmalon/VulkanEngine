@@ -37,7 +37,7 @@
 #include "BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h"
 
 #define CHAISCRIPT_NO_THREADS
-#include "C:/Users/Przemek/Desktop/ChaiScript-6.0.0/include/chaiscript/chaiscript.hpp"
+#include "chaiscript/chaiscript.hpp"
 
 #define ENABLE_VULKAN_VALIDATION
 

@@ -3,14 +3,6 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
-void World::addModelInstance(ModelInstance& model, std::string instanceName)
-{
-	model.transformIndex = models.size();
-	models.push_back(model);
-	modelMap.insert(std::make_pair(model.name, &models.back()));
-	Engine::renderer->gBufferCmdsNeedUpdate = true;
-}
-
 void World::addModelInstance(std::string modelName, std::string instanceName)
 {
 	if (modelMap.find(instanceName) != modelMap.end())
@@ -25,7 +17,10 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 	if (instanceName.length() == 0)
 		instanceName = modelName;
 	ins.name = instanceName;
-	addModelInstance(ins, instanceName);
+	ins.transformIndex = models.size();
+	models.push_back(ins);
+	modelMap.insert(std::make_pair(ins.name, &models.back()));
+	Engine::renderer->gBufferCmdsNeedUpdate = true;
 }
 
 void World::removeModelInstance(std::string instanceName)
@@ -44,4 +39,13 @@ void World::removeModelInstance(std::string instanceName)
 	}
 
 	Engine::renderer->gBufferCmdsNeedUpdate = true;
+}
+
+ModelInstance * World::getModelInstance(std::string instanceName)
+{
+	auto find = modelMap.find(instanceName);
+	if (find == modelMap.end())
+		return 0;
+	else
+		return find->second;
 }

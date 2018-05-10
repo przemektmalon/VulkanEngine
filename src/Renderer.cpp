@@ -412,7 +412,7 @@ void Renderer::populateDrawCmdBuffer()
 		int lodIndex = 0;
 		for (auto lim : m.model->lodLimits)
 		{
-			if (distanceToCam > lim)
+			if (distanceToCam >= lim)
 				break;
 			++lodIndex;
 		}
