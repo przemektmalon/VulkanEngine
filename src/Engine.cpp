@@ -215,6 +215,9 @@ void Engine::start()
 			}
 			case Event::KeyDown: {
 				auto key = ev.eventUnion.keyEvent.key.code;
+				if (console->isActive())
+					console->moveBlinker(key);
+
 				if (key == Key::KC_ESCAPE)
 				{
 					if (console->isActive())

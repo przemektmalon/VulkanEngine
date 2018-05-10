@@ -52,9 +52,14 @@ struct Event
 	void constructText(Key pKey, bool pShift)
 	{
 		unsigned char c = pKey.code;
-		if (c == Key::KC_BACKSPACE || c == Key::KC_DELETE || c == Key::KC_ENTER)
+		if (c == Key::KC_BACKSPACE || c == Key::KC_ENTER)
 		{
 			eventUnion.textInputEvent.character = c;
+			return;
+		}
+		else if (c == Key::KC_DELETE)
+		{
+			eventUnion.textInputEvent.character = 127;
 			return;
 		}
 		else if (c >= Key::KC_A && c <= Key::KC_Z)

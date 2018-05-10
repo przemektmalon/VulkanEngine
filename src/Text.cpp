@@ -218,6 +218,44 @@ void Text::setColour(glm::fvec4 pColour)
 	style.setColour(pColour);
 }
 
+glm::fvec2 Text::getCharsPosition(int index)
+{
+	if (style.charSize == 0) { return glm::fvec2(0,0); }
+	if (string.length() == 0) { return glm::fvec2(0, 0); }
+	if (style.font == nullptr) { return glm::fvec2(0, 0); }
+
+	auto tpos = position - glm::fvec2(style.origin);
+	glm::ivec2 vertPos(tpos);
+
+	float ascender = glyphs->getAscender();
+
+	auto p = string.c_str();
+
+	glm::ivec2 glyphPos = glyphs->getPosition(*p);
+	glm::ivec2 glyphSize = glyphs->getSize(*p);
+
+	int i = 0;
+
+	while (*p != 0)
+	{
+		if (*p == '\n')
+		{
+			vertPos.x = tpos.x;
+			vertPos.y += style.charSize;
+		}
+		else
+		{
+			vertPos.x += glyphs->getAdvance(*p).x;
+			vertPos.y += glyphs->getAdvance(*p).y;
+		}
+		if (i == index)
+			return vertPos;
+		++i;
+		++p;
+	}
+	return vertPos;
+}
+
 void Text::updateDescriptorSet()
 {
 	VkDescriptorImageInfo fontInfo = {};

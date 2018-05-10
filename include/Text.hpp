@@ -59,6 +59,7 @@ public:
 	frect getBounds() { return bounds; }
 	Style getStyle() { return style; }
 	GlyphContainer* getGlyphs() { return glyphs; }
+	glm::fvec2 getCharsPosition(int index);
 
 private:
 

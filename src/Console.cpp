@@ -31,8 +31,8 @@ void Console::create()
 	backs[0]->setTexture(Engine::assets.getTexture("blank"));
 	backs[1]->setTexture(Engine::assets.getTexture("blank"));
 
-	backs[0]->setColour(glm::fvec4(0.1, 0.1, 0.1, 0.99f));
-	backs[1]->setColour(glm::fvec4(0.05, 0.05, 0.05, 0.99f));
+	backs[0]->setColour(glm::fvec4(0.1, 0.1, 0.1, 0.9f));
+	backs[1]->setColour(glm::fvec4(0.05, 0.05, 0.05, 0.9f));
 
 	backs[0]->setDepth(1);
 	backs[1]->setDepth(1);
@@ -58,11 +58,11 @@ void Console::create()
 
 void Console::update()
 {
-	if (input->getString() != oldText)
+	if (input->getString() != oldText || oldBlinkerPosition != blinkerPosition)
 	{
 		std::vector<Vertex2D> verts;
 
-		int x = input->getBounds().right() + 2;
+		int x = input->getCharsPosition(blinkerPosition).x + 1;
 		int y = 274;
 		int w = 2;
 		int h = 24;
@@ -77,6 +77,7 @@ void Console::update()
 		blinker->setVerts(verts);
 
 		oldText = input->getString();
+		oldBlinkerPosition = blinkerPosition;
 	}
 
 	timeSinceBlink += Engine::frameTime.getSeconds();
@@ -99,8 +100,18 @@ void Console::inputChar(char c)
 	
 	if (c == 8) // backspace
 	{
-		if (s.length() > 2)
-			s.erase(s.size() - 1, 1);
+		if (blinkerPosition > 1)
+		{
+			s.erase(blinkerPosition, 1);
+			blinkerPosition -= 1;
+		}
+	}
+	else if (c == 127) // delete
+	{
+		if (blinkerPosition < input->getString().length() - 1)
+		{
+			s.erase(blinkerPosition + 1, 1);
+		}
 	}
 	else if (c == 13) // enter
 	{
@@ -132,16 +143,30 @@ void Console::inputChar(char c)
 
 		layer->addElement(input);
 
+		blinkerPosition = 1;
 		updatePositions();
 
 		return;
 	}
 	else
 	{
-		s.append(&c, 1);
+		blinkerPosition += 1;
+		s.insert(blinkerPosition, 1, c);
 	}
 
 	input->setString(s);
+}
+
+void Console::moveBlinker(Key k)
+{
+	if (k.code == Key::KC_LEFT)
+	{
+		blinkerPosition = std::max(1, blinkerPosition - 1);
+	}
+	else if (k.code == Key::KC_RIGHT)
+	{
+		blinkerPosition = std::min((int)input->getString().length() - 1, blinkerPosition + 1);
+	}
 }
 
 void Console::updatePositions()
