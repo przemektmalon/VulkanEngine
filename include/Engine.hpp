@@ -57,6 +57,7 @@ public:
 	static std::vector<PhysicalDeviceDetails> physicalDevicesDetails;
 	static int physicalDeviceIndex;
 	
+	static Time frameTime;
 	static bool engineRunning;
 	static Time engineStartTime;
 	static std::mt19937_64 rand;

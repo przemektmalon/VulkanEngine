@@ -14,7 +14,7 @@ public:
 
 	void initaliseOrtho(int sizeX, int sizeY, float pNear = 0.99f, float pFar = 100.f);
 
-	void update(Time& dt);
+	void update();
 
 	void setFOV(float pFOV);
 

@@ -14,7 +14,7 @@ public:
 
 	void inputChar(char c);
 
-	void toggle() { active = !active; }
+	void toggle() { active = !active; layer->setDoDraw(active); }
 	bool isActive() { return active; }
 	OLayer* getLayer() { return layer; }
 

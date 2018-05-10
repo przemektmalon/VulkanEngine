@@ -11,6 +11,8 @@ class OLayer
 	friend class OverlayRenderer;
 public:
 
+	OLayer() : draw(true), needsUpdate(true) {}
+
 	void create(glm::ivec2 resolution);
 	void cleanup();
 
@@ -26,6 +28,10 @@ public:
 
 	void updateVerts();
 	bool needsDrawUpdate();
+	void setUpdated();
+
+	bool doDraw() { return draw; }
+	void setDoDraw(bool doDraw) { draw = doDraw; needsUpdate = true; }
 
 private:
 
@@ -45,6 +51,9 @@ private:
 	glm::fvec2 resolution;
 	float depth;
 	
+	bool draw;
+	bool needsUpdate;
+
 	VkDescriptorSet imageDescriptor;
 
 	Buffer quadBuffer; // For the to-screen pass

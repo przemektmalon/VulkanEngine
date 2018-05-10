@@ -162,16 +162,25 @@ void OLayer::updateVerts()
 
 bool OLayer::needsDrawUpdate()
 {
-	bool ret = false;
+	bool ret = needsUpdate;
 	bool sortDepth = false;
 	for (auto& el : elements)
 	{
-		sortDepth = el->needsDepthUpdate();
+		sortDepth |= el->needsDepthUpdate();
 		ret |= el->needsDrawUpdate() | sortDepth;
 	}
 	if (sortDepth)
 		sortByDepths();
+	needsUpdate = false;
 	return ret;
+}
+
+void OLayer::setUpdated()
+{
+	for (auto& el : elements)
+	{
+		el->setUpdated();
+	}
 }
 
 void OverlayRenderer::cleanup()
@@ -611,9 +620,15 @@ void OverlayRenderer::createOverlayCommands()
 
 void OverlayRenderer::updateOverlayCommands()
 {
+	/// TODO: if we have a layer that updates every frame, we re-write all commands
+	/// Can we avoid this by using secondary command buffers for layers
+
 	bool update = false;
 	for (auto l : layers)
+	{
 		update |= l->needsDrawUpdate();
+		l->setUpdated();
+	}
 
 	if (!update)
 		return;
@@ -628,6 +643,9 @@ void OverlayRenderer::updateOverlayCommands()
 
 	for (auto layer : layers)
 	{
+		if (!layer->doDraw())
+			continue;
+
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = overlayRenderPass;
@@ -714,8 +732,6 @@ void OverlayRenderer::updateOverlayCommands()
 
 	VK_VALIDATE(vkCmdBindPipeline(combineCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipeline));
 
-	//VK_VALIDATE(vkCmdBindDescriptorSets(combineCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipelineLayout, 1, 1, &overlayCombineDescriptorSet, 0, nullptr));
-
 	glm::fmat4 proj = glm::ortho<float>(0, Engine::window->resX, Engine::window->resY, 0, -10, 10);
 	glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f,
 		+0.0f, -1.0f, 0.0f, 0.0f,
@@ -726,6 +742,9 @@ void OverlayRenderer::updateOverlayCommands()
 
 	for (auto layer : layers)
 	{
+		if (!layer->doDraw())
+			continue;
+
 		VK_VALIDATE(vkCmdBindDescriptorSets(combineCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipelineLayout, 0, 1, &layer->imageDescriptor, 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { layer->quadBuffer.getBuffer() };

@@ -45,7 +45,7 @@ glm::fvec3 Camera::getDirectionVector()
 	return glm::fvec3(glm::sin(yaw) * glm::cos(pitch), -glm::sin(pitch), -glm::cos(yaw) * glm::cos(pitch));
 }
 
-void Camera::update(Time & dt)
+void Camera::update()
 {
 	targetPitch = glm::clamp(targetPitch, -glm::pi<float>() / 2.f, glm::pi<float>() / 2.f);
 	pitch = ler(pitch, targetPitch, turnLerpFactor);

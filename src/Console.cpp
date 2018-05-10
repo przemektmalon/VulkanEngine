@@ -36,12 +36,17 @@ void Console::create()
 
 	layer->addElement(backs[0]);
 	layer->addElement(backs[1]);
+
+	layer->setDoDraw(active);
 	
 	updateBacks();
 }
 
 void Console::inputChar(char c)
 {
+	if (!isActive())
+		return;
+
 	std::string s; s = input->getString();
 	
 	if (c == 8) // backspace

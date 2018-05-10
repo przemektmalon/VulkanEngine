@@ -32,6 +32,13 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/matrix_transform_2d.hpp"
 
+#include "btBulletDynamicsCommon.h"
+#include "btBulletDynamicsCommon.h"
+#include "BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h"
+
+#define CHAISCRIPT_NO_THREADS
+#include "C:/Users/Przemek/Desktop/ChaiScript-6.0.0/include/chaiscript/chaiscript.hpp"
+
 #define ENABLE_VULKAN_VALIDATION
 
 #define VK_VALIDATE(f) { \

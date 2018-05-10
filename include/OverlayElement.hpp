@@ -13,15 +13,17 @@ public:
 	std::string getName() { return name; }
 	virtual void draw(VkCommandBuffer cmd) {}
 	virtual void cleanup() {}
-	bool needsDrawUpdate() { return drawUpdate; }
 	void* getPushConstData() { return pushConstData; }
 	int getPushConstSize() { return pushConstSize; }
 	VkDescriptorSet getDescriptorSet() { return descSet; }
 	ShaderProgram* getShader() { return shader; }
 	void setDepth(float pDepth) { depth = pDepth; depthUpdate = true; }
 	float getDepth() { return depth; }
-	bool needsDepthUpdate() { return depthUpdate; }
 	Type getType() { return type; }
+
+	bool needsDepthUpdate() { return depthUpdate; }
+	bool needsDrawUpdate() { return drawUpdate; }
+	void setUpdated() { depthUpdate = false; drawUpdate = false; }
 
 protected:
 	void* pushConstData; /// TODO: free in derived

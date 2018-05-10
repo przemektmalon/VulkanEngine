@@ -1,8 +1,6 @@
 #pragma once
 #include "PCH.hpp"
 #include "PhysicsObject.hpp"
-#include "btBulletDynamicsCommon.h"
-#include "BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h"
 #include "Time.hpp"
 
 class ModelInstance;

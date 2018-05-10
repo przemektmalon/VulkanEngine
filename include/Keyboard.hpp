@@ -101,6 +101,7 @@ public:
 		KC_ASTERISK = 0x6A,
 		KC_FORWARD_SLASH = 0xBF,
 		KC_SPACE = 0x20,
+		KC_TILDE = 0xDF,
 
 		KC_F1 = 0x70,
 		KC_F2,
@@ -144,6 +145,14 @@ public:
 		return keyState[key.code] & 0b10000000;
 #endif
 		return keyState[key.code] != 0;
+	}
+
+	static bool isKeyPressed(char key)
+	{
+#ifdef _WIN32
+		return keyState[key] & 0b10000000;
+#endif
+		return keyState[key] != 0;
 	}
 
 	static u8 keyState[256];

@@ -4,10 +4,10 @@
 #include "Renderer.hpp"
 #include "Image.hpp"
 #include "Profiler.hpp"
-
 #include "PBRImage.hpp"
-
 #include "OverlayRenderer.hpp"
+
+#include "Scripting.hpp"
 
 /*
 	@brief	Initialise enigne and sub-systems
@@ -52,6 +52,8 @@ void Engine::start()
 	renderer = new Renderer();
 	renderer->initialise();
 	physicsWorld.create();
+
+	initChai();
 
 	PROFILE_END("init");
 
@@ -148,8 +150,15 @@ void Engine::start()
 	renderer->overlayRenderer.addLayer(uiLayer);
 	renderer->overlayRenderer.addLayer(console->getLayer());
 
+	File scriptFile; scriptFile.open("./res/scripts/script.chai");
+	std::string scriptString; 
+	scriptString.resize(scriptFile.getSize());
+	scriptFile.readFile((char*)scriptString.data());
+	scriptFile.close();
+	scriptEvalString(scriptString);
+
 	Time frameStart;
-	Time frameTime; frameTime.setMicroSeconds(0);
+	frameTime.setMicroSeconds(0);
 	double fpsDisplay = 0.f;
 	int frames = 0;
 	std::vector<float> times;
@@ -207,16 +216,15 @@ void Engine::start()
 			case Event::KeyDown: {
 				auto key = ev.eventUnion.keyEvent.key.code;
 				if (key == Key::KC_ESCAPE)
-					engineRunning = false;
-				if (key == Key::KC_1)
 				{
-					window->resize(1920, 1080);
-					renderer->reInitialise();
+					if (console->isActive())
+						console->toggle();
+					else
+						engineRunning = false;
 				}
-				if (key == Key::KC_2)
+				if (key == Key::KC_TILDE)
 				{
-					window->resize(1280, 720);
-					renderer->reInitialise();
+					console->toggle();
 				}
 				break;
 			}
@@ -263,22 +271,13 @@ void Engine::start()
 
 		float camSpeed = 100.f;
 
-		auto move = glm::fvec3(glm::fvec4(0, 0, camSpeed * frameTime.getSeconds(), 1) * camera.getMatYaw());
-		camera.move(-move * float(Keyboard::isKeyPressed('W')));
-
-		move = glm::cross(glm::fvec3(glm::fvec4(0, 0, camSpeed * frameTime.getSeconds(), 1) * camera.getMatYaw()), glm::fvec3(0, 1, 0));
-		camera.move(move * float(Keyboard::isKeyPressed('A')));
-
-		move = glm::fvec3(glm::fvec4(0, 0, camSpeed * frameTime.getSeconds(), 1) * camera.getMatYaw());
-		camera.move(move * float(Keyboard::isKeyPressed('S')));
-
-		move = glm::cross(glm::fvec3(glm::fvec4(0, 0, camSpeed * frameTime.getSeconds(), 1) * camera.getMatYaw()), glm::fvec3(0, 1, 0));
-		camera.move(-move * float(Keyboard::isKeyPressed('D')));
-
-		camera.move(glm::fvec3(0,  camSpeed * frameTime.getSeconds() * float(Keyboard::isKeyPressed('R')),0));
-		camera.move(glm::fvec3(0, -camSpeed * frameTime.getSeconds() * float(Keyboard::isKeyPressed('F')), 0));
-
-		camera.update(frameTime);
+		try {
+			scriptEvalString("updateCamera()");
+		}
+		catch (chaiscript::exception::eval_error e)
+		{
+			std::cout << e.what() << std::endl;
+		}
 
 		// FPS display
 		++frames;
@@ -521,3 +520,4 @@ bool Engine::validationWarning;
 std::string Engine::validationMessage;
 OLayer* Engine::uiLayer;
 Console* Engine::console;
+Time Engine::frameTime;
