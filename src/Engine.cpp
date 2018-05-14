@@ -175,6 +175,13 @@ void Engine::start()
 
 		Event ev;
 		while (window->eventQ.pollEvent(ev)) {
+			try {
+				scriptEnv.evalString("processEvent()");
+			}
+			catch (chaiscript::exception::eval_error e)
+			{
+				std::cout << e.what() << std::endl;
+			}
 			switch (ev.type) {
 			case(Event::TextInput):
 			{

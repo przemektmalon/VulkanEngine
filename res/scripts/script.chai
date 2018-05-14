@@ -33,3 +33,50 @@ def updateCamera()
 
 	camera.update();
 }
+
+def processEvent()
+{
+	auto ev = Event();
+	if (pollEvent(ev))
+	{
+		switch (ev.type())
+		{
+			case(MouseMove) {
+				
+				break;
+			}
+			case(KeyDown) {
+				
+				break;
+			}
+			case(KeyUp) {
+				
+				break;
+			}
+			case(MouseDown) {
+				
+				break;
+			}
+			case(MouseUp) {
+				
+				break;
+			}
+			case(MouseWheel) {
+				
+				break;
+			}
+			case(TextInput) {
+				
+				break;
+			}
+			case(WindowResized) {
+				
+				break;
+			}
+			case(WindowMoved) {
+				
+				break;
+			}
+		}
+	}
+}

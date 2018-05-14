@@ -7,6 +7,7 @@
 #include "World.hpp"
 #include "Keyboard.hpp"
 #include "Engine.hpp"
+#include "Window.hpp"
 
 using namespace chaiscript;
 
@@ -165,22 +166,12 @@ void ScriptEnv::initChai()
 	{
 		ModulePtr m = ModulePtr(new chaiscript::Module());
 		utility::add_class<Event>(*m,
-			"Model",
+			"Event",
 			{ constructor<Event()>() },
 			{ { fun(&Event::type), "type" },
 			{ fun(&Event::getKeyEvent), "keyEvent" },
 			{ fun(&Event::getMouseEvent), "mouseEvent" }, 
 			{ fun(&Event::getTextEvent), "textEvent" }, }
-		);
-		chai.add(m);
-	}
-	{
-		ModulePtr m = ModulePtr(new chaiscript::Module());
-		utility::add_class<Event>(*m,
-			"Model",
-			{ constructor<Event()>() },
-			{ { fun(&Event::type), "type" },
-			{ fun(&Event::eventUnion), "makePhysical" } }
 		);
 		chai.add(m);
 	}
@@ -199,6 +190,7 @@ void ScriptEnv::initChai()
 			{ Event::TextInput, "TextInput" }
 			}
 		);
+		chai.add(m);
 	}
 
 	glm::fvec3(*crossFunc)(const glm::fvec3&, const glm::fvec3&) = glm::cross;
@@ -208,7 +200,7 @@ void ScriptEnv::initChai()
 	bool(*isKeyPressedFunc)(char) = Keyboard::isKeyPressed;
 
 	chai.add(fun(isKeyPressedFunc), "isKeyPressed");
-
+	chai.add(fun([](Event& ev)->bool { return Engine::window->eventQ.pollEvent(ev); }), "pollEvent");
 	chai.add(fun([]()->float { return Engine::frameTime.getSecondsf(); }), "getFrameTime");
 	chai.add(fun([]()->Camera& { return Engine::camera; }), "getCamera");
 	chai.add(fun([]()->World& { return Engine::world; }), "getWorld");
