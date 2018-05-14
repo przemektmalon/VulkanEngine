@@ -239,6 +239,7 @@ void Engine::start()
 				break;
 			}
 			}
+			window->eventQ.popEvent();
 		}
 		physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
 		

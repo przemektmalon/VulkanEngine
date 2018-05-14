@@ -162,6 +162,44 @@ void ScriptEnv::initChai()
 		);
 		chai.add(m);
 	}
+	{
+		ModulePtr m = ModulePtr(new chaiscript::Module());
+		utility::add_class<Event>(*m,
+			"Model",
+			{ constructor<Event()>() },
+			{ { fun(&Event::type), "type" },
+			{ fun(&Event::getKeyEvent), "keyEvent" },
+			{ fun(&Event::getMouseEvent), "mouseEvent" }, 
+			{ fun(&Event::getTextEvent), "textEvent" }, }
+		);
+		chai.add(m);
+	}
+	{
+		ModulePtr m = ModulePtr(new chaiscript::Module());
+		utility::add_class<Event>(*m,
+			"Model",
+			{ constructor<Event()>() },
+			{ { fun(&Event::type), "type" },
+			{ fun(&Event::eventUnion), "makePhysical" } }
+		);
+		chai.add(m);
+	}
+	{
+		ModulePtr m = ModulePtr(new chaiscript::Module());
+		chaiscript::utility::add_class<Event::Type>(*m,
+			"EventType",
+			{ { Event::MouseMove, "MouseMove" },
+			{ Event::MouseDown, "MouseDown" },
+			{ Event::MouseUp, "MouseUp" },
+			{ Event::MouseWheel, "MouseWheel" },
+			{ Event::KeyDown, "KeyDown" },
+			{ Event::KeyUp, "KeyUp" },
+			{ Event::WindowResized, "WindowResized" },
+			{ Event::WindowMoved, "WindowMoved" },
+			{ Event::TextInput, "TextInput" }
+			}
+		);
+	}
 
 	glm::fvec3(*crossFunc)(const glm::fvec3&, const glm::fvec3&) = glm::cross;
 

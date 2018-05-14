@@ -39,6 +39,10 @@ struct Event
 		mouse_struct mouseEvent;
 	} eventUnion;
 
+	EventUnion::key_struct getKeyEvent() { return eventUnion.keyEvent; }
+	EventUnion::mouse_struct getMouseEvent() { return eventUnion.mouseEvent; }
+	EventUnion::text_struct getTextEvent() { return eventUnion.textInputEvent; }
+
 	void constructKey(Key pKey, bool pShift, bool pAlt, bool pSys, bool pCtrl, bool pCaps)
 	{
 		eventUnion.keyEvent.key = pKey; eventUnion.keyEvent.shift = pShift; eventUnion.keyEvent.alt = pAlt; eventUnion.keyEvent.sys = pSys; eventUnion.keyEvent.ctrl = pCtrl; eventUnion.keyEvent.caps = pCaps;
@@ -215,9 +219,35 @@ public:
 		if (events.size() > 0)
 		{
 			pEvent = events.front();
-			events.pop();
 			return true;
 		} else
+		{
+			return false;
+		}
+	}
+
+	bool popEvent(Event& pEvent)
+	{
+		if (events.size() > 0)
+		{
+			pEvent = events.front();
+			events.pop();
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	bool popEvent()
+	{
+		if (events.size() > 0)
+		{
+			events.pop();
+			return true;
+		}
+		else
 		{
 			return false;
 		}

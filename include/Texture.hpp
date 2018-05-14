@@ -51,6 +51,7 @@ private:
 	void createImage();
 	void createImageView();
 	void generateMipMaps();
+	void gpuGenerateMipMaps();
 
 	int width, height;
 	int bpp, components;

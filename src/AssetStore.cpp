@@ -68,7 +68,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		ci.numLayers = paths.size();
-		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
 		tex.prepare(paths, name);
 		tex.loadToRAM(&ci);
