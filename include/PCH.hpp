@@ -41,7 +41,7 @@
 #include "chaiscript/chaiscript.hpp"
 #include <typeinfo>
 
-#define ENABLE_VULKAN_VALIDATION
+//#define ENABLE_VULKAN_VALIDATION
 
 #define VK_VALIDATE(f) { \
 	f; \
@@ -253,3 +253,5 @@
 ///  Thread support
 
 #include <thread>
+
+#include <mutex>

@@ -410,7 +410,7 @@ void Renderer::populateDrawCmdBuffer()
 		float distanceToCam = glm::length(Engine::camera.getPosition() - modelPos);
 
 		int lodIndex = 0;
-		for (auto lim : m.model->lodLimits)
+		for (auto lim : m.model->lodLimits) /// TODO: monitor for LOD/culling/world changes, dont re-populate this when not needed
 		{
 			if (distanceToCam >= lim)
 				break;

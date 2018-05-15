@@ -9,6 +9,7 @@
 #include "PhysicsWorld.hpp"
 #include "Console.hpp"
 #include "Scripting.hpp"
+#include "Threading.hpp"
 
 class OLayer;
 class Window;
@@ -53,6 +54,7 @@ public:
 	static PhysicsWorld physicsWorld;
 	static Console* console;
 	static ScriptEnv scriptEnv;
+	static Threading* threading;
 
 	static VkInstance vkInstance;
 	static VkPhysicalDevice vkPhysicalDevice;
@@ -60,6 +62,8 @@ public:
 	static int physicalDeviceIndex;
 	
 	static Time frameTime;
+	static Time newFrameTime;
+
 	static bool engineRunning;
 	static Time engineStartTime;
 	static std::mt19937_64 rand;

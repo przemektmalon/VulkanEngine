@@ -149,14 +149,92 @@ void Engine::start()
 	renderer->overlayRenderer.addLayer(console->getLayer());
 
 	scriptEnv.evalFile("./res/scripts/script.chai");
-	/*File scriptFile; scriptFile.open("./res/scripts/script.chai");
-	std::string scriptString; 
-	scriptString.resize(scriptFile.getSize());
-	scriptFile.readFile((char*)scriptString.data());
-	scriptFile.close();
-	scriptEvalString(scriptString);*/
 
-	Time frameStart;
+	std::function<void(void)> physicsJobFunc = []() -> void {
+		PROFILE_START("physics");
+		Engine::threading->physBulletMutex.lock();
+		physicsWorld.step(Engine::frameTime);
+		Engine::threading->physBulletMutex.unlock();
+		PROFILE_END("physics");
+	};
+
+	std::function<void(void)> physicsJobDoneFunc = [&physicsJobFunc, &physicsJobDoneFunc]() -> void {
+		Engine::threading->totalJobsFinished.fetch_add(1);
+	};
+
+	std::function<void(void)> physicsToEngineJobFunc = []() -> void {
+		Engine::threading->physToEngineMutex.lock();
+		physicsWorld.updateModels();
+		Engine::threading->physToEngineMutex.unlock();
+	};
+
+	std::function<void(void)> physicsToEngineJobDoneFunc = [&physicsToEngineJobFunc, &physicsToEngineJobDoneFunc]() -> void {
+		Engine::threading->totalJobsFinished.fetch_add(1);
+	};
+
+	std::function<void(void)> physicsToGPUJobFunc = []() -> void {
+		Engine::threading->physToGPUMutex.lock();
+		Engine::renderer->updateTransformBuffer();
+		Engine::threading->physToGPUMutex.unlock();
+	};
+
+	std::function<void(void)> physicsToGPUJobDoneFunc = [&physicsToGPUJobFunc, &physicsToGPUJobDoneFunc]() -> void {
+		Engine::threading->totalJobsFinished.fetch_add(1);
+	};
+
+	std::function<void(void)> renderJobFunc = []() -> void {
+
+		PROFILE_START("setuprender");
+
+		Engine::threading->physToEngineMutex.lock();
+		Engine::renderer->populateDrawCmdBuffer(); // Mutex with engine model transform update
+		Engine::threading->physToEngineMutex.unlock();
+
+		Engine::renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
+		Engine::renderer->updateShadowCommands(); // Mutex with engine model transform update
+		Engine::renderer->updateGBufferCommands();
+		Engine::renderer->updateCameraBuffer();
+
+		PROFILE_END("setuprender");
+
+		PROFILE_START("submitrender");
+
+		Engine::threading->physToGPUMutex.lock();
+		Engine::renderer->render();
+		Engine::threading->physToGPUMutex.unlock();
+
+		PROFILE_END("submitrender");
+	};
+
+	std::function<void(void)> renderJobDoneFunc = [&renderJobFunc, &renderJobDoneFunc]() -> void {
+		Engine::threading->totalJobsFinished.fetch_add(1);
+	};
+
+	std::function<void(void)> scriptsJobFunc = []() -> void {
+		PROFILE_START("scripts");
+		try {
+			Engine::scriptEnv.evalString("updateCamera()");
+		}
+		catch (chaiscript::exception::eval_error e)
+		{
+			std::cout << e.what() << std::endl;
+		}
+		PROFILE_END("scripts");
+	};
+
+	std::function<void(void)> scriptsJobDoneFunc = []() -> void {
+		Engine::threading->totalJobsFinished.fetch_add(1);
+	};
+
+	threading = new Threading(4);
+
+	threading->addJob(Job(physicsJobFunc, physicsJobDoneFunc));
+	threading->addJob(Job(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
+	threading->addJob(Job(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
+	threading->addJob(Job(renderJobFunc, renderJobDoneFunc));
+	threading->addJob(Job(scriptsJobFunc, scriptsJobDoneFunc));
+
+	Time frameStart; frameStart = engineStartTime;
 	frameTime.setMicroSeconds(0);
 	double fpsDisplay = 0.f;
 	int frames = 0;
@@ -165,8 +243,6 @@ void Engine::start()
 	{
 		PROFILE_START("msgevent");
 
-		frameStart = clock.time();
-		
 		while (window->processMessages()) { /* Invoke timer ? */ }
 		
 #ifdef _WIN32
@@ -175,13 +251,13 @@ void Engine::start()
 
 		Event ev;
 		while (window->eventQ.pollEvent(ev)) {
-			try {
+			/*try {
 				scriptEnv.evalString("processEvent()");
 			}
 			catch (chaiscript::exception::eval_error e)
 			{
 				std::cout << e.what() << std::endl;
-			}
+			}*/
 			switch (ev.type) {
 			case(Event::TextInput):
 			{
@@ -197,6 +273,7 @@ void Engine::start()
 			{
 				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
 				{
+					Engine::threading->physBulletMutex.lock(); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
 					glm::fvec3 p = camera.getPosition();
 					btVector3 camPos(p.x, p.y, p.z);
 
@@ -204,6 +281,7 @@ void Engine::start()
 					btVector3 rayTo = physicsWorld.getRayTo(int(ev.eventUnion.mouseEvent.position.x), int(ev.eventUnion.mouseEvent.position.y));
 
 					physicsWorld.pickBody(rayFrom, rayTo);
+					Engine::threading->physBulletMutex.unlock();
 				}
 				break;
 			}
@@ -211,7 +289,9 @@ void Engine::start()
 			{
 				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
 				{
+					Engine::threading->physBulletMutex.lock(); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
 					physicsWorld.removePickingConstraint();
+					Engine::threading->physBulletMutex.unlock();
 				}
 				break;
 			}
@@ -249,102 +329,65 @@ void Engine::start()
 			window->eventQ.popEvent();
 		}
 		physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
-		
-		auto stepPhysics = [&](Time& time) -> void {
-			physicsWorld.step(time);
-		};
-
-		std::thread physThread(stepPhysics, frameTime);
-
-		PROFILE_END("msgevent");
-		
-		PROFILE_START("setuprender");
-
-		// Rendering and engine logic
-		renderer->populateDrawCmdBuffer();
-		renderer->updateTransformBuffer();
-		renderer->overlayRenderer.updateOverlayCommands();
-		renderer->updateShadowCommands();
-		renderer->updateGBufferCommands();
-		renderer->updateCameraBuffer();
-
-		PROFILE_END("setuprender");
-		
-		PROFILE_START("submitrender");
-
-		renderer->render();
-
-		PROFILE_END("submitrender");
-
-		PROFILE_START("physics");
-
-		physThread.join();
-		//physicsWorld.step(frameTime);
-		physicsWorld.updateModels();
-
-		PROFILE_END("physics");
-
-		float camSpeed = 100.f;
-
-		PROFILE_START("scripts");
 
 		console->update();
 
-		try {
-			scriptEnv.evalString("updateCamera()");
-		}
-		catch (chaiscript::exception::eval_error e)
+		PROFILE_END("msgevent");
+
+		// If all jobs this frame done
+		if (threading->totalJobsAdded.load() == threading->totalJobsFinished.load())
 		{
-			std::cout << e.what() << std::endl;
+			frameTime = clock.time() - frameStart;
+			frameStart = clock.time();
+
+			threading->addJob(Job(physicsJobFunc, physicsJobDoneFunc));
+			threading->addJob(Job(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
+			threading->addJob(Job(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
+			threading->addJob(Job(renderJobFunc, renderJobDoneFunc));
+			threading->addJob(Job(scriptsJobFunc, scriptsJobDoneFunc));
+
+			// FPS display
+			++frames;
+			fpsDisplay += frameTime.getSeconds();
+			if (fpsDisplay > 0.75f)
+			{
+				double gBufferTime = double(Engine::gpuTimeStamps[Renderer::END_GBUFFER] - Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER]) * 0.000001;
+				double shadowTime = double(Engine::gpuTimeStamps[Renderer::END_SHADOW] - Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW]) * 0.000001;
+				double pbrTime = double(Engine::gpuTimeStamps[Renderer::END_PBR] - Engine::gpuTimeStamps[Renderer::BEGIN_PBR]) * 0.000001;
+				double overlayTime = double(Engine::gpuTimeStamps[Renderer::END_OVERLAY] - Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY]) * 0.000001;
+				double overlayCombineTime = double(Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE] - Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE]) * 0.000001;
+				double screenTime = double(Engine::gpuTimeStamps[Renderer::END_SCREEN] - Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN]) * 0.000001;
+
+				double totalGPUTime = gBufferTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
+
+				auto stats = (Text*)uiLayer->getElement("stats");
+
+				stats->setString(
+					"---------------------------\n"
+					"GBuffer pass   : " + std::to_string(gBufferTime) + "ms\n" +
+					"Shadow pass    : " + std::to_string(shadowTime) + "ms\n" +
+					"PBR pass       : " + std::to_string(pbrTime) + "ms\n" +
+					"Overlay pass   : " + std::to_string(overlayTime) + "ms\n" +
+					"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms\n" +
+					"Screen pass    : " + std::to_string(screenTime) + "ms\n\n" +
+
+					"Total GPU time : " + std::to_string(totalGPUTime) + "ms\n" +
+					"GPU FPS        : " + std::to_string((int)(1.0 / (totalGPUTime*0.001))) + "\n\n" +
+
+					"---------------------------\n" +
+					"User input     : " + std::to_string(PROFILE_TIME_MS("msgevent")) + "ms\n" +
+					"Set up render  : " + std::to_string(PROFILE_TIME_MS("setuprender")) + "ms\n" +
+					"Submit render  : " + std::to_string(PROFILE_TIME_MS("submitrender") - totalGPUTime) + "ms\n" +
+					"Physics        : " + std::to_string(PROFILE_TIME_MS("physics")) + "ms\n" +
+					"Scripts        : " + std::to_string(PROFILE_TIME_MS("scripts")) + "ms\n\n" +
+
+					"Avg frame time : " + std::to_string((fpsDisplay * 1000) / double(frames)) + "ms\n" +
+					"FPS            : " + std::to_string((int)(double(frames) / fpsDisplay))
+				);
+				fpsDisplay = 0.f;
+				frames = 0;
+			}
 		}
-
-		PROFILE_END("scripts");
-
-		// FPS display
-		++frames;
-		fpsDisplay += frameTime.getSeconds();
-		times.push_back(frameTime.getMilliSecondsf());
-		if (fpsDisplay > 0.75f)
-		{
-			double gBufferTime = double(Engine::gpuTimeStamps[Renderer::END_GBUFFER] - Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER]) * 0.000001;
-			double shadowTime = double(Engine::gpuTimeStamps[Renderer::END_SHADOW] - Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW]) * 0.000001;
-			double pbrTime = double(Engine::gpuTimeStamps[Renderer::END_PBR] - Engine::gpuTimeStamps[Renderer::BEGIN_PBR]) * 0.000001;
-			double overlayTime = double(Engine::gpuTimeStamps[Renderer::END_OVERLAY] - Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY]) * 0.000001;
-			double overlayCombineTime = double(Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE] - Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE]) * 0.000001;
-			double screenTime = double(Engine::gpuTimeStamps[Renderer::END_SCREEN] - Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN]) * 0.000001;
-
-			double totalGPUTime = gBufferTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
-
-			auto stats = (Text*)uiLayer->getElement("stats");
-
-			stats->setString(
-				"---------------------------\n"
-				"GBuffer pass   : " + std::to_string(gBufferTime) + "ms\n" +
-				"Shadow pass    : " + std::to_string(shadowTime) + "ms\n" +
-				"PBR pass       : " + std::to_string(pbrTime) + "ms\n" +
-				"Overlay pass   : " + std::to_string(overlayTime) + "ms\n" +
-				"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms\n" +
-				"Screen pass    : " + std::to_string(screenTime) + "ms\n\n" +
-
-				"Total GPU time : " + std::to_string(totalGPUTime) + "ms\n" +
-				"GPU FPS        : " + std::to_string((int)(1.0/(totalGPUTime*0.001))) + "\n\n" +
-
-				"---------------------------\n" +
-				"User input     : " + std::to_string(PROFILE_TIME_MS("msgevent")) + "ms\n" +
-				"Set up render  : " + std::to_string(PROFILE_TIME_MS("setuprender")) + "ms\n" +
-				"Submit render  : " + std::to_string(PROFILE_TIME_MS("submitrender") - totalGPUTime) + "ms\n" +
-				"Physics        : " + std::to_string(PROFILE_TIME_MS("physics")) + "ms\n" +
-				"Scripts        : " + std::to_string(PROFILE_TIME_MS("scripts")) + "ms\n\n" +
-
-				"Avg frame time : " + std::to_string((fpsDisplay * 1000) / double(frames)) + "ms\n" +
-				"FPS            : " + std::to_string((int)(double(frames) / fpsDisplay))
-			);
-			fpsDisplay = 0.f;
-			frames = 0;
-			times.clear();
-		}
-
-		frameTime = clock.time() - frameStart;
 	}
 
 	quit();
@@ -544,3 +587,4 @@ OLayer* Engine::uiLayer;
 Console* Engine::console;
 Time Engine::frameTime;
 ScriptEnv Engine::scriptEnv;
+Threading* Engine::threading;
