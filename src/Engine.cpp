@@ -6,6 +6,7 @@
 #include "Profiler.hpp"
 #include "PBRImage.hpp"
 #include "OverlayRenderer.hpp"
+#include "Threading.hpp"
 
 /*
 	@brief	Initialise enigne and sub-systems
@@ -55,9 +56,16 @@ void Engine::start()
 
 	PROFILE_END("init");
 
+	threading = new Threading(4);
+
 	PROFILE_START("assets");
 
 	assets.loadAssets("/res/resources.xml");
+
+	while (!threading->allJobsDone())
+	{
+		// Wait for all assets to load
+	}
 
 	PROFILE_END("assets");
 
@@ -226,13 +234,11 @@ void Engine::start()
 		Engine::threading->totalJobsFinished.fetch_add(1);
 	};
 
-	threading = new Threading(4);
-
-	threading->addJob(Job(physicsJobFunc, physicsJobDoneFunc));
-	threading->addJob(Job(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
-	threading->addJob(Job(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
-	threading->addJob(Job(renderJobFunc, renderJobDoneFunc));
-	threading->addJob(Job(scriptsJobFunc, scriptsJobDoneFunc));
+	threading->addJob(new Job<>(physicsJobFunc, physicsJobDoneFunc));
+	threading->addJob(new Job<>(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
+	threading->addJob(new Job<>(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
+	threading->addJob(new Job<>(renderJobFunc, renderJobDoneFunc));
+	threading->addJob(new Job<>(scriptsJobFunc, scriptsJobDoneFunc));
 
 	Time frameStart; frameStart = engineStartTime;
 	frameTime.setMicroSeconds(0);
@@ -334,17 +340,18 @@ void Engine::start()
 
 		PROFILE_END("msgevent");
 
-		// If all jobs this frame done
-		if (threading->totalJobsAdded.load() == threading->totalJobsFinished.load())
+		if (threading->allJobsDone())
 		{
 			frameTime = clock.time() - frameStart;
 			frameStart = clock.time();
 
-			threading->addJob(Job(physicsJobFunc, physicsJobDoneFunc));
-			threading->addJob(Job(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
-			threading->addJob(Job(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
-			threading->addJob(Job(renderJobFunc, renderJobDoneFunc));
-			threading->addJob(Job(scriptsJobFunc, scriptsJobDoneFunc));
+			threading->cleanupJobs();
+
+			threading->addJob(new Job<>(physicsJobFunc, physicsJobDoneFunc));
+			threading->addJob(new Job<>(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
+			threading->addJob(new Job<>(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
+			threading->addJob(new Job<>(renderJobFunc, renderJobDoneFunc));
+			threading->addJob(new Job<>(scriptsJobFunc, scriptsJobDoneFunc));
 
 			// FPS display
 			++frames;

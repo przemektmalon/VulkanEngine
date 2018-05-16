@@ -3,6 +3,7 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 #include "XMLParser.hpp"
+#include "Threading.hpp"
 
 void AssetStore::cleanup()
 {
@@ -70,9 +71,15 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		ci.numLayers = paths.size();
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
+		auto texLoadFunc = std::bind([](Texture* tex, TextureCreateInfo ci) -> void {
+			tex->loadToRAM(&ci);
+			tex->loadToGPU();
+		},&tex,ci);
+
 		tex.prepare(paths, name);
-		tex.loadToRAM(&ci);
-		tex.loadToGPU();
+		//tex.loadToRAM(&ci);
+		//tex.loadToGPU();
+		Engine::threading->addJob(new Job<decltype(texLoadFunc), VoidJobType>(texLoadFunc, defaultJobDoneFunc));
 	}
 
 	auto& tex = textures.insert(std::make_pair("blank", Texture())).first->second;
