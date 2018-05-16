@@ -301,7 +301,7 @@ void Renderer::updateShadowCommands()
 		glm::fvec4 push(pos.x, pos.y, pos.z, l.getRadius());
 
 		VK_VALIDATE(vkCmdPushConstants(shadowCommandBuffer, pointShadowPipelineLayout, VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fvec4), &push));
-		VK_VALIDATE(vkCmdDrawIndexedIndirect(shadowCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand)));
+		VK_VALIDATE(vkCmdDrawIndexedIndirect(shadowCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
 		VK_VALIDATE(vkCmdEndRenderPass(shadowCommandBuffer));
 	}
@@ -343,7 +343,7 @@ void Renderer::updateShadowCommands()
 		push[20] = l.getRadius() * 2.f;
 
 		VK_VALIDATE(vkCmdPushConstants(shadowCommandBuffer, spotShadowPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(float) + sizeof(glm::fvec3), &push));
-		VK_VALIDATE(vkCmdDrawIndexedIndirect(shadowCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand)));
+		VK_VALIDATE(vkCmdDrawIndexedIndirect(shadowCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
 		VK_VALIDATE(vkCmdEndRenderPass(shadowCommandBuffer));
 	}

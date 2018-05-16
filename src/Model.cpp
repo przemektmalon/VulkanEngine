@@ -7,9 +7,12 @@
 #include "Renderer.hpp"
 #include "rapidxml.hpp"
 #include "File.hpp"
+#include "Threading.hpp"
 
 void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 {
+	availability |= LOADING_TO_RAM;
+
 	for (auto& path : diskPaths)
 	{
 		Assimp::Importer importer;
@@ -70,14 +73,19 @@ void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 	}
 
 	availability |= ON_RAM;
+	availability &= ~LOADING_TO_RAM;
 
 	DBG_INFO("Model loaded: " << diskPaths[0]);
 }
 
 void Model::loadToGPU(void * pCreateStruct)
 {
+	availability |= LOADING_TO_GPU;
+	Engine::threading->pushingModelToGPUMutex.lock();
 	Engine::renderer->pushModelDataToGPU(*this);
 	availability |= ON_GPU;
+	availability &= ~LOADING_TO_GPU;
+	Engine::threading->pushingModelToGPUMutex.unlock();
 }
 
 void ModelInstance::setModel(Model * m)

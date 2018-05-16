@@ -16,7 +16,7 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 	vkUsage = ci->usageFlags;
 	components = ci->components;
 
-	if (isAvailable(ON_DISK))
+	if (checkAvailability(ON_DISK))
 	{
 		// Asset has been prepared by asset store
 		// Name and size filled in
@@ -107,7 +107,7 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 	const auto r = Engine::renderer;
 
-	if (isAvailable(ON_RAM))
+	if (checkAvailability(ON_RAM))
 	{
 		// Asset in RAM, check if create struct is non-zero
 

@@ -15,7 +15,7 @@ public:
 
 typedef std::function<void(void)> VoidJobType;
 
-template<typename JobFuncType = std::function<void(void)>, typename DoneFuncType = std::function<void(void)>>
+template<typename JobFuncType = VoidJobType, typename DoneFuncType = VoidJobType>
 class Job : public JobBase
 {
 public:
@@ -78,6 +78,10 @@ public:
 	std::mutex physBulletMutex;
 	std::mutex physToEngineMutex;
 	std::mutex physToGPUMutex;
+
+	std::mutex instanceTransformMutex;
+	std::mutex addingModelInstanceMutex;
+	std::mutex pushingModelToGPUMutex;
 };
 
 static void defaultJobDoneFunc()

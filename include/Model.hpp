@@ -147,12 +147,9 @@ class ModelInstance
 public:
 	std::string name;
 	Transform transform;
-	//glm::fmat4 transform;
-	Model * model;
 	u32 transformIndex; // Index into gpu transform buffer
-
+	Model * model;
 	Material* material;
-
 	PhysicsObject* physicsObject;
 
 	void setModel(Model* m);

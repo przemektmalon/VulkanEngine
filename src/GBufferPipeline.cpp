@@ -426,7 +426,7 @@ void Renderer::updateGBufferCommands()
 	VK_VALIDATE(vkCmdBindVertexBuffers(gBufferCommandBuffer, 0, 1, vertexBuffers, offsets));
 	VK_VALIDATE(vkCmdBindIndexBuffer(gBufferCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
 
-	VK_VALIDATE(vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.models.size(), sizeof(VkDrawIndexedIndirectCommand)));
+	VK_VALIDATE(vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
 	VK_VALIDATE(vkCmdEndRenderPass(gBufferCommandBuffer));
 

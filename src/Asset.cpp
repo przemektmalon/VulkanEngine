@@ -47,7 +47,7 @@ void Asset::cleanupGPU()
 	DBG_WARNING("Attempting to cleanup asset \"" << name << "\" from GPU, but cleanup function not overriden.")
 }
 
-bool Asset::isAvailable(AvailabilityFlags flags)
+bool Asset::checkAvailability(int flags)
 {
 	return (availability & flags);
 }

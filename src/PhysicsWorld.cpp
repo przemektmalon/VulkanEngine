@@ -7,6 +7,7 @@
 #include "Renderer.hpp"
 #include "AssetStore.hpp"
 #include "Window.hpp"
+#include "Threading.hpp"
 
 void PhysicsWorld::updateModels()
 {

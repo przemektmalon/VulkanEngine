@@ -34,6 +34,13 @@ def updateCamera()
 	camera.update();
 }
 
+def addMonkey()
+{
+	getWorld().addModel("monkey","monkey");
+	getWorld().getModel("monkey").getTransform().setScale(fvec3(20,20,20));
+	getWorld().getModel("monkey").getTransform().setTranslation(fvec3(3,3,3));
+}
+
 def processEvent()
 {
 	auto ev = Event();

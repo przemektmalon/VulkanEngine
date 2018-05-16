@@ -5,6 +5,7 @@
 #include "File.hpp"
 #include "Shader.hpp"
 #include "Image.hpp"
+#include "Threading.hpp"
 
 /*
 	@brief	Initialise renderer and Vulkan objects
@@ -400,34 +401,34 @@ void Renderer::reloadShaders()
 
 void Renderer::populateDrawCmdBuffer()
 {
-	VkDrawIndexedIndirectCommand* cmd = new VkDrawIndexedIndirectCommand[Engine::world.models.size()];
+	VkDrawIndexedIndirectCommand* cmd = new VkDrawIndexedIndirectCommand[Engine::world.instancesToDraw.size()];
 
 	int i = 0;
 	
-	for (auto& m : Engine::world.models)
+	for (auto& m : Engine::world.instancesToDraw)
 	{
-		glm::fvec3 modelPos = m.transform.getTranslation();
+		glm::fvec3 modelPos = m->transform.getTranslation();
 		float distanceToCam = glm::length(Engine::camera.getPosition() - modelPos);
 
 		int lodIndex = 0;
-		for (auto lim : m.model->lodLimits) /// TODO: monitor for LOD/culling/world changes, dont re-populate this when not needed
+		for (auto lim : m->model->lodLimits) /// TODO: monitor for LOD/culling/world changes, dont re-populate this when not needed
 		{
 			if (distanceToCam >= lim)
 				break;
 			++lodIndex;
 		}
 
-		auto& lodMesh = m.model->modelLODs[lodIndex];
+		auto& lodMesh = m->model->modelLODs[lodIndex];
 
 		cmd[i].firstIndex = lodMesh.firstIndex;
 		cmd[i].indexCount = lodMesh.indexDataLength;
 		cmd[i].vertexOffset = lodMesh.firstVertex;
-		cmd[i].firstInstance = (m.material->gpuIndexBase << 20) | (m.transformIndex);
+		cmd[i].firstInstance = (m->material->gpuIndexBase << 20) | (m->transformIndex);
 		cmd[i].instanceCount = 1; /// TODO: do we want/need a different class for real instanced drawing ?
 		++i;
 	}
 
-	drawCmdBuffer.setMem(cmd, Engine::world.modelMap.size() * sizeof(VkDrawIndexedIndirectCommand), 0);
+	drawCmdBuffer.setMem(cmd, Engine::world.modelNames.size() * sizeof(VkDrawIndexedIndirectCommand), 0);
 
 	delete[] cmd;
 }
@@ -617,7 +618,9 @@ void Renderer::createTextureSampler()
 void Renderer::createUBOs()
 {
 	cameraUBO.create(sizeof(CameraUBOData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	transformUBO.create(sizeof(glm::fmat4) * 1000, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	// 8 MB of transforms can support around 125k model instances
+	transformUBO.create(8 * 1024 * 1024, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 /*
@@ -767,16 +770,20 @@ void Renderer::updateCameraBuffer()
 */
 void Renderer::updateTransformBuffer()
 {
+	Engine::threading->instanceTransformMutex.lock();
+
 	glm::fmat4* transform = (glm::fmat4*)transformUBO.map();
 
 	int i = 0;
-	for (auto& m : Engine::world.models)
+	for (auto& m : Engine::world.instancesToDraw)
 	{
-		transform[i] = m.transform.getTransformMat();
+		transform[m->transformIndex] = m->transform.getTransformMat();
 		++i;
 	}
 
 	transformUBO.unmap();
+
+	Engine::threading->instanceTransformMutex.unlock();
 }
 
 void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount, VkImageAspectFlags aspect)

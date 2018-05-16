@@ -95,36 +95,41 @@ void Engine::start()
 			int s = 100;
 			int sh = s / 2;
 			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % 1000) / 5.f + 50.f, s64(rand() % s) - sh);
-			//world.modelMap["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 5) * 2), std::floor(int(i / (int)5) * 2), 0));
-			world.modelMap["hollowbox" + std::to_string(i)]->transform.setTranslation(pos);
-			world.modelMap["hollowbox" + std::to_string(i)]->transform.setScale(glm::fvec3(10));
-			world.modelMap["hollowbox" + std::to_string(i)]->transform.updateMatrix();
-			world.modelMap["hollowbox" + std::to_string(i)]->setMaterial(assets.getMaterial(materialList[i % 6]));
-			world.modelMap["hollowbox" + std::to_string(i)]->makePhysicsObject();
+			//world.modelNames["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 5) * 2), std::floor(int(i / (int)5) * 2), 0));
+			world.modelNames["hollowbox" + std::to_string(i)]->transform.setTranslation(pos);
+			world.modelNames["hollowbox" + std::to_string(i)]->transform.setScale(glm::fvec3(10));
+			world.modelNames["hollowbox" + std::to_string(i)]->transform.updateMatrix();
+			world.modelNames["hollowbox" + std::to_string(i)]->setMaterial(assets.getMaterial(materialList[i % 6]));
+			world.modelNames["hollowbox" + std::to_string(i)]->makePhysicsObject();
 		}
 
 		world.addModelInstance("pbrsphere", "pbrsphere");
-		world.modelMap["pbrsphere"]->transform.setTranslation(glm::fvec3(4, 0, 0));
-		world.modelMap["pbrsphere"]->transform.setScale(glm::fvec3(10));
-		world.modelMap["pbrsphere"]->transform.updateMatrix();
-		world.modelMap["pbrsphere"]->setMaterial(assets.getMaterial("marble"));
-		world.modelMap["pbrsphere"]->makePhysicsObject();
+		world.modelNames["pbrsphere"]->transform.setTranslation(glm::fvec3(4, 0, 0));
+		world.modelNames["pbrsphere"]->transform.setScale(glm::fvec3(10));
+		world.modelNames["pbrsphere"]->transform.updateMatrix();
+		world.modelNames["pbrsphere"]->setMaterial(assets.getMaterial("marble"));
+		world.modelNames["pbrsphere"]->makePhysicsObject();
 
 		world.addModelInstance("ground", "ground");
-		world.modelMap["ground"]->transform.setTranslation(glm::fvec3(0, 0, 0));
-		world.modelMap["ground"]->transform.setScale(glm::fvec3(10));
-		world.modelMap["ground"]->transform.updateMatrix();
-		world.modelMap["ground"]->setMaterial(assets.getMaterial("marble"));
-		world.modelMap["ground"]->makePhysicsObject();
+		world.modelNames["ground"]->transform.setTranslation(glm::fvec3(0, 0, 0));
+		world.modelNames["ground"]->transform.setScale(glm::fvec3(10));
+		world.modelNames["ground"]->transform.updateMatrix();
+		world.modelNames["ground"]->setMaterial(assets.getMaterial("dirt"));
+		world.modelNames["ground"]->makePhysicsObject();
 
 		//world.addModelInstance("monkey");
-		//world.modelMap["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
+		//world.modelNames["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
+	}
+
+	while (!threading->allJobsDone())
+	{
 	}
 
 	PROFILE_END("world");
 
 	PROFILE_START("cmds");
 
+	world.frustumCulling(&camera);
 	renderer->updateTransformBuffer();
 	renderer->populateDrawCmdBuffer();
 
@@ -177,7 +182,9 @@ void Engine::start()
 
 	std::function<void(void)> physicsToEngineJobFunc = []() -> void {
 		Engine::threading->physToEngineMutex.lock();
+		Engine::threading->instanceTransformMutex.lock();
 		physicsWorld.updateModels();
+		Engine::threading->instanceTransformMutex.unlock();
 		Engine::threading->physToEngineMutex.unlock();
 	};
 
@@ -200,6 +207,7 @@ void Engine::start()
 		PROFILE_START("setuprender");
 
 		Engine::threading->physToEngineMutex.lock();
+		Engine::world.frustumCulling(&Engine::camera);
 		Engine::renderer->populateDrawCmdBuffer(); // Mutex with engine model transform update
 		Engine::threading->physToEngineMutex.unlock();
 
@@ -225,6 +233,7 @@ void Engine::start()
 
 	std::function<void(void)> scriptsJobFunc = []() -> void {
 		PROFILE_START("scripts");
+		Engine::threading->instanceTransformMutex.lock();
 		try {
 			Engine::scriptEnv.evalString("updateCamera()");
 		}
@@ -232,6 +241,7 @@ void Engine::start()
 		{
 			std::cout << e.what() << std::endl;
 		}
+		Engine::threading->instanceTransformMutex.unlock();
 		PROFILE_END("scripts");
 	};
 

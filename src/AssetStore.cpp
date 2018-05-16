@@ -62,7 +62,8 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 			continue;
 		}
 
-		auto& tex = textures.insert(std::make_pair(name, Texture())).first->second;
+		auto& tex = textures.try_emplace(name).first->second;
+		//auto& tex = textures.insert(std::make_pair(name, Texture())).first->second;
 		TextureCreateInfo ci;
 		ci.genMipMaps = mip;
 		ci.components = 4;
@@ -82,7 +83,8 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		Engine::threading->addJob(new Job<decltype(texLoadFunc), VoidJobType>(texLoadFunc, defaultJobDoneFunc));
 	}
 
-	auto& tex = textures.insert(std::make_pair("blank", Texture())).first->second;
+	auto& tex = textures.try_emplace("blank").first->second;
+	//auto& tex = textures.insert(std::make_pair("blank", Texture())).first->second;
 	TextureCreateInfo ci;
 	ci.genMipMaps = false;
 	ci.components = 4;
@@ -161,7 +163,8 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 			continue;
 		}
 
-		auto& model = models.insert(std::make_pair(name, Model())).first->second;
+		auto& model = models.try_emplace(name).first->second;
+		//auto& model = models.insert(std::make_pair(name, Model())).first->second;
 		model.physicsInfoFilePath = physics;
 		model.lodPaths = lodPaths;
 		model.lodLimits = lodLimits;
@@ -187,7 +190,8 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 		std::vector<std::string> paths; paths.push_back(path);
 
-		auto& font = fonts.insert(std::make_pair(name, Font())).first->second;
+		auto& font = fonts.try_emplace(name).first->second;
+		//auto& font = fonts.insert(std::make_pair(name, Font())).first->second;
 		font.prepare(paths, name);
 		font.loadToRAM();
 

@@ -62,8 +62,6 @@ public:
 	static int physicalDeviceIndex;
 	
 	static Time frameTime;
-	static Time newFrameTime;
-
 	static bool engineRunning;
 	static Time engineStartTime;
 	static std::mt19937_64 rand;
