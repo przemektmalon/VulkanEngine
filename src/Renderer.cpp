@@ -690,7 +690,7 @@ void Renderer::createSemaphores()
 /*
 	@brief	Copies data to staging buffer
 */
-void Renderer::copyToStagingBuffer(void * srcData, VkDeviceSize size, VkDeviceSize dstOffset)
+void Renderer::copyToStagingBuffer(Buffer& stagingBuffer, void * srcData, VkDeviceSize size, VkDeviceSize dstOffset)
 {
 	void* data = stagingBuffer.map(dstOffset, size);
 	memcpy(data, srcData, (size_t)size);
@@ -700,7 +700,7 @@ void Renderer::copyToStagingBuffer(void * srcData, VkDeviceSize size, VkDeviceSi
 /*
 	@brief	Creates staging buffer with requested size
 */
-void Renderer::createStagingBuffer(VkDeviceSize size)
+void Renderer::createStagingBuffer(Buffer& stagingBuffer, VkDeviceSize size)
 {
 	stagingBuffer.create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
@@ -708,7 +708,7 @@ void Renderer::createStagingBuffer(VkDeviceSize size)
 /*
 	@brief	Destroys staging buffer
 */
-void Renderer::destroyStagingBuffer()
+void Renderer::destroyStagingBuffer(Buffer& stagingBuffer)
 {
 	stagingBuffer.destroy();
 }

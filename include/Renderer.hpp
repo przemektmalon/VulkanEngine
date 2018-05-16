@@ -273,7 +273,7 @@ public:
 	// It should keep track of free memory which may be "holes" (after removing memory from middle of buffer) and allocate if new additions fit
 	// If we want to compact data (not sure if this will be worth the effort) we'd have to keep track of which memory regions are used by which models
 
-	Buffer stagingBuffer;
+	//Buffer stagingBuffer;
 	Buffer screenQuadBuffer;
 	
 	Buffer vertexIndexBuffer;
@@ -301,11 +301,11 @@ public:
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 
 	// Creates staging buffer with requested size
-	void createStagingBuffer(VkDeviceSize size);
+	void createStagingBuffer(Buffer& stagingBuffer, VkDeviceSize size);
 	// Copies to staging buffer
-	void copyToStagingBuffer(void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
+	void copyToStagingBuffer(Buffer& stagingBuffer, void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
 	// Destroys staging buffer
-	void destroyStagingBuffer();
+	void destroyStagingBuffer(Buffer& stagingBuffer);
 	
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);

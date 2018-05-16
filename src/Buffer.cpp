@@ -105,10 +105,11 @@ void Buffer::setMem(void * src, VkDeviceSize pSize, VkDeviceSize offset)
 	if (memFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 	{
 		const auto r = Engine::renderer;
-		r->createStagingBuffer(pSize);
-		r->copyToStagingBuffer(src, pSize, 0);
-		r->stagingBuffer.copyTo(this , pSize, 0, offset);
-		r->destroyStagingBuffer();
+		Buffer stagingBuffer;
+		r->createStagingBuffer(stagingBuffer, pSize);
+		r->copyToStagingBuffer(stagingBuffer, src, pSize, 0);
+		stagingBuffer.copyTo(this , pSize, 0, offset);
+		r->destroyStagingBuffer(stagingBuffer);
 	}
 	else if ((memFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
 	{

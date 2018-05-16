@@ -123,10 +123,11 @@ void Texture::loadToGPU(void * pCreateStruct)
 		for (int i = 0; i < numLayers; ++i)
 		{
 			VkDeviceSize layerSize = size / numLayers;
-			r->createStagingBuffer(layerSize);
-			r->copyToStagingBuffer(img[i].data.data(), (size_t)layerSize);
-			r->stagingBuffer.copyTo(this, 0, 0, i, 1);
-			r->destroyStagingBuffer();
+			Buffer stagingBuffer;
+			r->createStagingBuffer(stagingBuffer, layerSize);
+			r->copyToStagingBuffer(stagingBuffer, img[i].data.data(), (size_t)layerSize);
+			stagingBuffer.copyTo(this, 0, 0, i, 1);
+			r->destroyStagingBuffer(stagingBuffer);
 		}
 
 		if (mipped)
@@ -159,13 +160,14 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 		if (ci->pData)
 		{
-			r->createStagingBuffer(size);
-			r->copyToStagingBuffer(ci->pData, (size_t)size);
+			Buffer stagingBuffer;
+			r->createStagingBuffer(stagingBuffer, size);
+			r->copyToStagingBuffer(stagingBuffer, ci->pData, (size_t)size);
 			vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			createImage();
 			r->transitionImageLayout(vkImage, vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, maxMipLevel + 1, numLayers, vkAspect);
-			r->stagingBuffer.copyTo(this, 0, 0, 0, 1);
-			r->destroyStagingBuffer();
+			stagingBuffer.copyTo(this, 0, 0, 0, 1);
+			r->destroyStagingBuffer(stagingBuffer);
 
 			if (mipped)
 				gpuGenerateMipMaps();
@@ -192,7 +194,8 @@ void Texture::generateMipMaps()
 	const auto r = Engine::renderer;
 
 	VkDeviceSize allMipsSize = (img[0].data.size() * 1.335) * numLayers;
-	r->createStagingBuffer(allMipsSize);
+	Buffer stagingBuffer;
+	r->createStagingBuffer(stagingBuffer, allMipsSize);
 
 	VkDeviceSize offset = 0;
 
@@ -206,7 +209,7 @@ void Texture::generateMipMaps()
 		for (auto& level : layer)
 		{
 			prevMip->generateMipMap(level);
-			r->copyToStagingBuffer(&level.data[0], level.data.size(), offset);
+			r->copyToStagingBuffer(stagingBuffer, &level.data[0], level.data.size(), offset);
 			
 			VkBufferImageCopy region = {};
 			region.imageSubresource.aspectMask = vkAspect;
@@ -229,13 +232,13 @@ void Texture::generateMipMaps()
 
 	VkCommandBuffer commandBuffer = r->beginSingleTimeCommands();
 
-	vkCmdCopyBufferToImage(commandBuffer, r->stagingBuffer.getBuffer(), vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions.size(), copyRegions.data());
+	vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.getBuffer(), vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions.size(), copyRegions.data());
 
 	r->setImageLayout(commandBuffer, *this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 	r->endSingleTimeCommands(commandBuffer);
 
-	r->destroyStagingBuffer();
+	r->destroyStagingBuffer(stagingBuffer);
 }
 
 void Texture::gpuGenerateMipMaps()

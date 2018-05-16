@@ -158,10 +158,11 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 
 	const auto& r = Engine::renderer;
 
-	r->createStagingBuffer(totalGlyphSetTexSize);
+	Buffer stagingBuffer;
+	r->createStagingBuffer(stagingBuffer, totalGlyphSetTexSize);
 
 	VkDeviceSize copyOffset = 0;
-	void* data = r->stagingBuffer.map(0, totalGlyphSetTexSize);
+	void* data = stagingBuffer.map(0, totalGlyphSetTexSize);
 	for (int i = 1; i < NO_PRINTABLE_CHARS; ++i)
 	{
 		char* dst = (char*)data; dst += copyOffset;
@@ -169,18 +170,18 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 		copyOffset += chars[i].data.size();
 	}
 
-	r->stagingBuffer.unmap();
+	stagingBuffer.unmap();
 
 	copyOffset = 0;
 	for (int i = 1; i < NO_PRINTABLE_CHARS; ++i)
 	{
 		VkOffset3D offset = { coords[i].x, coords[i].y, 0 };
 		VkExtent3D extent = { sizes[i].x, sizes[i].y, 1 };
-		r->stagingBuffer.copyTo(glyphs, copyOffset, 0, 0, 1, offset, extent);
+		stagingBuffer.copyTo(glyphs, copyOffset, 0, 0, 1, offset, extent);
 		copyOffset += chars[i].data.size();
 	}
 
-	r->destroyStagingBuffer();
+	r->destroyStagingBuffer(stagingBuffer);
 
 	height = pFace->size->metrics.height >> 6;
 	ascender = pFace->size->metrics.ascender >> 6;
