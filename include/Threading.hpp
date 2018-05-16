@@ -1,23 +1,39 @@
 #pragma once
 #include "PCH.hpp"
+#include "Engine.hpp"
 
 // Job -- function to call with some arguments (by some thread)
 // Threading -- worker threads and job queue
 
-class Job
+class JobBase
+{
+public:
+	JobBase() {};
+
+	virtual void run() = 0;
+};
+
+typedef std::function<void(void)> VoidJobType;
+
+template<typename JobFuncType = std::function<void(void)>, typename DoneFuncType = std::function<void(void)>>
+class Job : public JobBase
 {
 public:
 	Job() {}
-	Job(std::function<void(void)> pJobFunction, std::function<void(void)> pDoneFunction) : jobFunction(pJobFunction), doneFunction(pDoneFunction) {}
+	Job(JobFuncType pJobFunction) : jobFunction(pJobFunction), doneFunction([]()->void {}) {}
+	Job(JobFuncType pJobFunction, DoneFuncType pDoneFunction) : jobFunction(pJobFunction), doneFunction(pDoneFunction) {}
 
-	std::function<void(void)> jobFunction;
-	std::function<void(void)> doneFunction;
-
-	void run() { jobFunction(); doneFunction(); }
+	void run()
+	{
+		jobFunction();
+		doneFunction();
+		Engine::threading->freeJob(this);
+	}
 
 private:
 
-
+	JobFuncType jobFunction;
+	DoneFuncType doneFunction;
 };
 
 class Threading
@@ -25,74 +41,36 @@ class Threading
 public:
 
 	// Construct worker threads
-	Threading(int pNumThreads) : workers(pNumThreads)
-	{
-		totalJobsAdded.store(0);
-		totalJobsFinished.store(0);
-		for (auto w : workers)
-		{
-			w = new std::thread(&Threading::update, this);
-		}
-	}
+	Threading(int pNumThreads);
 
 	// Terminate worker threads
-	~Threading()
-	{
-		/// TODO: notify threads to terminate
-		for (auto w : workers)
-		{
-			w->join();
-		}
-	}
+	~Threading();
 
 	// Systems add their jobs to the queue
-	void addJob(Job& jobToAdd)
-	{
-		jobsQueueMutex.lock();
-		totalJobsAdded.fetch_add(1);
-		jobs.emplace(jobToAdd);
-		jobsQueueMutex.unlock();
-	}
+	void addJob(JobBase* jobToAdd);
 
 	// Each worker will grab some job
-	bool getJob(Job& job)
-	{	
-		jobsQueueMutex.lock();
-		if (jobs.size() == 0)
-		{
-			jobsQueueMutex.unlock();
-			return false;
-			/*return Job([]()->void {
-				//std::cout << "No jobs for thread: " << std::this_thread::get_id() << " sleeping" << std::endl;
-				//std::this_thread::sleep_for(std::chrono::microseconds(1));
-			}, []()->void {});*/
-		}
-		job = jobs.front();
-		jobs.pop();
-		jobsQueueMutex.unlock();
-		return true;
-	}
+	bool getJob(JobBase*& job);
 
 	// Executed by each worker thread
-	void update()
-	{
-		Job job;
-		while (true)
-		{
-			if (getJob(job))
-				job.run();
-			else
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-	}
+	void update();
 
+	// Are all jobs done
+	bool allJobsDone();
+
+	// Mark job for freeing memory
+	void freeJob(JobBase* jobToFree);
+
+	// Free marked jobs
+	void cleanupJobs();
 
 	std::mutex jobsQueueMutex;
-	std::queue<Job> jobs;
+	std::mutex jobsFreeMutex;
+	std::queue<JobBase*> jobs;
+	std::list<JobBase*> jobsToFree;
 	std::atomic_char32_t totalJobsAdded;
 	std::atomic_char32_t totalJobsFinished;
 	std::vector<std::thread*> workers;
-
 
 	// Testing mutexes
 
@@ -101,3 +79,8 @@ public:
 	std::mutex physToEngineMutex;
 	std::mutex physToGPUMutex;
 };
+
+static void defaultJobDoneFunc()
+{
+	Engine::threading->totalJobsFinished.fetch_add(1);
+}

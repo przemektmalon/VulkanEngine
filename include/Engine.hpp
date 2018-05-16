@@ -9,8 +9,8 @@
 #include "PhysicsWorld.hpp"
 #include "Console.hpp"
 #include "Scripting.hpp"
-#include "Threading.hpp"
 
+class Threading;
 class OLayer;
 class Window;
 class Renderer;
