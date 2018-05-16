@@ -56,6 +56,11 @@ void Engine::start()
 
 	PROFILE_END("init");
 
+	PROFILE_PREALLOC("setuprender");
+	PROFILE_PREALLOC("physics");
+	PROFILE_PREALLOC("submitrender");
+	PROFILE_PREALLOC("scripts");
+
 	threading = new Threading(4);
 
 	PROFILE_START("assets");

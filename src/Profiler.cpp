@@ -2,6 +2,11 @@
 #include "Profiler.hpp"
 #include "Engine.hpp"
 
+void Profiler::prealloc(std::string id)
+{
+	times[id] = std::make_pair(Time(),Time());
+}
+
 void Profiler::start(std::string id)
 {
 	times[id].first.setMicroSeconds(Engine::clock.now());
