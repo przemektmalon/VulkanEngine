@@ -55,7 +55,6 @@ public:
 		NUM_GPU_TIMESTAMPS };
 
 	OverlayRenderer overlayRenderer;
-	OLayer layer;
 
 	// Device, queues, swap chain
 	VkDevice device;
@@ -70,7 +69,8 @@ public:
 	VkDescriptorPool descriptorPool;
 	VkDescriptorPool freeableDescriptorPool;
 	VkCommandPool commandPool;
-	VkCommandPool resettableCommandPool;
+	VkCommandPool gBufferCommandPool;
+	VkFence gBufferFence;
 	VkQueryPool queryPool;
 
 	// Semaphores

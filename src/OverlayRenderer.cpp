@@ -610,7 +610,7 @@ void OverlayRenderer::createOverlayCommands()
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = Engine::renderer->resettableCommandPool;
+	allocInfo.commandPool = Engine::renderer->commandPool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
@@ -766,8 +766,8 @@ void OverlayRenderer::updateOverlayCommands()
 
 void OverlayRenderer::destroyOverlayCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->resettableCommandPool, 1, &elementCommandBuffer));
-	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->resettableCommandPool, 1, &combineCommandBuffer));
+	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->commandPool, 1, &elementCommandBuffer));
+	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->commandPool, 1, &combineCommandBuffer));
 }
 
 void OverlayRenderer::destroyOverlayDescriptorSetLayouts()

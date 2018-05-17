@@ -116,7 +116,6 @@ void Renderer::createGBufferRenderPass()
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-
 	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &gBufferRenderPass));
 }
 
@@ -377,7 +376,7 @@ void Renderer::createGBufferCommands()
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
+	allocInfo.commandPool = gBufferCommandPool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 

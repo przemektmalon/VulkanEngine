@@ -56,12 +56,19 @@ void Engine::start()
 
 	PROFILE_END("init");
 
-	PROFILE_PREALLOC("setuprender");
-	PROFILE_PREALLOC("physics");
-	PROFILE_PREALLOC("submitrender");
-	PROFILE_PREALLOC("scripts");
-
 	threading = new Threading(4);
+
+	int i = 0;
+	std::vector<std::thread::id> threadIDs(4 + 1); // 4 threads created by the main thread so + 1
+	for (auto& thread : threading->workers) {
+		threadIDs[i] = thread->get_id();
+		++i;
+	}
+	threadIDs[i] = std::this_thread::get_id(); // Main thread can also use profiler
+
+	std::vector<std::string> profilerTags = { "setuprender", "physics", "submitrender", "scripts", "gbuffer", "shadow", "pbr", "overlay", "overlaycombine", "screen" };
+
+	Profiler::prealloc(threadIDs, profilerTags); // Avoid thread clashes when allocating newly encountered tags
 
 	PROFILE_START("assets");
 
@@ -117,6 +124,10 @@ void Engine::start()
 		//world.modelNames["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
 	}
 
+	while (!threading->allJobsDone())
+	{
+	}
+
 	auto prepareRenderJobFunc = []() -> void {
 		renderer->updateScreenCommands();
 		renderer->updatePBRCommands();
@@ -124,16 +135,12 @@ void Engine::start()
 
 	threading->addGraphicsJob(new Job<>(prepareRenderJobFunc, defaultJobDoneFunc));
 
-	while (!threading->allJobsDone())
-	{
-	}
-
 	PROFILE_END("world");
 
 	std::cout << std::endl;
-	DBG_INFO("Initialisation time     : " << PROFILE_TIME("init") << " seconds");
-	DBG_INFO("Asset load time         : " << PROFILE_TIME("assets") << " seconds");
-	DBG_INFO("World loading time      : " << PROFILE_TIME("world") << " seconds");
+	DBG_INFO("Initialisation time     : " << PROFILE_TO_S(PROFILE_GET_AVERAGE("init")) << " seconds");
+	DBG_INFO("Asset load time         : " << PROFILE_TO_S(PROFILE_GET_AVERAGE("assets")) << " seconds");
+	DBG_INFO("World loading time      : " << PROFILE_TO_S(PROFILE_GET_AVERAGE("world")) << " seconds");
 	
 	console = new Console();
 	console->create();
@@ -205,13 +212,13 @@ void Engine::start()
 
 		PROFILE_END("setuprender");
 
-		PROFILE_START("submitrender");
+		
 
 		Engine::threading->physToGPUMutex.lock();
 		Engine::renderer->render();
 		Engine::threading->physToGPUMutex.unlock();
 
-		PROFILE_END("submitrender");
+		
 	};
 
 	std::function<void(void)> renderJobDoneFunc = [&renderJobFunc, &renderJobDoneFunc]() -> void {
@@ -347,6 +354,13 @@ void Engine::start()
 			frameTime = clock.time() - frameStart;
 			frameStart = clock.time();
 
+			PROFILE_GPU_ADD_TIME("gbuffer", Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER], Engine::gpuTimeStamps[Renderer::END_GBUFFER]);
+			PROFILE_GPU_ADD_TIME("shadow", Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW], Engine::gpuTimeStamps[Renderer::END_SHADOW]);
+			PROFILE_GPU_ADD_TIME("pbr", Engine::gpuTimeStamps[Renderer::BEGIN_PBR], Engine::gpuTimeStamps[Renderer::END_PBR]);
+			PROFILE_GPU_ADD_TIME("overlay", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY], Engine::gpuTimeStamps[Renderer::END_OVERLAY]);
+			PROFILE_GPU_ADD_TIME("overlaycombine", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE], Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE]);
+			PROFILE_GPU_ADD_TIME("screen", Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN], Engine::gpuTimeStamps[Renderer::END_SCREEN]);
+
 			threading->cleanupJobs();
 
 			threading->addJob(new Job<>(physicsJobFunc, physicsJobDoneFunc));
@@ -360,12 +374,12 @@ void Engine::start()
 			fpsDisplay += frameTime.getSeconds();
 			if (fpsDisplay > 0.75f)
 			{
-				double gBufferTime = double(Engine::gpuTimeStamps[Renderer::END_GBUFFER] - Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER]) * 0.000001;
-				double shadowTime = double(Engine::gpuTimeStamps[Renderer::END_SHADOW] - Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW]) * 0.000001;
-				double pbrTime = double(Engine::gpuTimeStamps[Renderer::END_PBR] - Engine::gpuTimeStamps[Renderer::BEGIN_PBR]) * 0.000001;
-				double overlayTime = double(Engine::gpuTimeStamps[Renderer::END_OVERLAY] - Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY]) * 0.000001;
-				double overlayCombineTime = double(Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE] - Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE]) * 0.000001;
-				double screenTime = double(Engine::gpuTimeStamps[Renderer::END_SCREEN] - Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN]) * 0.000001;
+				double gBufferTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("gbuffer"));
+				double shadowTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("shadow"));
+				double pbrTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("pbr"));
+				double overlayTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("overlay"));
+				double overlayCombineTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("overlaycombine"));
+				double screenTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("screen"));
 
 				double totalGPUTime = gBufferTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
 
@@ -384,17 +398,30 @@ void Engine::start()
 					"GPU FPS        : " + std::to_string((int)(1.0 / (totalGPUTime*0.001))) + "\n\n" +
 
 					"---------------------------\n" +
-					"User input     : " + std::to_string(PROFILE_TIME_MS("msgevent")) + "ms\n" +
-					"Set up render  : " + std::to_string(PROFILE_TIME_MS("setuprender")) + "ms\n" +
-					"Submit render  : " + std::to_string(PROFILE_TIME_MS("submitrender") - totalGPUTime) + "ms\n" +
-					"Physics        : " + std::to_string(PROFILE_TIME_MS("physics")) + "ms\n" +
-					"Scripts        : " + std::to_string(PROFILE_TIME_MS("scripts")) + "ms\n\n" +
+					"User input     : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("msgevent"))) + "ms\n" +
+					"Set up render  : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("setuprender"))) + "ms\n" +
+					"Queue submit   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("submitrender"))) + "ms\n" +
+					"Physics        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("physics"))) + "ms\n" +
+					"Scripts        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("scripts"))) + "ms\n\n" +
 
 					"Avg frame time : " + std::to_string((fpsDisplay * 1000) / double(frames)) + "ms\n" +
 					"FPS            : " + std::to_string((int)(double(frames) / fpsDisplay))
 				);
 				fpsDisplay = 0.f;
 				frames = 0;
+
+				PROFILE_RESET("msgevent");
+				PROFILE_RESET("setuprender");
+				PROFILE_RESET("submitrender");
+				PROFILE_RESET("physics");
+				PROFILE_RESET("scripts");
+
+				PROFILE_RESET("gbuffer");
+				PROFILE_RESET("shadow");
+				PROFILE_RESET("pbr");
+				PROFILE_RESET("overlay");
+				PROFILE_RESET("overlaycombine");
+				PROFILE_RESET("screen");
 			}
 		}
 	}

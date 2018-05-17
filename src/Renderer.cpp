@@ -6,6 +6,7 @@
 #include "Shader.hpp"
 #include "Image.hpp"
 #include "Threading.hpp"
+#include "Profiler.hpp"
 
 /*
 	@brief	Initialise renderer and Vulkan objects
@@ -221,7 +222,6 @@ void Renderer::cleanup()
 	VK_VALIDATE(vkDestroyDescriptorPool(device, descriptorPool, nullptr));
 	VK_VALIDATE(vkDestroyDescriptorPool(device, freeableDescriptorPool, nullptr));
 	VK_VALIDATE(vkDestroyCommandPool(device, commandPool, 0));
-	VK_VALIDATE(vkDestroyCommandPool(device, resettableCommandPool, 0));
 	VK_VALIDATE(vkDestroyQueryPool(device, queryPool, 0));
 
 	VK_VALIDATE(vkDestroySampler(device, textureSampler, nullptr));
@@ -287,6 +287,8 @@ void Renderer::render()
 		//recreateVulkanSwapChain();
 		return;
 	}
+
+	PROFILE_START("submitrender");
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -364,6 +366,8 @@ void Renderer::render()
 	presentInfo.pImageIndices = &imageIndex;
 
 	VK_CHECK_RESULT(vkQueuePresentKHR(presentQueue, &presentInfo));
+
+	PROFILE_END("submitrender");
 
 	VK_CHECK_RESULT(vkQueueWaitIdle(presentQueue));
 
@@ -541,10 +545,14 @@ void Renderer::createCommandPool()
 
 	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool));
 
-	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.queueFamilyIndex = 0;
-	
-	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &resettableCommandPool));
+	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &gBufferCommandPool));
+
+	VkFenceCreateInfo fci = {};
+	fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	fci.pNext = 0;
+
+	VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &gBufferFence));
 }
 
 void Renderer::createQueryPool()
