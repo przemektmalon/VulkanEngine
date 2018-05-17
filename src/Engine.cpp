@@ -74,9 +74,16 @@ void Engine::start()
 
 	assets.loadAssets("/res/resources.xml");
 
-	while (!threading->allJobsDone())
+	// Wait for all textures to load and be transferred to GPU
+	while (!threading->allTransferJobsDone() || !threading->allJobsDone())
 	{
-		// Wait for all assets to load
+		// Submit any gpu transfer jobs that were children of DISK load jobs
+		JobBase* gpuTransferJob;
+		while (threading->getGPUTransferJob(gpuTransferJob))
+		{
+			gpuTransferJob->run();
+		}
+		/// TODO: maybe give a few millisecond break here before checking for more jobs ?
 	}
 
 	renderer->updateGBufferDescriptorSets();
@@ -124,8 +131,16 @@ void Engine::start()
 		//world.modelNames["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
 	}
 
-	while (!threading->allJobsDone())
+	// Wait for all textures to load and be transferred to GPU
+	while (!threading->allTransferJobsDone() || !threading->allJobsDone())
 	{
+		// Submit any gpu transfer jobs that were children of DISK load jobs
+		JobBase* gpuTransferJob;
+		while (threading->getGPUTransferJob(gpuTransferJob))
+		{
+			gpuTransferJob->run();
+		}
+		/// TODO: maybe give a few millisecond break here before checking for more jobs ?
 	}
 
 	auto prepareRenderJobFunc = []() -> void {
@@ -212,13 +227,9 @@ void Engine::start()
 
 		PROFILE_END("setuprender");
 
-		
-
 		Engine::threading->physToGPUMutex.lock();
 		Engine::renderer->render();
 		Engine::threading->physToGPUMutex.unlock();
-
-		
 	};
 
 	std::function<void(void)> renderJobDoneFunc = [&renderJobFunc, &renderJobDoneFunc]() -> void {
@@ -346,6 +357,13 @@ void Engine::start()
 		physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
 
 		console->update();
+
+		// Submit any gpu transfer jobs
+		JobBase* gpuTransferJob;
+		while (threading->getGPUTransferJob(gpuTransferJob))
+		{
+			gpuTransferJob->run();
+		}
 
 		PROFILE_END("msgevent");
 

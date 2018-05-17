@@ -58,6 +58,7 @@ public:
 
 	// Device, queues, swap chain
 	VkDevice device;
+	VkQueue transferQueue; // Queue for memory transfers (submitted to by the main thread)
 	VkQueue graphicsQueue;
 	VkQueue computeQueue;
 	VkQueue presentQueue;

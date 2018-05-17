@@ -65,7 +65,7 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 			m->getAvailability() |= Asset::LOADING_TO_RAM;
 			m->getAvailability() |= Asset::LOADING_TO_GPU;
 			auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, defaultJobDoneFunc);
-			job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, defaultJobDoneFunc));
+			job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, defaultTransferJobDoneFunc));
 			Engine::threading->addJob(job);
 		}
 		else

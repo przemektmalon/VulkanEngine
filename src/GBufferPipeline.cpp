@@ -385,10 +385,25 @@ void Renderer::createGBufferCommands()
 
 void Renderer::updateGBufferCommands()
 {
-	if (!gBufferCmdsNeedUpdate)
-		return;
+	//if (!gBufferCmdsNeedUpdate)
+	//	return;
 
-	gBufferCmdsNeedUpdate = false;
+	//gBufferCmdsNeedUpdate = false;
+
+	/// TODO: each thread will have a dynamic number of fences we will have to wait for all of them to signal (from the previous frame)
+	VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferFence, true, std::numeric_limits<u64>::max()));
+
+	VK_CHECK_RESULT(vkResetCommandPool(device, gBufferCommandPool, 0));
+
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = gBufferCommandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = 1;
+
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommandBuffer));
+
+	// From now on until we reset the gbuffer fence at the end of this function we cant submit a gBuffer command buffer
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -432,6 +447,8 @@ void Renderer::updateGBufferCommands()
 	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, END_GBUFFER));
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(gBufferCommandBuffer));
+
+	VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferFence));
 }
 
 void Renderer::destroyGBufferAttachments()

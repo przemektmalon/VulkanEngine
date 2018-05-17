@@ -82,7 +82,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 		tex.prepare(paths, name);
 		auto job = new Job<decltype(texLoadFunc)>(texLoadFunc, defaultJobDoneFunc);
-		job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, defaultJobDoneFunc));
+		job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, defaultTransferJobDoneFunc));
 		Engine::threading->addJob(job);
 	}
 

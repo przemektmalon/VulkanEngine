@@ -303,8 +303,10 @@ void Renderer::render()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
-
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, gBufferFence));
+	// From now on we cant update the gBuffer command buffer until the fence is signalled at some point in the future
+	// GBuffer command update will block
+	// Later we want to implement a double(or triple) buffering for command buffers and fences, so we can start updating next frames command buffer without blocking
 
 	VkPipelineStageFlags waitStages1[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
 	submitInfo.waitSemaphoreCount = 1;
@@ -526,10 +528,13 @@ void Renderer::createLogicalDevice()
 
 	VK_CHECK_RESULT(vkCreateDevice(Engine::vkPhysicalDevice, &dci, 0, &device));
 
+	// All three of these queues are the same queue internally, they're all submitted to from the same 'graphics' dedicated thread
 	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &graphicsQueue));
 	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &presentQueue)); /// Todo: Support for AMD gpus which have non-universal queues
 	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &computeQueue));
-}
+
+	// Separate queue for the 'main' thread for transfer operations
+	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &transferQueue));}
 
 /*
 	@brief	Create Vulkan command pool for submitting commands to a particular queue

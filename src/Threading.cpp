@@ -37,6 +37,14 @@ void Threading::addGraphicsJob(JobBase * jobToAdd)
 	graphicsJobsQueueMutex.unlock();
 }
 
+void Threading::addGPUTransferJob(JobBase * jobToAdd)
+{
+	gpuTransferJobsQueueMutex.lock();
+	totalTransferJobsAdded.fetch_add(1);
+	gpuTransferJobs.emplace(jobToAdd);
+	gpuTransferJobsQueueMutex.unlock();
+}
+
 bool Threading::getJob(JobBase *& job)
 {
 	jobsQueueMutex.lock();
@@ -62,6 +70,20 @@ bool Threading::getGraphicsJob(JobBase *& job)
 	job = graphicsJobs.front();
 	graphicsJobs.pop();
 	graphicsJobsQueueMutex.unlock();
+	return true;
+}
+
+bool Threading::getGPUTransferJob(JobBase *& job)
+{
+	gpuTransferJobsQueueMutex.lock();
+	if (gpuTransferJobs.size() == 0)
+	{
+		gpuTransferJobsQueueMutex.unlock();
+		return false;
+	}
+	job = gpuTransferJobs.front();
+	gpuTransferJobs.pop();
+	gpuTransferJobsQueueMutex.unlock();
 	return true;
 }
 
@@ -94,6 +116,11 @@ void Threading::updateGraphics()
 bool Threading::allJobsDone()
 {
 	return totalJobsAdded.load() == totalJobsFinished.load();
+}
+
+bool Threading::allTransferJobsDone()
+{
+	return totalTransferJobsAdded.load() == totalTransferJobsFinished.load();
 }
 
 void Threading::freeJob(JobBase * jobToFree)
