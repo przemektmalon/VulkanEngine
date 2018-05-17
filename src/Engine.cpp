@@ -72,16 +72,12 @@ void Engine::start()
 		// Wait for all assets to load
 	}
 
-	PROFILE_END("assets");
-
-	PROFILE_START("descsets");
-
 	renderer->updateGBufferDescriptorSets();
 	renderer->updateShadowDescriptorSets();
 	renderer->updatePBRDescriptorSets();
 	renderer->updateScreenDescriptorSets();
-	
-	PROFILE_END("descsets");
+
+	PROFILE_END("assets");
 
 	PROFILE_START("world");
 
@@ -121,32 +117,23 @@ void Engine::start()
 		//world.modelNames["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
 	}
 
+	auto prepareRenderJobFunc = []() -> void {
+		renderer->updateScreenCommands();
+		renderer->updatePBRCommands();
+	};
+
+	threading->addGraphicsJob(new Job<>(prepareRenderJobFunc, defaultJobDoneFunc));
+
 	while (!threading->allJobsDone())
 	{
 	}
 
 	PROFILE_END("world");
 
-	PROFILE_START("cmds");
-
-	world.frustumCulling(&camera);
-	renderer->updateTransformBuffer();
-	renderer->populateDrawCmdBuffer();
-
-	renderer->updateGBufferCommands();
-	renderer->updateShadowCommands();
-	renderer->updatePBRCommands();
-	renderer->updateScreenCommands();
-	renderer->overlayRenderer.updateOverlayCommands();
-
-	PROFILE_END("cmds");
-
 	std::cout << std::endl;
 	DBG_INFO("Initialisation time     : " << PROFILE_TIME("init") << " seconds");
 	DBG_INFO("Asset load time         : " << PROFILE_TIME("assets") << " seconds");
-	DBG_INFO("Descriptor sets time    : " << PROFILE_TIME("descsets") << " seconds");
 	DBG_INFO("World loading time      : " << PROFILE_TIME("world") << " seconds");
-	DBG_INFO("Command submission time : " << PROFILE_TIME("cmds") << " seconds");
 	
 	console = new Console();
 	console->create();
@@ -252,7 +239,7 @@ void Engine::start()
 	threading->addJob(new Job<>(physicsJobFunc, physicsJobDoneFunc));
 	threading->addJob(new Job<>(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
 	threading->addJob(new Job<>(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
-	threading->addJob(new Job<>(renderJobFunc, renderJobDoneFunc));
+	threading->addGraphicsJob(new Job<>(renderJobFunc, renderJobDoneFunc));
 	threading->addJob(new Job<>(scriptsJobFunc, scriptsJobDoneFunc));
 
 	Time frameStart; frameStart = engineStartTime;
@@ -365,7 +352,7 @@ void Engine::start()
 			threading->addJob(new Job<>(physicsJobFunc, physicsJobDoneFunc));
 			threading->addJob(new Job<>(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
 			threading->addJob(new Job<>(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
-			threading->addJob(new Job<>(renderJobFunc, renderJobDoneFunc));
+			threading->addGraphicsJob(new Job<>(renderJobFunc, renderJobDoneFunc));
 			threading->addJob(new Job<>(scriptsJobFunc, scriptsJobDoneFunc));
 
 			// FPS display

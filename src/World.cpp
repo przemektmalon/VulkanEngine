@@ -47,8 +47,6 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 
 	Engine::renderer->gBufferCmdsNeedUpdate = true;
 
-	std::cout << "Adding model instance: " << modelName << std::endl;
-
 	Engine::threading->addingModelInstanceMutex.unlock();
 
 	if (!m->checkAvailability(Asset::ON_RAM) && !m->checkAvailability(Asset::LOADING_TO_RAM))
@@ -56,16 +54,19 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 		if (!m->checkAvailability(Asset::ON_GPU) && !m->checkAvailability(Asset::LOADING_TO_GPU))
 		{
 			/// TODO: prevent loading the same model more than once
-			auto loadJobFunc = std::bind([](Model* m, ModelInstance* mi) -> void {
+			auto loadJobFunc = std::bind([](Model* m) -> void {
 				m->loadToRAM();
-				m->loadToGPU(); /// TODO: asset availability might need to be an atomic
-				Engine::threading->totalJobsFinished.fetch_add(1);
-				std::cout << "Done adding: " << m->getName() << std::endl;
-			}, m, insertPosition);
+			}, m);
+
+			auto modelToGPUFunc = std::bind([](Model* m) -> void {
+				m->loadToGPU();
+			}, m);
 
 			m->getAvailability() |= Asset::LOADING_TO_RAM;
 			m->getAvailability() |= Asset::LOADING_TO_GPU;
-			Engine::threading->addJob(new Job<decltype(loadJobFunc), VoidJobType>(loadJobFunc, []()->void {}));
+			auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, defaultJobDoneFunc);
+			job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, defaultJobDoneFunc));
+			Engine::threading->addJob(job);
 		}
 		else
 		{

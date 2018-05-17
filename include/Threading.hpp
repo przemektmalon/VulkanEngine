@@ -20,18 +20,26 @@ class Job : public JobBase
 {
 public:
 	Job() {}
-	Job(JobFuncType pJobFunction) : jobFunction(pJobFunction), doneFunction([]()->void {}) {}
-	Job(JobFuncType pJobFunction, DoneFuncType pDoneFunction) : jobFunction(pJobFunction), doneFunction(pDoneFunction) {}
+	Job(JobFuncType pJobFunction) : jobFunction(pJobFunction), doneFunction([]()->void {}), child(nullptr) {}
+	Job(JobFuncType pJobFunction, DoneFuncType pDoneFunction) : jobFunction(pJobFunction), doneFunction(pDoneFunction), child(nullptr) {}
 
 	void run()
 	{
 		jobFunction();
+		if (child)
+			Engine::threading->addGraphicsJob(child); /// TODO: might not be a graphics job
 		doneFunction();
 		Engine::threading->freeJob(this);
 	}
 
+	void setChild(JobBase* pChild)
+	{
+		child = pChild;
+	}
+
 private:
 
+	JobBase * child;
 	JobFuncType jobFunction;
 	DoneFuncType doneFunction;
 };
@@ -48,12 +56,21 @@ public:
 
 	// Systems add their jobs to the queue
 	void addJob(JobBase* jobToAdd);
+	
+	// Vulkan queue submissions can only be done from one thread
+	void addGraphicsJob(JobBase* jobToAdd);
 
 	// Each worker will grab some job
 	bool getJob(JobBase*& job);
 
+	// Graphics submission thread will take these jobs before regular ones
+	bool getGraphicsJob(JobBase*& job);
+
 	// Executed by each worker thread
 	void update();
+
+	// Executed by graphics submission thread before regular update
+	void updateGraphics();
 
 	// Are all jobs done
 	bool allJobsDone();
@@ -65,8 +82,10 @@ public:
 	void cleanupJobs();
 
 	std::mutex jobsQueueMutex;
+	std::mutex graphicsJobsQueueMutex;
 	std::mutex jobsFreeMutex;
 	std::queue<JobBase*> jobs;
+	std::queue<JobBase*> graphicsJobs;
 	std::list<JobBase*> jobsToFree;
 	std::atomic_char32_t totalJobsAdded;
 	std::atomic_char32_t totalJobsFinished;

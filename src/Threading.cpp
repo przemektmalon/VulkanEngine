@@ -5,15 +5,16 @@ Threading::Threading(int pNumThreads) : workers(pNumThreads)
 {
 	totalJobsAdded.store(0);
 	totalJobsFinished.store(0);
-	for (auto w : workers)
+	for (int i = 0; i < pNumThreads - 1; ++i)
 	{
-		w = new std::thread(&Threading::update, this);
+		workers[i] = new std::thread(&Threading::update, this);
 	}
+	workers[pNumThreads - 1] = new std::thread(&Threading::updateGraphics, this);
 }
 
 Threading::~Threading()
 {
-	/// TODO: notify threads to terminate
+	/// TODO: notify threads to force terminate ??
 	for (auto w : workers)
 	{
 		w->join();
@@ -26,6 +27,14 @@ void Threading::addJob(JobBase * jobToAdd)
 	totalJobsAdded.fetch_add(1);
 	jobs.emplace(jobToAdd);
 	jobsQueueMutex.unlock();
+}
+
+void Threading::addGraphicsJob(JobBase * jobToAdd)
+{
+	graphicsJobsQueueMutex.lock();
+	totalJobsAdded.fetch_add(1);
+	graphicsJobs.emplace(jobToAdd);
+	graphicsJobsQueueMutex.unlock();
 }
 
 bool Threading::getJob(JobBase *& job)
@@ -42,12 +51,40 @@ bool Threading::getJob(JobBase *& job)
 	return true;
 }
 
+bool Threading::getGraphicsJob(JobBase *& job)
+{
+	graphicsJobsQueueMutex.lock();
+	if (graphicsJobs.size() == 0)
+	{
+		graphicsJobsQueueMutex.unlock();
+		return false;
+	}
+	job = graphicsJobs.front();
+	graphicsJobs.pop();
+	graphicsJobsQueueMutex.unlock();
+	return true;
+}
+
 void Threading::update()
 {
 	JobBase* job;
 	while (true)
 	{
 		if (getJob(job))
+			job->run();
+		else
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+}
+
+void Threading::updateGraphics()
+{
+	JobBase* job;
+	while (true)
+	{
+		if (getGraphicsJob(job))
+			job->run();
+		else if (getJob(job))
 			job->run();
 		else
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));

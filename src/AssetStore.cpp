@@ -74,13 +74,16 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 		auto texLoadFunc = std::bind([](Texture* tex, TextureCreateInfo ci) -> void {
 			tex->loadToRAM(&ci);
-			tex->loadToGPU();
 		},&tex,ci);
 
+		auto texToGPUFunc = std::bind([](Texture* tex) -> void {
+			tex->loadToGPU();
+		}, &tex);
+
 		tex.prepare(paths, name);
-		//tex.loadToRAM(&ci);
-		//tex.loadToGPU();
-		Engine::threading->addJob(new Job<decltype(texLoadFunc), VoidJobType>(texLoadFunc, defaultJobDoneFunc));
+		auto job = new Job<decltype(texLoadFunc)>(texLoadFunc, defaultJobDoneFunc);
+		job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, defaultJobDoneFunc));
+		Engine::threading->addJob(job);
 	}
 
 	auto& tex = textures.try_emplace("blank").first->second;
