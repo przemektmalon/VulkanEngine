@@ -86,24 +86,6 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		Engine::threading->addJob(job);
 	}
 
-	auto& tex = textures.try_emplace("blank").first->second;
-	//auto& tex = textures.insert(std::make_pair("blank", Texture())).first->second;
-	TextureCreateInfo ci;
-	ci.genMipMaps = false;
-	ci.components = 4;
-	ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-	ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	ci.numLayers = 1;
-	ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	ci.width = 2;
-	ci.height = 2;
-	ci.bpp = 32;
-	int blank[4]; memset(blank, 0xFFFFFFFF, 16);
-	ci.pData = blank;
-	ci.format = VK_FORMAT_R8G8B8A8_UNORM;
-
-	tex.loadToGPU(&ci);
-
 	// Textures ---------------------------------------------------------------------
 
 	// Materials --------------------------------------------------------------------
@@ -202,6 +184,49 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 	}
 
 	// Fonts ------------------------------------------------------------------------
+}
+
+void AssetStore::loadDefaultAssets()
+{
+	{
+		auto& tex = textures.try_emplace("blank").first->second;
+		//auto& tex = textures.insert(std::make_pair("blank", Texture())).first->second;
+		TextureCreateInfo ci;
+		ci.genMipMaps = false;
+		ci.components = 4;
+		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ci.numLayers = 1;
+		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		ci.width = 2;
+		ci.height = 2;
+		ci.bpp = 32;
+		int blank[4]; memset(blank, 0xFFFFFFFF, 16);
+		ci.pData = blank;
+		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+
+		tex.loadToGPU(&ci);
+	}
+
+	{
+		auto& tex = textures.try_emplace("black").first->second;
+		//auto& tex = textures.insert(std::make_pair("blank", Texture())).first->second;
+		TextureCreateInfo ci;
+		ci.genMipMaps = false;
+		ci.components = 4;
+		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ci.numLayers = 1;
+		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		ci.width = 2;
+		ci.height = 2;
+		ci.bpp = 32;
+		int blank[4]; memset(blank, 0x00000000, 16);
+		ci.pData = blank;
+		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+
+		tex.loadToGPU(&ci);
+	}
 }
 
 void AssetStore::addMaterial(std::string name, std::string albedoSpec, std::string normalRough)

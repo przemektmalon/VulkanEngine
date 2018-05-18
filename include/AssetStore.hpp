@@ -10,6 +10,7 @@ public:
 
 	void cleanup();
 	void loadAssets(std::string assetListFilePath);
+	void loadDefaultAssets();
 
 	Material* getMaterial(std::string matName) 
 	{ 
