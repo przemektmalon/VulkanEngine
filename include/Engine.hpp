@@ -70,4 +70,5 @@ public:
 	static std::string validationMessage;
 	static OLayer* uiLayer;
 	static u64 gpuTimeStamps[12];
+	static std::atomic_char initialised;
 };

@@ -51,12 +51,7 @@ void Engine::start()
 	camera.setPosition(glm::fvec3(50, 50, 50));
 
 	renderer = new Renderer();
-	renderer->initialise();
-	physicsWorld.create();
-
-	scriptEnv.initChai();
-
-	PROFILE_END("init");
+	renderer->initialiseDevice();
 
 	threading = new Threading(4);
 
@@ -70,13 +65,37 @@ void Engine::start()
 
 	std::vector<std::string> profilerTags = { "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
 
-												"gbuffer", "shadow", "pbr", "overlay", "overlaycombine",  "screen", // GPU Tags
-												
-												"physmutex", "phystoenginemutex", "phystogpumutex", // Mutex tags
-												"transformmutex", "modeladdmutex"
+		"gbuffer", "shadow", "pbr", "overlay", "overlaycombine",  "screen", // GPU Tags
+
+		"physmutex", "phystoenginemutex", "phystogpumutex", // Mutex tags
+		"transformmutex", "modeladdmutex"
 	};
 
 	Profiler::prealloc(threadIDs, profilerTags); // Avoid thread clashes when allocating newly encountered tags
+
+	renderer->initialise();
+	
+	assets.loadDefaultAssets();
+	assets.loadAssets("/res/consolefontresource.xml");
+
+	console = new Console();
+	console->create();
+	renderer->overlayRenderer.addLayer(console->getLayer());
+
+	auto renderConsoleFunc = []() -> void {
+		Engine::renderer->overlayRenderer.updateOverlayCommands();
+		renderer->updateScreenDescriptorSets();
+		renderer->updateScreenCommands();
+		Engine::console->renderAtStartup();
+	};
+
+	auto renderConsoleJob = new Job<>(renderConsoleFunc, defaultAsyncJobDoneFunc);
+	Engine::threading->addGraphicsJob(renderConsoleJob, 1);
+
+	physicsWorld.create();
+	scriptEnv.initChai();
+
+	PROFILE_END("init");
 
 	PROFILE_START("assets");
 
@@ -97,7 +116,6 @@ void Engine::start()
 	renderer->updateGBufferDescriptorSets();
 	renderer->updateShadowDescriptorSets();
 	renderer->updatePBRDescriptorSets();
-	renderer->updateScreenDescriptorSets();
 
 	PROFILE_END("assets");
 
@@ -151,6 +169,8 @@ void Engine::start()
 		/// TODO: maybe give a few millisecond break here before checking for more jobs ?
 	}
 
+	initialised = 1;
+
 	auto prepareRenderJobFunc = []() -> void {
 		renderer->updateScreenCommands();
 		renderer->updatePBRCommands();
@@ -160,13 +180,9 @@ void Engine::start()
 
 	PROFILE_END("world");
 
-	std::cout << std::endl;
-	DBG_INFO("Initialisation time     : " << PROFILE_TO_S(PROFILE_GET_AVERAGE("init")) << " seconds");
-	DBG_INFO("Asset load time         : " << PROFILE_TO_S(PROFILE_GET_AVERAGE("assets")) << " seconds");
-	DBG_INFO("World loading time      : " << PROFILE_TO_S(PROFILE_GET_AVERAGE("world")) << " seconds");
-	
-	console = new Console();
-	console->create();
+	console->postMessage("Initialisation time : " + std::to_string(PROFILE_TO_S(PROFILE_GET_AVERAGE("init"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
+	console->postMessage("Asset load time     : " + std::to_string(PROFILE_TO_S(PROFILE_GET_AVERAGE("assets"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
+	console->postMessage("World loading time  : " + std::to_string(PROFILE_TO_S(PROFILE_GET_AVERAGE("world"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
 
 	Text* t = new Text;
 	t->setName("stats");
@@ -191,7 +207,7 @@ void Engine::start()
 	uiLayer->addElement(t);
 
 	renderer->overlayRenderer.addLayer(uiLayer);
-	renderer->overlayRenderer.addLayer(console->getLayer());
+	
 
 	scriptEnv.evalFile("./res/scripts/script.chai");
 
@@ -276,14 +292,13 @@ void Engine::start()
 	threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc));
 	threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc));
 	threading->addJob(new Job<>(physicsToGPUJobFunc, defaultJobDoneFunc));
-	threading->addJob(new Job<>(renderPrepareJobAFunc, defaultJobDoneFunc));
+	threading->addGraphicsJob(new Job<>(renderPrepareJobAFunc, defaultJobDoneFunc));
 	threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc));
 
 	Time frameStart; frameStart = engineStartTime;
 	frameTime.setMicroSeconds(0);
 	double fpsDisplay = 0.f;
 	int frames = 0;
-	std::vector<float> times;
 	while (engineRunning)
 	{
 		PROFILE_START("msgevent");
@@ -375,8 +390,6 @@ void Engine::start()
 		}
 		physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
 
-		console->update();
-
 		// Submit any gpu transfer jobs
 		JobBase* gpuTransferJob;
 		while (threading->getGPUTransferJob(gpuTransferJob))
@@ -391,6 +404,8 @@ void Engine::start()
 			frameTime = clock.time() - frameStart;
 			frameStart = clock.time();
 
+			console->update();
+
 			PROFILE_GPU_ADD_TIME("gbuffer", Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER], Engine::gpuTimeStamps[Renderer::END_GBUFFER]);
 			PROFILE_GPU_ADD_TIME("shadow", Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW], Engine::gpuTimeStamps[Renderer::END_SHADOW]);
 			PROFILE_GPU_ADD_TIME("pbr", Engine::gpuTimeStamps[Renderer::BEGIN_PBR], Engine::gpuTimeStamps[Renderer::END_PBR]);
@@ -403,7 +418,7 @@ void Engine::start()
 			threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc));
 			threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc));
 			threading->addJob(new Job<>(physicsToGPUJobFunc, defaultJobDoneFunc));
-			threading->addJob(new Job<>(renderPrepareJobAFunc, defaultJobDoneFunc));
+			threading->addGraphicsJob(new Job<>(renderPrepareJobAFunc, defaultJobDoneFunc));
 			threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc));
 
 			// FPS display
@@ -678,3 +693,4 @@ Console* Engine::console;
 Time Engine::frameTime;
 ScriptEnv Engine::scriptEnv;
 Threading* Engine::threading;
+std::atomic_char Engine::initialised = 0;

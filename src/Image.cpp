@@ -5,6 +5,8 @@
 #include "stb_image.h"
 #include "stb_image_write.h"
 #include "cro_mipmap.h"
+#include "Engine.hpp"
+#include "Console.hpp"
 
 void Image::setSize(int pWidth, int pHeight, int pComponents)
 {
@@ -17,12 +19,15 @@ void Image::load(std::string path, int pComponents)
 	char buff[FILENAME_MAX];
   	GetCurrentDir( buff, FILENAME_MAX );
   	std::string current_working_dir(buff);
+
+	Engine::console->postMessage("Loading image: " + path, glm::fvec3(0.8, 0.8, 0.3));
+
 	if (path[0] == '/')
 		path = current_working_dir + path;
 	else
 		path = current_working_dir + "/" + path;
 
-	DBG_INFO("Loading image: " << path);
+	
 	unsigned char* loadedData = stbi_load(path.c_str(), &width, &height, &components, pComponents);
 	if (pComponents != 0)
 	{

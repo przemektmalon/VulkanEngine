@@ -325,7 +325,7 @@ void main()
 	barrier();
 
 	vec3 litPixel = vec3(0.0);
-	float ambient = 0.07;
+	float ambient = 0.12;
 	vec4 albedoSpec = vec4(0.0);
 	float ssaoVal = 1.0;
 

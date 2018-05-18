@@ -75,7 +75,7 @@ void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 	availability |= ON_RAM;
 	availability &= ~LOADING_TO_RAM;
 
-	DBG_INFO("Model loaded: " << diskPaths[0]);
+	Engine::console->postMessage("Model loaded: " + diskPaths[0], glm::fvec3(0.8, 0.8, 0.3));
 }
 
 void Model::loadToGPU(void * pCreateStruct)

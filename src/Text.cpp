@@ -42,7 +42,7 @@ void Text::Style::setColour(glm::fvec4 pColour)
 
 void Text::update()
 {
-	glyphs = style.font->requestGlyphs(style.charSize, this);
+	glyphs = style.font->requestGlyphs(style.charSize, this); /// TODO: We get device lost sometimes, most likely a threading issue !!
 	bounds.zero();
 
 	drawable = false;
@@ -182,6 +182,8 @@ void Text::setFont(Font * pFont)
 
 void Text::setCharSize(u16 pCharSize)
 {
+	if (style.charSize == pCharSize)
+		return;
 	style.font->releaseGlyphs(style.charSize, this);
 	style.setCharSize(pCharSize);
 	style.font->requestGlyphs(pCharSize, this);

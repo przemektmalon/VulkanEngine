@@ -166,9 +166,4 @@
 		<physics>_groundphysics.xml</physics>
 	</model>
 
-	<font>
-		<name>consola</name>
-		<path>_consola.ttf</path>
-	</font>
-
 </resources>

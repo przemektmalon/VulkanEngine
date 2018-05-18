@@ -63,6 +63,7 @@ private:
 class OverlayRenderer
 {
 	friend class Renderer;
+	friend class Console;
 public:
 
 	void createOverlayRenderPass();

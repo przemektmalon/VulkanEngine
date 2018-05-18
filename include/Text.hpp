@@ -14,8 +14,8 @@ public:
 
 	struct Style
 	{
-		Style() : font(0), charSize(16), originPreDef(TopLeft), origin(0, 0), colour(glm::fvec4(1, 1, 1, 1)) {}
-		Style(Font* pFont, u16 pCharSize = 16, Origin pOriginPreDef = TopLeft, glm::ivec2 pOrigin = glm::ivec2(0, 0), glm::fvec4 pColour = glm::fvec4(1, 1, 1, 1)) :
+		Style() : font(0), charSize(20), originPreDef(TopLeft), origin(0, 0), colour(glm::fvec4(1, 1, 1, 1)) {}
+		Style(Font* pFont, u16 pCharSize = 20, Origin pOriginPreDef = TopLeft, glm::ivec2 pOrigin = glm::ivec2(0, 0), glm::fvec4 pColour = glm::fvec4(1, 1, 1, 1)) :
 			font(pFont),
 			charSize(pCharSize),
 			originPreDef(pOriginPreDef),

@@ -8,7 +8,7 @@
 class Console
 {
 public:
-	Console() : active(false), layer(0), timeSinceBlink(0), blinkerPosition(1), oldBlinkerPosition(1), scrollPosition(0) {}
+	Console() : active(true), layer(0), timeSinceBlink(0), blinkerPosition(1), oldBlinkerPosition(1), scrollPosition(0) {}
 
 	void create();
 	void update();
@@ -19,6 +19,10 @@ public:
 	void toggle() { active = !active; layer->setDoDraw(active); }
 	bool isActive() { return active; }
 	OLayer* getLayer() { return layer; }
+
+	void postMessage(std::string msg, glm::fvec3 colour);
+
+	void renderAtStartup();
 
 private:
 
@@ -35,10 +39,12 @@ private:
 	UIPolygon* backs[2];
 	UIPolygon* blinker;
 
+	std::mutex messagePostMutex;
+
 	float scrollPosition;
 	int blinkerPosition;
 	int oldBlinkerPosition;
 	float timeSinceBlink;
 	bool active;
-	const int historyLimit = 30;
+	const int historyLimit = 50;
 };

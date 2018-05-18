@@ -62,8 +62,16 @@ void Font::cleanupGPU()
 
 GlyphContainer * Font::loadGlyphs(u16 pCharSize)
 {
-	auto ins = glyphContainers.insert(std::make_pair(pCharSize, GlyphContainer(pCharSize, ftFace)));
-	return &ins.first->second;
+	auto findGlyphs = glyphContainers.find(pCharSize);
+	if (findGlyphs == glyphContainers.end()) {
+		DBG_INFO("Creating new glyphs for: " << name << ", size " << (int)pCharSize);
+		auto ins = glyphContainers.insert(std::make_pair(pCharSize, GlyphContainer(pCharSize, ftFace)));
+		return &ins.first->second;
+	}
+	else {
+		return &findGlyphs->second;
+	}
+	
 }
 
 void GlyphContainer::load(u16 pCharSize, FT_Face pFace)

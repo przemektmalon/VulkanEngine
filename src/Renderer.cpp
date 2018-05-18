@@ -10,17 +10,20 @@
 
 thread_local VkCommandPool Renderer::commandPool;
 
+void Renderer::initialiseDevice()
+{
+	createLogicalDevice();
+}
+
 /*
 	@brief	Initialise renderer and Vulkan objects
 */
 void Renderer::initialise()
 {
-	// Logical device, memory pools, samplers, and semaphores
-	createLogicalDevice();
+	// Memory pools, samplers, and semaphores
 	createDescriptorPool();
 	createCommandPool();
 	createQueryPool();
-
 	createTextureSampler();
 	createSemaphores();
 
@@ -495,15 +498,15 @@ void Renderer::createLogicalDevice()
 {
 	DBG_INFO("Creating Vulkan logical device");
 	
-	// Initialise one queue for our device which will be used for everything (rendering presenting transferring operations)
+	// Initialise two queues for our device
 	VkDeviceQueueCreateInfo qci = {};
 	qci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 	qci.pNext = 0;
 	qci.flags = 0;
 	qci.queueFamilyIndex = 0;
-	qci.queueCount = 1;
-	float priority = 1.f;
-	qci.pQueuePriorities = &priority;
+	qci.queueCount = 2;
+	float priorities[2] = { 1.f, 1.f };
+	qci.pQueuePriorities = priorities;
 
 	VkPhysicalDeviceFeatures pdf = {};
 	pdf.samplerAnisotropy = VK_TRUE;
@@ -539,7 +542,8 @@ void Renderer::createLogicalDevice()
 	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &computeQueue));
 
 	// Separate queue for the 'main' thread for transfer operations
-	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &transferQueue));}
+	VK_VALIDATE(vkGetDeviceQueue(device, 0, 1, &transferQueue));
+}
 
 /*
 	@brief	Create Vulkan command pool for submitting commands to a particular queue
@@ -688,13 +692,13 @@ void Renderer::createDescriptorPool()
 
 	std::array<VkDescriptorPoolSize, 1> poolSizesFreeable = {};
 	poolSizesFreeable[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizesFreeable[0].descriptorCount = 50;
+	poolSizesFreeable[0].descriptorCount = 200;
 
 	VkDescriptorPoolCreateInfo poolInfoFreeable = {};
 	poolInfoFreeable.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfoFreeable.poolSizeCount = static_cast<uint32_t>(poolSizesFreeable.size());
 	poolInfoFreeable.pPoolSizes = poolSizesFreeable.data();
-	poolInfoFreeable.maxSets = 50;
+	poolInfoFreeable.maxSets = 200;
 	poolInfoFreeable.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfoFreeable, nullptr, &freeableDescriptorPool));
@@ -744,6 +748,45 @@ void Renderer::destroyStagingBuffer(Buffer& stagingBuffer)
 	stagingBuffer.destroy();
 }
 
+VkCommandBuffer Renderer::beginTransferCommands()
+{
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = commandPool;
+	allocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer commandBuffer;
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer));
+
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+
+	return commandBuffer;
+}
+
+VkSubmitInfo Renderer::endTransferCommands(VkCommandBuffer commandBuffer)
+{
+	VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	return submitInfo;
+}
+
+void Renderer::submitTransferOperation(VkSubmitInfo submitInfo, VkFence fence)
+{
+	VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
+	VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue)); /// TODO: non blocking queue submissions !
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, submitInfo.pCommandBuffers));
+}
+
 VkCommandBuffer Renderer::beginSingleTimeCommands() 
 {
     VkCommandBufferAllocateInfo allocInfo = {};
@@ -764,7 +807,7 @@ VkCommandBuffer Renderer::beginSingleTimeCommands()
     return commandBuffer;
 }
 
-void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
+void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fence) {
 	VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
     VkSubmitInfo submitInfo = {};
@@ -772,8 +815,12 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
-	VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue));
+	Engine::threading->physToGPUMutex.lock();
+	
+	VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
+	VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue)); /// TODO: non blocking queue submissions !
+
+	Engine::threading->physToGPUMutex.unlock();
 
 	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer));
 }

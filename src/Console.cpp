@@ -4,6 +4,9 @@
 #include "Engine.hpp"
 #include "Window.hpp"
 #include "Scripting.hpp"
+#include "Threading.hpp"
+#include "Renderer.hpp"
+#include "Profiler.hpp"
 
 void Console::create()
 {
@@ -59,6 +62,7 @@ void Console::create()
 
 void Console::update()
 {
+	messagePostMutex.lock();
 	if (input->getString() != oldText || oldBlinkerPosition != blinkerPosition)
 	{
 		std::vector<Vertex2D> verts;
@@ -87,6 +91,7 @@ void Console::update()
 		blinker->toggleDoDraw();
 		timeSinceBlink = 0;
 	}
+	messagePostMutex.unlock();
 }
 
 void Console::inputChar(char c)
@@ -116,24 +121,10 @@ void Console::inputChar(char c)
 	}
 	else if (c == 13) // enter
 	{
-		/// TODO: process command
-		if (output.size() == historyLimit)
-		{
-			auto t = output.back();
-			t->cleanup();
-			layer->removeElement(t);
-			delete t;
-			output.pop_back();
-			history.pop_back();
-		}
-		input->setColour(glm::fvec4(0.9, 0.9, 0.9, 1.0));
-		history.push_front(input->getString());
-		output.push_front(input);
-		auto outputString = input->getString();
-		outputString.replace(0, 1, "$");
+		postMessage(std::string(input->getString().c_str() + 2), glm::fvec3(0.9, 0.9, 0.9));
 
-		output.front()->setString(outputString);
-		output.front()->setDepth(2);
+		layer->removeElement(input);
+		delete input;
 
 		input = new Text();
 
@@ -148,7 +139,7 @@ void Console::inputChar(char c)
 
 		if (s.length() > 2)
 		{
-			std::string result("$ Done");
+			std::string result("Done");
 			glm::fvec4 col(0.1, 0.1, 0.9, 1.0);
 			try {
 				
@@ -169,16 +160,16 @@ void Console::inputChar(char c)
 				if (typeInfo == any_string.type())
 				{
 					decltype(sh_string) valPtr = retVal.cast<decltype(sh_string)>();
-					result = std::string("$ ") + *valPtr;
+					result = *valPtr;
 				}
 				else if (typeInfo == any_string_nonconst.type())
 				{
 					decltype(sh_string_nonconst) valPtr = retVal.cast<decltype(sh_string_nonconst)>();
-					result = std::string("$ ") + *valPtr;
+					result = *valPtr;
 				}
 				else
 				{
-					result = std::string("$ Done ( ") + typeInfo.name() + " )";
+					result = std::string("Done ( ") + typeInfo.name() + " )";
 				}
 
 
@@ -189,14 +180,14 @@ void Console::inputChar(char c)
 	chaiscript::detail::Any any_##TYPE## ( sh_##TYPE## ); \
 	if (typeInfo == any_##TYPE##.type() ) { \
 		decltype( sh_##TYPE## ) valPtr = retVal.cast<decltype( sh_##TYPE## )>(); \
-		result = std::string("$ ") + std::to_string(*valPtr); }
+		result = std::to_string(*valPtr); }
 
 #define CHECK_PRINT_CONST_TYPE_INFO(TYPE) \
 	auto sh_const_##TYPE## = std::make_shared < ##TYPE const>(); \
 	chaiscript::detail::Any any_const_##TYPE## ( sh_const_##TYPE## ); \
 	if (typeInfo == any_const_##TYPE##.type() ) { \
 		decltype( sh_const_##TYPE## ) valPtr = retVal.cast<decltype( sh_const_##TYPE## )>(); \
-		result = std::string("$ ") + std::to_string(*valPtr); }
+		result = std::to_string(*valPtr); }
 
 				// Signed integers
 				CHECK_PRINT_TYPE_INFO(s8);
@@ -226,34 +217,15 @@ void Console::inputChar(char c)
 			}
 			catch (chaiscript::exception::eval_error e)
 			{
-				result = "$ " + std::string(e.what());
+				result = std::string(e.what());
 				col = glm::fvec4(0.9, 0.1, 0.1, 1.0);
 			}
-			auto res = new Text();
-
-			if (output.size() == historyLimit)
-			{
-				auto t = output.back();
-				t->cleanup();
-				layer->removeElement(t);
-				delete t;
-				output.pop_back();
-			}
-
-			res->setFont(Engine::assets.getFont("consola"));
-			res->setColour(col);
-			res->setCharSize(20);
-			res->setString(result);
-			res->setDepth(2);
-
-			layer->addElement(res);
-			output.push_front(res);
-		}
 			
-
+			postMessage(result, glm::fvec3(col.x, col.y, col.z));
+		}
+		
 		scrollPosition = 0;
 		blinkerPosition = 1;
-		updatePositions();
 
 		return;
 	}
@@ -280,6 +252,7 @@ void Console::moveBlinker(Key k)
 
 void Console::scroll(s16 wheelDelta)
 {
+	messagePostMutex.lock();
 	if (wheelDelta > 0)
 	{
 		scrollPosition = std::min((std::max((float)output.size(), 10.f) - 10.f) * (input->getGlyphs()->getHeight() + 2), scrollPosition + 22.f);
@@ -287,8 +260,116 @@ void Console::scroll(s16 wheelDelta)
 	}
 	else
 	{
-		scrollPosition = std::max(0.f, scrollPosition - 10.f);
+		scrollPosition = std::max(0.f, scrollPosition - 22.f);
 		updatePositions();
+	}
+	messagePostMutex.unlock();
+}
+
+void Console::postMessage(std::string msg, glm::fvec3 colour)
+{
+	messagePostMutex.lock();
+
+	if (output.size() == historyLimit)
+	{
+		auto t = output.back();
+		t->cleanup();
+		layer->removeElement(t);
+		delete t;
+		output.pop_back();
+	}
+	
+	Text* msgText = new Text;
+
+	msgText->setFont(Engine::assets.getFont("consola"));
+	msgText->setColour(glm::fvec4(colour.x, colour.y, colour.z, 1.0));
+	msgText->setCharSize(20);
+	msgText->setString("$ " + msg);
+	msgText->setPosition(glm::fvec2(3, 253));
+	msgText->setDepth(2);
+
+	layer->addElement(msgText);
+
+	output.push_front(msgText);
+
+	updatePositions();
+
+	messagePostMutex.unlock();
+}
+
+void Console::renderAtStartup()
+{
+	Engine::threading->physToGPUMutex.lock();
+
+	Engine::renderer->overlayRenderer.updateOverlayCommands();
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submitInfo.waitSemaphoreCount = 0;
+	submitInfo.pWaitDstStageMask = 0;
+	submitInfo.pCommandBuffers = &Engine::renderer->overlayRenderer.elementCommandBuffer;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pSignalSemaphores = &Engine::renderer->overlayFinishedSemaphore;
+	submitInfo.signalSemaphoreCount = 1;
+
+	VK_CHECK_RESULT(vkQueueSubmit(Engine::renderer->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
+
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = &Engine::renderer->overlayFinishedSemaphore;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.pCommandBuffers = &Engine::renderer->overlayRenderer.combineCommandBuffer;
+	submitInfo.pSignalSemaphores = &Engine::renderer->overlayCombineFinishedSemaphore;
+	submitInfo.signalSemaphoreCount = 1;
+
+	VK_CHECK_RESULT(vkQueueSubmit(Engine::renderer->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
+	uint32_t imageIndex;
+	VkResult result = vkAcquireNextImageKHR(Engine::renderer->device, Engine::renderer->swapChain, std::numeric_limits<uint64_t>::max(), Engine::renderer->imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+	if (result != VK_SUCCESS)
+	{
+		DBG_SEVERE("Could not acquire next image");
+		return;
+	}
+
+	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	VkSemaphore waitSems[] = { Engine::renderer->imageAvailableSemaphore, Engine::renderer->overlayCombineFinishedSemaphore };
+	submitInfo.pWaitSemaphores = waitSems;
+	submitInfo.waitSemaphoreCount = 2;
+	submitInfo.pWaitDstStageMask = waitStages2;
+	submitInfo.pCommandBuffers = &Engine::renderer->screenCommandBuffers[imageIndex];
+	submitInfo.pSignalSemaphores = &Engine::renderer->screenFinishedSemaphore;
+
+	VK_CHECK_RESULT(vkQueueSubmit(Engine::renderer->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
+
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = &Engine::renderer->screenFinishedSemaphore;
+
+	VkSwapchainKHR swapChains[] = { Engine::renderer->swapChain };
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+
+	presentInfo.pImageIndices = &imageIndex;
+
+	VK_CHECK_RESULT(vkQueuePresentKHR(Engine::renderer->presentQueue, &presentInfo));
+
+	VK_CHECK_RESULT(vkQueueWaitIdle(Engine::renderer->presentQueue));
+
+	Engine::threading->physToGPUMutex.unlock();
+
+	if (!Engine::initialised.load())
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		auto renderAgainFunc = std::bind(&Console::renderAtStartup, this);
+		auto renderAgainJob = new Job<decltype(renderAgainFunc)>(renderAgainFunc, defaultAsyncJobDoneFunc);
+		Engine::threading->addGraphicsJob(renderAgainJob, 1);
 	}
 }
 

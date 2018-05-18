@@ -1,0 +1,13 @@
+<resources>
+
+	<resfolder>./res/</resfolder>
+	<texfolder>textures/</texfolder>
+	<modelfolder>models/</modelfolder>
+	<fontfolder>fonts/</fontfolder>
+
+	<font>
+		<name>consola</name>
+		<path>_consola.ttf</path>
+	</font>
+
+</resources>

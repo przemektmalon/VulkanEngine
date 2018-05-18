@@ -37,6 +37,7 @@ public:
 	Renderer() : vertexInputByteOffset(0), indexInputByteOffset(0) {}
 
 	// Top level
+	void initialiseDevice();
 	void initialise();
 	void reInitialise();
 	void cleanup();
@@ -340,8 +341,13 @@ public:
 	// Destroys staging buffer
 	void destroyStagingBuffer(Buffer& stagingBuffer);
 	
+	VkCommandBuffer beginTransferCommands();
+	VkSubmitInfo endTransferCommands(VkCommandBuffer commandBuffer);
+	void submitTransferOperation(VkSubmitInfo submitInfo, VkFence fence = VK_NULL_HANDLE);
+
 	VkCommandBuffer beginSingleTimeCommands();
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fence = VK_NULL_HANDLE);
 	void updateCameraBuffer();
 	void updateTransformBuffer();
 };
+
