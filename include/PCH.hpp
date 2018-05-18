@@ -88,6 +88,16 @@
 				DBG_SEVERE("VK_ERROR_FORMAT_NOT_SUPPORTED"); break; \
 			case(VK_ERROR_FRAGMENTED_POOL): \
 				DBG_SEVERE("VK_ERROR_FRAGMENTED_POOL"); break; \
+			case(VK_NOT_READY): \
+				DBG_WARNING("VK_NOT_READY"); break; \
+			case(VK_TIMEOUT): \
+				DBG_WARNING("VK_TIMEOUT"); break; \
+			case(VK_EVENT_SET): \
+				DBG_WARNING("VK_EVENT_SET"); break; \
+			case(VK_EVENT_RESET): \
+				DBG_WARNING("VK_EVENT_RESET"); break; \
+			case(VK_INCOMPLETE): \
+				DBG_WARNING("VK_INCOMPLETE"); break; \
 			default: \
 				DBG_SEVERE("VK_ERROR"); break; \
 		} \
