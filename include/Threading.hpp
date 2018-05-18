@@ -74,7 +74,10 @@ public:
 	// The main thread will grab these jobs each iteration of its loop and send them to the GPU
 	bool getGPUTransferJob(JobBase*& job);
 
-	// Executed by each worker thread
+
+	// Thread_locals with special construction are initialised in the 'update' (thread entry) functions
+
+	// Executed by each worker thread 
 	void update();
 
 	// Executed by graphics submission thread before regular update

@@ -202,9 +202,11 @@ void Engine::start()
 	};
 
 	std::function<void(void)> physicsToGPUJobFunc = []() -> void {
+		Engine::threading->physToEngineMutex.lock();
 		Engine::threading->physToGPUMutex.lock();
 		Engine::renderer->updateTransformBuffer();
 		Engine::threading->physToGPUMutex.unlock();
+		Engine::threading->physToEngineMutex.unlock();
 	};
 
 	std::function<void(void)> physicsToGPUJobDoneFunc = [&physicsToGPUJobFunc, &physicsToGPUJobDoneFunc]() -> void {

@@ -376,7 +376,7 @@ void Renderer::createGBufferCommands()
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = gBufferCommandPool;
+	allocInfo.commandPool = commandPool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
@@ -393,11 +393,11 @@ void Renderer::updateGBufferCommands()
 	/// TODO: each thread will have a dynamic number of fences we will have to wait for all of them to signal (from the previous frame)
 	VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferFence, true, std::numeric_limits<u64>::max()));
 
-	VK_CHECK_RESULT(vkResetCommandPool(device, gBufferCommandPool, 0));
+	//VK_CHECK_RESULT(vkResetCommandPool(device, commandPool, 0));
 
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = gBufferCommandPool;
+	allocInfo.commandPool = commandPool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 

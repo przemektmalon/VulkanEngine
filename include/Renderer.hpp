@@ -66,11 +66,43 @@ public:
 	VkFormat swapChainImageFormat;
 	VkExtent2D renderResolution;
 
+
+
+
+	// Thread safe command pools and fencing
+
+	// For now just make sure each thread has its own command pool
+	static thread_local VkCommandPool commandPool;
+
+
+
+	// We have no guarantee that every job will be done on the same thread on concurrent frames
+	// A job might be waiting for a fence from a different job to finish before it can be recorded
+	// Double buffering should minimize this cost, as we will be grabbing a pool from the frame before last which should be finished
+
+	/*struct ThreadSafeCommands
+	{
+		VkCommandPool commandPool[2];
+		int currentPool;
+
+		// The current pool will be toggled when all submissions are done ( after all buffers are created )
+
+		// Command buffers will be allocated on each thread from the current pool and added here
+		std::vector<VkCommandBuffer> commandsToSubmit;
+
+		// A pool can be reset when all fences are signalled
+		std::vector<VkFence> fences;
+	};
+
+	static thread_local ThreadSafeCommands threadSafeCommands;*/
+
+
+
+
 	// Memory pools
 	VkDescriptorPool descriptorPool;
 	VkDescriptorPool freeableDescriptorPool;
-	VkCommandPool commandPool;
-	VkCommandPool gBufferCommandPool;
+	//VkCommandPool commandPool;
 	VkFence gBufferFence;
 	VkQueryPool queryPool;
 
@@ -91,6 +123,7 @@ public:
 	void createLogicalDevice();
 	void createDescriptorPool();
 	void createCommandPool();
+	static void createPerThreadCommandPools();
 	void createQueryPool();
 	void createTextureSampler();
 	void createSemaphores();

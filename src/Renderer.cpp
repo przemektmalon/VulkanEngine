@@ -8,6 +8,8 @@
 #include "Threading.hpp"
 #include "Profiler.hpp"
 
+thread_local VkCommandPool Renderer::commandPool;
+
 /*
 	@brief	Initialise renderer and Vulkan objects
 */
@@ -112,8 +114,8 @@ void Renderer::initialise()
 		pl.setColour(col * glm::fvec3(2.3));
 		pl.setLinear(0.001);
 		pl.setQuadratic(0.001);
-		pl.setFadeStart(200);
-		pl.setFadeLength(50);
+		pl.setFadeStart(10000);
+		pl.setFadeLength(500);
 	}
 
 	lightManager.updateLightCounts();
@@ -550,14 +552,24 @@ void Renderer::createCommandPool()
 
 	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool));
 
-	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &gBufferCommandPool));
-
 	VkFenceCreateInfo fci = {};
 	fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 	fci.pNext = 0;
 
 	VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &gBufferFence));
+}
+
+void Renderer::createPerThreadCommandPools()
+{
+	DBG_INFO("Creating Vulkan command pool");
+
+	VkCommandPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex = 0;
+	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+	VK_CHECK_RESULT(vkCreateCommandPool(Engine::renderer->device, &poolInfo, nullptr, &commandPool));
 }
 
 void Renderer::createQueryPool()

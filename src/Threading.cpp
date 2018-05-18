@@ -1,5 +1,7 @@
 #include "PCH.hpp"
 #include "Threading.hpp"
+#include "Engine.hpp"
+#include "Renderer.hpp"
 
 Threading::Threading(int pNumThreads) : workers(pNumThreads)
 {
@@ -89,6 +91,7 @@ bool Threading::getGPUTransferJob(JobBase *& job)
 
 void Threading::update()
 {
+	Engine::renderer->createPerThreadCommandPools();
 	JobBase* job;
 	while (true)
 	{
@@ -101,10 +104,11 @@ void Threading::update()
 
 void Threading::updateGraphics()
 {
+	Engine::renderer->createPerThreadCommandPools();
 	JobBase* job;
 	while (true)
 	{
-		if (getGraphicsJob(job))
+		if (getGraphicsJob(job)) // Graphics submission jobs have priority (they should be very fast)
 			job->run();
 		else if (getJob(job))
 			job->run();
