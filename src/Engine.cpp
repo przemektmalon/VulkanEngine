@@ -48,6 +48,8 @@ void Engine::start()
 
 	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 2.f, 0.1, maxDepth);
 
+	camera.setPosition(glm::fvec3(50, 50, 50));
+
 	renderer = new Renderer();
 	renderer->initialise();
 	physicsWorld.create();
@@ -66,7 +68,13 @@ void Engine::start()
 	}
 	threadIDs[i] = std::this_thread::get_id(); // Main thread can also use profiler
 
-	std::vector<std::string> profilerTags = { "setuprender", "physics", "submitrender", "scripts", "gbuffer", "shadow", "pbr", "overlay", "overlaycombine", "screen" };
+	std::vector<std::string> profilerTags = { "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
+
+												"gbuffer", "shadow", "pbr", "overlay", "overlaycombine",  "screen", // GPU Tags
+												
+												"physmutex", "phystoenginemutex", "phystogpumutex", // Mutex tags
+												"transformmutex", "modeladdmutex"
+	};
 
 	Profiler::prealloc(threadIDs, profilerTags); // Avoid thread clashes when allocating newly encountered tags
 
@@ -166,10 +174,20 @@ void Engine::start()
 	t->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	t->setCharSize(20);
 	t->setString("");
-	t->setPosition(glm::fvec2(0, 310));
+	t->setPosition(glm::fvec2(0, 290));
 
 	uiLayer = new OLayer;
 	uiLayer->create(glm::ivec2(1280, 720));
+	uiLayer->addElement(t);
+
+	t = new Text;
+	t->setName("mutexstats");
+	t->setFont(Engine::assets.getFont("consola"));
+	t->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
+	t->setCharSize(20);
+	t->setString("");
+	t->setPosition(glm::fvec2(400, 590));
+
 	uiLayer->addElement(t);
 
 	renderer->overlayRenderer.addLayer(uiLayer);
@@ -177,70 +195,73 @@ void Engine::start()
 
 	scriptEnv.evalFile("./res/scripts/script.chai");
 
-	std::function<void(void)> physicsJobFunc = []() -> void {
+	auto physicsJobFunc = []() -> void {
+		PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock());
 		PROFILE_START("physics");
-		Engine::threading->physBulletMutex.lock();
 		physicsWorld.step(Engine::frameTime);
-		Engine::threading->physBulletMutex.unlock();
 		PROFILE_END("physics");
+		Engine::threading->physBulletMutex.unlock();
+		
 	};
 
-	std::function<void(void)> physicsJobDoneFunc = [&physicsJobFunc, &physicsJobDoneFunc]() -> void {
-		Engine::threading->totalJobsFinished.fetch_add(1);
-	};
-
-	std::function<void(void)> physicsToEngineJobFunc = []() -> void {
-		Engine::threading->physToEngineMutex.lock();
-		Engine::threading->instanceTransformMutex.lock();
+	auto physicsToEngineJobFunc = []() -> void {
+		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
+		PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
+		PROFILE_START("physics");
 		physicsWorld.updateModels();
+		PROFILE_END("physics");
 		Engine::threading->instanceTransformMutex.unlock();
 		Engine::threading->physToEngineMutex.unlock();
 	};
 
-	std::function<void(void)> physicsToEngineJobDoneFunc = [&physicsToEngineJobFunc, &physicsToEngineJobDoneFunc]() -> void {
-		Engine::threading->totalJobsFinished.fetch_add(1);
-	};
-
-	std::function<void(void)> physicsToGPUJobFunc = []() -> void {
-		Engine::threading->physToEngineMutex.lock();
-		Engine::threading->physToGPUMutex.lock();
+	auto physicsToGPUJobFunc = []() -> void {
+		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
+		PROFILE_MUTEX("phystogpumutex", Engine::threading->physToGPUMutex.lock());
+		PROFILE_START("physics");
 		Engine::renderer->updateTransformBuffer();
+		PROFILE_END("physics");
 		Engine::threading->physToGPUMutex.unlock();
 		Engine::threading->physToEngineMutex.unlock();
 	};
 
-	std::function<void(void)> physicsToGPUJobDoneFunc = [&physicsToGPUJobFunc, &physicsToGPUJobDoneFunc]() -> void {
-		Engine::threading->totalJobsFinished.fetch_add(1);
-	};
-
-	std::function<void(void)> renderJobFunc = []() -> void {
-
-		PROFILE_START("setuprender");
-
-		Engine::threading->physToEngineMutex.lock();
-		Engine::world.frustumCulling(&Engine::camera);
-		Engine::renderer->populateDrawCmdBuffer(); // Mutex with engine model transform update
-		Engine::threading->physToEngineMutex.unlock();
-
-		Engine::renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
-		Engine::renderer->updateShadowCommands(); // Mutex with engine model transform update
-		Engine::renderer->updateGBufferCommands();
-		Engine::renderer->updateCameraBuffer();
-
-		PROFILE_END("setuprender");
-
-		Engine::threading->physToGPUMutex.lock();
+	auto renderJobFunc = []() -> void {
+		PROFILE_MUTEX("phystogpumutex", Engine::threading->physToGPUMutex.lock());
 		Engine::renderer->render();
 		Engine::threading->physToGPUMutex.unlock();
 	};
 
-	std::function<void(void)> renderJobDoneFunc = [&renderJobFunc, &renderJobDoneFunc]() -> void {
-		Engine::threading->totalJobsFinished.fetch_add(1);
+	auto renderPrepareJobBFunc = [&renderJobFunc]() -> void {
+		PROFILE_START("setuprender");
+
+		Engine::renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
+		Engine::renderer->updateCameraBuffer();
+
+		auto nextJob = new Job<>(renderJobFunc, defaultJobDoneFunc);
+		Engine::threading->addGraphicsJob(nextJob);
+
+		PROFILE_END("setuprender");
 	};
 
-	std::function<void(void)> scriptsJobFunc = []() -> void {
+	auto renderPrepareJobAFunc = [&renderPrepareJobBFunc]() -> void {
+		PROFILE_START("setuprender");
+
+		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
+		Engine::world.frustumCulling(&Engine::camera);
+		Engine::renderer->populateDrawCmdBuffer(); // Mutex with engine model transform update
+		Engine::threading->physToEngineMutex.unlock();
+
+		Engine::renderer->updateShadowCommands(); // Mutex with engine model transform update
+		Engine::renderer->updateGBufferCommands();
+
+		auto nextJob = new Job<>(renderPrepareJobBFunc, defaultJobDoneFunc);
+		Engine::threading->addJob(nextJob);
+
+		PROFILE_END("setuprender");
+	};
+
+	auto scriptsJobFunc = []() -> void {
 		PROFILE_START("scripts");
-		Engine::threading->instanceTransformMutex.lock();
+		PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
 		try {
 			Engine::scriptEnv.evalString("updateCamera()");
 		}
@@ -252,15 +273,11 @@ void Engine::start()
 		PROFILE_END("scripts");
 	};
 
-	std::function<void(void)> scriptsJobDoneFunc = []() -> void {
-		Engine::threading->totalJobsFinished.fetch_add(1);
-	};
-
-	threading->addJob(new Job<>(physicsJobFunc, physicsJobDoneFunc));
-	threading->addJob(new Job<>(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
-	threading->addJob(new Job<>(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
-	threading->addGraphicsJob(new Job<>(renderJobFunc, renderJobDoneFunc));
-	threading->addJob(new Job<>(scriptsJobFunc, scriptsJobDoneFunc));
+	threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc));
+	threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc));
+	threading->addJob(new Job<>(physicsToGPUJobFunc, defaultJobDoneFunc));
+	threading->addJob(new Job<>(renderPrepareJobAFunc, defaultJobDoneFunc));
+	threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc));
 
 	Time frameStart; frameStart = engineStartTime;
 	frameTime.setMicroSeconds(0);
@@ -301,7 +318,7 @@ void Engine::start()
 			{
 				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
 				{
-					Engine::threading->physBulletMutex.lock(); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
+					PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock()); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
 					glm::fvec3 p = camera.getPosition();
 					btVector3 camPos(p.x, p.y, p.z);
 
@@ -317,7 +334,7 @@ void Engine::start()
 			{
 				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
 				{
-					Engine::threading->physBulletMutex.lock(); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
+					PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock()); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
 					physicsWorld.removePickingConstraint();
 					Engine::threading->physBulletMutex.unlock();
 				}
@@ -383,11 +400,11 @@ void Engine::start()
 
 			threading->cleanupJobs();
 
-			threading->addJob(new Job<>(physicsJobFunc, physicsJobDoneFunc));
-			threading->addJob(new Job<>(physicsToEngineJobFunc, physicsToEngineJobDoneFunc));
-			threading->addJob(new Job<>(physicsToGPUJobFunc, physicsToGPUJobDoneFunc));
-			threading->addGraphicsJob(new Job<>(renderJobFunc, renderJobDoneFunc));
-			threading->addJob(new Job<>(scriptsJobFunc, scriptsJobDoneFunc));
+			threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc));
+			threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc));
+			threading->addJob(new Job<>(physicsToGPUJobFunc, defaultJobDoneFunc));
+			threading->addJob(new Job<>(renderPrepareJobAFunc, defaultJobDoneFunc));
+			threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc));
 
 			// FPS display
 			++frames;
@@ -421,6 +438,7 @@ void Engine::start()
 					"User input     : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("msgevent"))) + "ms\n" +
 					"Set up render  : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("setuprender"))) + "ms\n" +
 					"Queue submit   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("submitrender"))) + "ms\n" +
+					"Queue idle     : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("qwaitidle"))) + "ms\n" +
 					"Physics        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("physics"))) + "ms\n" +
 					"Scripts        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("scripts"))) + "ms\n\n" +
 
@@ -429,6 +447,17 @@ void Engine::start()
 				);
 				fpsDisplay = 0.f;
 				frames = 0;
+
+				auto mutexStats = (Text*)uiLayer->getElement("mutexstats");
+
+				mutexStats->setString(
+					"----MUTEXES----------------\n"
+					"---------------------------\n"
+					"Physics        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("physmutex"))) + "ms\n" +
+					"Phys->Engine   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("phystoenginemutex"))) + "ms\n" +
+					"Phys->GPU      : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("phystogpumutex"))) + "ms\n" +
+					"Transform      : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("transformmutex"))) + "ms\n"
+				);
 
 				PROFILE_RESET("msgevent");
 				PROFILE_RESET("setuprender");
@@ -442,6 +471,11 @@ void Engine::start()
 				PROFILE_RESET("overlay");
 				PROFILE_RESET("overlaycombine");
 				PROFILE_RESET("screen");
+
+				PROFILE_RESET("physmutex");
+				PROFILE_RESET("phystoenginemutex");
+				PROFILE_RESET("phystogpumutex");
+				PROFILE_RESET("transformmutex");
 			}
 		}
 	}

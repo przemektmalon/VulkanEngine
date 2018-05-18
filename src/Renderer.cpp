@@ -279,17 +279,6 @@ void Renderer::cleanupForReInit()
 */
 void Renderer::render()
 {
-	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-
-	if (result != VK_SUCCESS)
-	{
-		DBG_SEVERE("Could not acquire next image");
-		//cleanupVulkanSwapChain();
-		//recreateVulkanSwapChain();
-		return;
-	}
-
 	PROFILE_START("submitrender");
 
 	VkSubmitInfo submitInfo = {};
@@ -345,6 +334,16 @@ void Renderer::render()
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
+	uint32_t imageIndex;
+	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+	if (result != VK_SUCCESS)
+	{
+		DBG_SEVERE("Could not acquire next image");
+		//cleanupVulkanSwapChain();
+		//recreateVulkanSwapChain();
+		return;
+	}
 	
 	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSemaphore waitSems[] = { imageAvailableSemaphore, pbrFinishedSemaphore, overlayCombineFinishedSemaphore };
@@ -373,7 +372,11 @@ void Renderer::render()
 
 	PROFILE_END("submitrender");
 
+	PROFILE_START("qwaitidle");
+
 	VK_CHECK_RESULT(vkQueueWaitIdle(presentQueue));
+
+	PROFILE_END("qwaitidle");
 
 	VK_CHECK_RESULT(vkGetQueryPoolResults(device, queryPool, 0, NUM_GPU_TIMESTAMPS, sizeof(u64) * NUM_GPU_TIMESTAMPS, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT));
 }
@@ -795,7 +798,7 @@ void Renderer::updateCameraBuffer()
 */
 void Renderer::updateTransformBuffer()
 {
-	Engine::threading->instanceTransformMutex.lock();
+	PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
 
 	glm::fmat4* transform = (glm::fmat4*)transformUBO.map();
 

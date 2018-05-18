@@ -3,6 +3,7 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 #include "Threading.hpp"
+#include "Profiler.hpp"
 
 // list of vectors of instanaces
 // vector.size = 100
@@ -11,7 +12,7 @@
 
 void World::addModelInstance(std::string modelName, std::string instanceName)
 {
-	Engine::threading->addingModelInstanceMutex.lock();
+	PROFILE_MUTEX("modeladdmutex", Engine::threading->addingModelInstanceMutex.lock());
 	if (modelNames.find(instanceName) != modelNames.end())
 		return; // Instance exists
 

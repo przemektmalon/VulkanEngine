@@ -19,6 +19,8 @@
 
 #define PROFILE_GPU_ADD_TIME(name, start, end) Profiler::addGPUTime(name, start, end);
 
+#define PROFILE_MUTEX(name, mutex) Profiler::start(name); mutex; Profiler::end(name);
+
 /// TODO:   In the future we might want to profile specific parts of scripts that are loaded dynamically at run-time
 ///			We therefore cannot preallocate the tags of these profiles beforehand
 ///			We need to have a thread safe tag addition for this scenario

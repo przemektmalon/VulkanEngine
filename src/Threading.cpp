@@ -7,6 +7,8 @@ Threading::Threading(int pNumThreads) : workers(pNumThreads)
 {
 	totalJobsAdded.store(0);
 	totalJobsFinished.store(0);
+	totalTransferJobsAdded.store(0);
+	totalTransferJobsFinished.store(0);
 	for (int i = 0; i < pNumThreads - 1; ++i)
 	{
 		workers[i] = new std::thread(&Threading::update, this);

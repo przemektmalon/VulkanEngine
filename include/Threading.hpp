@@ -117,7 +117,6 @@ public:
 
 	// Testing mutexes
 
-	std::mutex renderMutex;
 	std::mutex physBulletMutex;
 	std::mutex physToEngineMutex;
 	std::mutex physToGPUMutex;

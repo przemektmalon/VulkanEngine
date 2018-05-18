@@ -80,7 +80,7 @@ public:
 	// A job might be waiting for a fence from a different job to finish before it can be recorded
 	// Double buffering should minimize this cost, as we will be grabbing a pool from the frame before last which should be finished
 
-	/*struct ThreadSafeCommands
+	struct ThreadSafeCommands
 	{
 		VkCommandPool commandPool[2];
 		int currentPool;
@@ -94,7 +94,7 @@ public:
 		std::vector<VkFence> fences;
 	};
 
-	static thread_local ThreadSafeCommands threadSafeCommands;*/
+	static thread_local ThreadSafeCommands threadSafeCommands;
 
 
 
@@ -102,7 +102,6 @@ public:
 	// Memory pools
 	VkDescriptorPool descriptorPool;
 	VkDescriptorPool freeableDescriptorPool;
-	//VkCommandPool commandPool;
 	VkFence gBufferFence;
 	VkQueryPool queryPool;
 
