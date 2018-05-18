@@ -25,26 +25,26 @@ Threading::~Threading()
 	}
 }
 
-void Threading::addJob(JobBase * jobToAdd)
+void Threading::addJob(JobBase * jobToAdd, int async)
 {
 	jobsQueueMutex.lock();
-	totalJobsAdded.fetch_add(1);
+	totalJobsAdded.fetch_add(1 - async);
 	jobs.emplace(jobToAdd);
 	jobsQueueMutex.unlock();
 }
 
-void Threading::addGraphicsJob(JobBase * jobToAdd)
+void Threading::addGraphicsJob(JobBase * jobToAdd, int async)
 {
 	graphicsJobsQueueMutex.lock();
-	totalJobsAdded.fetch_add(1);
+	totalJobsAdded.fetch_add(1 - async);
 	graphicsJobs.emplace(jobToAdd);
 	graphicsJobsQueueMutex.unlock();
 }
 
-void Threading::addGPUTransferJob(JobBase * jobToAdd)
+void Threading::addGPUTransferJob(JobBase * jobToAdd, int async)
 {
 	gpuTransferJobsQueueMutex.lock();
-	totalTransferJobsAdded.fetch_add(1);
+	totalTransferJobsAdded.fetch_add(1 - async);
 	gpuTransferJobs.emplace(jobToAdd);
 	gpuTransferJobsQueueMutex.unlock();
 }

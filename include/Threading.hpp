@@ -56,14 +56,16 @@ public:
 	// Terminate worker threads
 	~Threading();
 
+	// 'async' jobs are not counted in job total and finish counters so as to not block on frame borders
+
 	// Systems add their jobs to the queue
-	void addJob(JobBase* jobToAdd);
+	void addJob(JobBase* jobToAdd, int async = 0);
 	
 	// Vulkan queue submissions can only be done from one thread (per queue)
-	void addGraphicsJob(JobBase* jobToAdd);
+	void addGraphicsJob(JobBase* jobToAdd, int async = 0);
 
 	// During rendering GPU memory transfer operation will be submitted to a separate transfer queue from the main thread
-	void addGPUTransferJob(JobBase* jobToAdd);
+	void addGPUTransferJob(JobBase* jobToAdd, int async = 0);
 
 	// Each worker will grab some job
 	bool getJob(JobBase*& job);
@@ -134,4 +136,8 @@ static void defaultJobDoneFunc()
 static void defaultTransferJobDoneFunc()
 {
 	Engine::threading->totalTransferJobsFinished.fetch_add(1);
+}
+
+static void defaultAsyncJobDoneFunc()
+{
 }
