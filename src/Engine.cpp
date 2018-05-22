@@ -81,7 +81,7 @@ void Engine::start()
 
 	std::vector<std::string> profilerTags = { "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
 
-		"gbuffer", "shadow", "pbr", "overlay", "overlaycombine",  "screen", // GPU Tags
+		"gbuffer", "shadow", "pbr", "overlay", "overlaycombine",  "screen", "commands", "cullingdrawbuffer", // GPU Tags
 
 		"physmutex", "phystoenginemutex", "phystogpumutex", // Mutex tags
 		"transformmutex", "modeladdmutex"
@@ -109,7 +109,7 @@ void Engine::start()
 	renderer->overlayRenderer.addLayer(console->getLayer()); // The console is a UI overlay
 
 	/*
-		This graphics job will recurse (see Console::renderAtStartup) until initialisation is complete
+		This graphics job will 'recurse' (see Console::renderAtStartup) until initialisation is complete
 	*/
 	auto renderConsoleFunc = []() -> void {
 		Engine::renderer->overlayRenderer.updateOverlayCommands();
@@ -232,7 +232,7 @@ void Engine::start()
 	statsText->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	statsText->setCharSize(20);
 	statsText->setString("");
-	statsText->setPosition(glm::fvec2(0, 290));
+	statsText->setPosition(glm::fvec2(0, 270));
 
 	uiLayer->addElement(statsText);
 
@@ -254,7 +254,7 @@ void Engine::start()
 	threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc));
 	threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc));
 	threading->addJob(new Job<>(physicsToGPUJobFunc, defaultJobDoneFunc));
-	threading->addGraphicsJob(new Job<>(renderPrepareJobAFunc, defaultJobDoneFunc));
+	threading->addGraphicsJob(new Job<>(renderJobFunc, defaultJobDoneFunc));
 	threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc));
 
 	// Used to measure frame time
@@ -398,7 +398,7 @@ void Engine::start()
 			threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc));
 			threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc));
 			threading->addJob(new Job<>(physicsToGPUJobFunc, defaultJobDoneFunc));
-			threading->addGraphicsJob(new Job<>(renderPrepareJobAFunc, defaultJobDoneFunc));
+			threading->addGraphicsJob(new Job<>(renderJobFunc, defaultJobDoneFunc));
 			threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc));
 
 			// Display performance stats
@@ -431,7 +431,8 @@ void Engine::start()
 
 					"---------------------------\n" +
 					"User input     : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("msgevent"))) + "ms\n" +
-					"Set up render  : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("setuprender"))) + "ms\n" +
+					"Culling & draw : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("cullingdrawbuffer"))) + "ms\n" +
+					"Commands       : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("commands"))) + "ms\n" +
 					"Queue submit   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("submitrender"))) + "ms\n" +
 					"Queue idle     : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("qwaitidle"))) + "ms\n" +
 					"Physics        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("physics"))) + "ms\n" +

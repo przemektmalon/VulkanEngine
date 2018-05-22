@@ -260,10 +260,15 @@ void Renderer::createShadowCommands()
 	allocInfo.commandBufferCount = 1;
 
 	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &shadowCommandBuffer));
+	shadowPreviousPool = commandPool;
 }
 
 void Renderer::updateShadowCommands()
 {
+	vkWaitForFences(device, 1, &shadowFence, true, std::numeric_limits<u64>::max());
+	freeCommandBuffer(&shadowCommandBuffer, shadowPreviousPool);
+	createShadowCommands();
+
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;

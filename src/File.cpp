@@ -1,6 +1,7 @@
 #include "PCH.hpp"
 #include "File.hpp"
-
+#include "Engine.hpp"
+#include "Console.hpp"
 
 bool File::create(std::string && pPath, Mode pFileMode)
 {

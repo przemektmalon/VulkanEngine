@@ -73,20 +73,16 @@ public:
 	// Thread safe command pools and fencing
 
 	// For now just make sure each thread has its own command pool
-	static thread_local VkCommandPool commandPool;
+	static thread_local VkCommandPool commandPool; // [3]
+	std::mutex bufferFreeMutex;
+	void freeCommandBuffer(VkCommandBuffer* buffer, VkCommandPool pool);
 
-
-
-	// We have no guarantee that every job will be done on the same thread on concurrent frames
-	// A job might be waiting for a fence from a different job to finish before it can be recorded
-	// Double buffering should minimize this cost, as we will be grabbing a pool from the frame before last which should be finished
+	// The current pool will be toggled when all submissions are done ( after all buffers are created )
+	/*int currentPool;
 
 	struct ThreadSafeCommands
 	{
-		VkCommandPool commandPool[2];
-		int currentPool;
-
-		// The current pool will be toggled when all submissions are done ( after all buffers are created )
+		VkCommandPool commandPool;
 
 		// Command buffers will be allocated on each thread from the current pool and added here
 		std::vector<VkCommandBuffer> commandsToSubmit;
@@ -95,15 +91,19 @@ public:
 		std::vector<VkFence> fences;
 	};
 
-	static thread_local ThreadSafeCommands threadSafeCommands;
+	static thread_local ThreadSafeCommands threadSafeCommands[3];*/
 
 
+	struct CommandsAndFence
+	{
+		VkCommandBuffer commands;
+		VkFence fence;
+	};
 
 
 	// Memory pools
 	VkDescriptorPool descriptorPool;
 	VkDescriptorPool freeableDescriptorPool;
-	VkFence gBufferFence;
 	VkQueryPool queryPool;
 
 	// Semaphores
@@ -181,7 +181,10 @@ public:
 	VkRenderPass gBufferRenderPass;
 
 	// Command buffer
-	VkCommandBuffer gBufferCommandBuffer;
+	CommandsAndFence gBufferCommands;
+	//VkCommandBuffer gBufferCommandBuffer;
+	//VkFence gBufferFence;
+	VkCommandPool gBufferPreviousPool;
 	bool gBufferCmdsNeedUpdate;
 
 	/// --------------------
@@ -221,6 +224,8 @@ public:
 
 	// Command buffer
 	VkCommandBuffer shadowCommandBuffer;
+	VkCommandPool shadowPreviousPool;
+	VkFence shadowFence;
 
 	/// --------------------
 	/// PBR shading pipeline
@@ -255,6 +260,8 @@ public:
 
 	// Command buffer
 	VkCommandBuffer pbrCommandBuffer;
+	VkCommandPool pbrPreviousPool;
+	VkFence pbrFence;
 
 	/// --------------------
 	/// Screen pipeline
@@ -334,16 +341,13 @@ public:
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 
-	// Creates staging buffer with requested size
 	void createStagingBuffer(Buffer& stagingBuffer, VkDeviceSize size);
-	// Copies to staging buffer
 	void copyToStagingBuffer(Buffer& stagingBuffer, void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
-	// Destroys staging buffer
 	void destroyStagingBuffer(Buffer& stagingBuffer);
 	
 	VkCommandBuffer beginTransferCommands();
 	VkSubmitInfo endTransferCommands(VkCommandBuffer commandBuffer);
-	void submitTransferOperation(VkSubmitInfo submitInfo, VkFence fence = VK_NULL_HANDLE);
+	void submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence = VK_NULL_HANDLE);
 
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fence = VK_NULL_HANDLE);

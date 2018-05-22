@@ -120,16 +120,19 @@
 	*/
 
 	#ifdef _MSC_VER
-		#define DBG_SEVERE(msg) { \
+	#define DBG_SEVERE(msg) { \
 			std::stringstream ss; \
 			ss << msg; \
-			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b11001111); \
-			std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
-			std::cout << "! SEVERE  -"; \
-			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
-			std::cout << " " << ss.str() << std::endl; \
-			MessageBoxA(NULL, LPCSTR(ss.str().c_str()), "Severe Error!", MB_OK); \
-			DebugBreak(); } 
+			if (Engine::console) { \
+				/*Engine::console->postMessage(ss.str(), glm::fvec3(1.f,0.2,0.2));*/ } \
+			else { \
+				SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b11001111); \
+				std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
+				std::cout << "! SEVERE  -"; \
+				SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
+				std::cout << " " << ss.str() << std::endl; \
+				MessageBoxA(NULL, LPCSTR(ss.str().c_str()), "Severe Error!", MB_OK); \
+				DebugBreak(); } }
 	#else
 		#define DBG_SEVERE(msg) { \
 			std::stringstream ss; \
@@ -144,19 +147,25 @@
 	#define DBG_WARNING(msg) { \
 		std::stringstream ss; \
 		ss << msg; \
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b01101111); \
-		std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
-		std::cout << "! Warning -"; \
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
-		std::cout << " " << ss.str() << std::endl; }
+		if (Engine::console) { \
+			/* Engine::console->postMessage(ss.str(), glm::fvec3(0.9,0.9,0.2));*/ } \
+		else { \
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b01101111); \
+			std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
+			std::cout << "! Warning -"; \
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
+			std::cout << " " << ss.str() << std::endl; } }
 
 	#define DBG_INFO(msg) { \
 		std::stringstream ss; \
 		ss << msg; \
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00011111); \
-		std::cout << " Info     -"; \
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
-		std::cout << " " << ss.str() << std::endl; }
+		if (Engine::console) { \
+			/*Engine::console->postMessage(ss.str(), glm::fvec3(0.2,0.2,1));*/ } \
+		else { \
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00011111); \
+			std::cout << " Info     -"; \
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
+			std::cout << " " << ss.str() << std::endl; } }
 #else
 	#ifdef __linux__
 		#define DBG_SEVERE(msg) { \

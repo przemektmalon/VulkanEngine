@@ -3,6 +3,7 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 #include "Window.hpp"
+#include "Threading.hpp"
 
 void OLayer::create(glm::ivec2 pResolution)
 {
@@ -206,12 +207,16 @@ void OverlayRenderer::cleanupForReInit()
 
 void OverlayRenderer::addLayer(OLayer * layer)
 {
+	Engine::threading->layersMutex.lock();
 	layers.insert(layer);
+	Engine::threading->layersMutex.unlock();
 }
 
 void OverlayRenderer::removeLayer(OLayer * layer)
 {
+	Engine::threading->layersMutex.lock();
 	layers.erase(layer);
+	Engine::threading->layersMutex.unlock();
 }
 
 void OverlayRenderer::createOverlayAttachmentsFramebuffers()
@@ -623,6 +628,8 @@ void OverlayRenderer::updateOverlayCommands()
 	/// TODO: if we have a layer that updates every frame, we re-write all commands
 	/// Can we avoid this by using secondary command buffers for layers
 
+	Engine::threading->layersMutex.lock();
+
 	bool update = false;
 	for (auto l : layers)
 	{
@@ -631,7 +638,10 @@ void OverlayRenderer::updateOverlayCommands()
 	}
 
 	if (!update)
+	{
+		Engine::threading->layersMutex.unlock();
 		return;
+	}
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -762,6 +772,8 @@ void OverlayRenderer::updateOverlayCommands()
 	VK_VALIDATE(vkCmdWriteTimestamp(combineCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::END_OVERLAY_COMBINE));
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(combineCommandBuffer));
+
+	Engine::threading->layersMutex.unlock();
 }
 
 void OverlayRenderer::destroyOverlayCommands()

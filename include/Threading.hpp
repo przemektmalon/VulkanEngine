@@ -8,9 +8,31 @@
 class JobBase
 {
 public:
-	JobBase() {};
+	enum Type { Regular, Graphics, Transfer };
+
+	JobBase(Type pType) : type(pType), child(nullptr) {}
 
 	virtual void run() = 0;
+
+	void setChild(JobBase* pChild)
+	{
+		child = pChild;
+	}
+
+	void setType(Type pType)
+	{
+		type = pType;
+	}
+
+	Type getType()
+	{
+		return type;
+	}
+
+protected:
+
+	JobBase * child;
+	Type type;
 };
 
 typedef std::function<void(void)> VoidJobType;
@@ -19,29 +41,34 @@ template<typename JobFuncType = VoidJobType, typename DoneFuncType = VoidJobType
 class Job : public JobBase
 {
 public:
-	Job() {}
-	Job(JobFuncType pJobFunction) : jobFunction(pJobFunction), doneFunction([]()->void {}), child(nullptr) {}
-	Job(JobFuncType pJobFunction, DoneFuncType pDoneFunction) : jobFunction(pJobFunction), doneFunction(pDoneFunction), child(nullptr) {}
+	Job(JobFuncType pJobFunction, DoneFuncType pDoneFunction) : jobFunction(pJobFunction), doneFunction(pDoneFunction), JobBase(Regular) {}
+	Job(JobFuncType pJobFunction, DoneFuncType pDoneFunction, Type pType) : jobFunction(pJobFunction), doneFunction(pDoneFunction), JobBase(pType) {}
 
 	void run()
 	{
 		jobFunction();
 		if (child)
-			Engine::threading->addGPUTransferJob(child); /// TODO: Might not be a transfer job, for now all are ( asset to gpu transfers )
-														 ///       Find an efficient solution to adding any type of job as child ( or some other solution )
-														 ///	   Not priority unless we start adding a lot of heavy child jobs that will hog the main thread
+		{
+			switch (child->getType())
+			{
+			case (Regular):
+				Engine::threading->addJob(child);
+				break;
+			case (Graphics):
+				Engine::threading->addGraphicsJob(child);
+				break;
+			case (Transfer):
+				Engine::threading->addGPUTransferJob(child);
+				break;
+			}
+		}	
 		doneFunction();
 		Engine::threading->freeJob(this);
 	}
 
-	void setChild(JobBase* pChild)
-	{
-		child = pChild;
-	}
 
 private:
 
-	JobBase * child;
 	JobFuncType jobFunction;
 	DoneFuncType doneFunction;
 };
@@ -126,6 +153,8 @@ public:
 	std::mutex instanceTransformMutex;
 	std::mutex addingModelInstanceMutex;
 	std::mutex pushingModelToGPUMutex;
+
+	std::mutex layersMutex;
 };
 
 static void defaultJobDoneFunc()

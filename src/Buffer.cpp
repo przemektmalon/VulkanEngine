@@ -37,8 +37,36 @@ void Buffer::destroy()
 	VK_VALIDATE(vkFreeMemory(Engine::renderer->device, memory, 0));
 }
 
+void Buffer::createPersistantStaging()
+{
+	if (staging)
+		return;
+
+	staging = new Buffer();
+	staging->create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+}
+
+void Buffer::destroyPersistantStaging()
+{
+	if (!staging)
+		return;
+
+	staging->destroy();
+	delete staging;
+	staging = 0;
+}
+
 void * Buffer::map()
 {
+	if (memFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	{
+		if (!staging)
+		{
+			DBG_SEVERE("Attempting to map an unmappable buffer");
+			return nullptr;
+		}
+		return staging->map();
+	}
 	void* data;
 	VK_CHECK_RESULT(vkMapMemory(Engine::renderer->device, memory, 0, size, 0, &data));
 	return data;
@@ -46,6 +74,15 @@ void * Buffer::map()
 
 void * Buffer::map(VkDeviceSize offset, VkDeviceSize pSize)
 {
+	if (memFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	{
+		if (!staging)
+		{
+			DBG_SEVERE("Attempting to map an unmappable buffer");
+			return nullptr;
+		}
+		return staging->map(offset, pSize);
+	}
 	void* data;
 	VK_CHECK_RESULT(vkMapMemory(Engine::renderer->device, memory, offset, pSize, 0, &data));
 	return data;
@@ -53,6 +90,16 @@ void * Buffer::map(VkDeviceSize offset, VkDeviceSize pSize)
 
 void Buffer::unmap()
 {
+	if (memFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	{
+		if (!staging)
+		{
+			DBG_SEVERE("Attempting to map an unmappable buffer");
+			return;
+		}
+		staging->copyTo(this, size, 0, 0);
+		staging->unmap();
+	}
 	VK_VALIDATE(vkUnmapMemory(Engine::renderer->device, memory));
 }
 
@@ -105,11 +152,19 @@ void Buffer::setMem(void * src, VkDeviceSize pSize, VkDeviceSize offset)
 	if (memFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 	{
 		const auto r = Engine::renderer;
-		Buffer stagingBuffer;
-		r->createStagingBuffer(stagingBuffer, pSize);
-		r->copyToStagingBuffer(stagingBuffer, src, pSize, 0);
-		stagingBuffer.copyTo(this , pSize, 0, offset);
-		r->destroyStagingBuffer(stagingBuffer);
+		if (staging)
+		{
+			r->copyToStagingBuffer(*staging, src, pSize, 0);
+			staging->copyTo(this, pSize, 0, offset);
+		}
+		else
+		{
+			Buffer stagingBuffer;
+			r->createStagingBuffer(stagingBuffer, pSize);
+			r->copyToStagingBuffer(stagingBuffer, src, pSize, 0);
+			stagingBuffer.copyTo(this, pSize, 0, offset);
+			r->destroyStagingBuffer(stagingBuffer);
+		}
 	}
 	else if ((memFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
 	{

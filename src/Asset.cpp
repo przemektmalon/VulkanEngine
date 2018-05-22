@@ -1,6 +1,8 @@
 #include "PCH.hpp"
 #include "Asset.hpp"
 #include "File.hpp"
+#include "Engine.hpp"
+#include "Console.hpp"
 
 void Asset::prepare(std::vector<std::string>& pDiskPaths, std::string pName)
 {

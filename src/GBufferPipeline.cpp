@@ -380,7 +380,8 @@ void Renderer::createGBufferCommands()
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommandBuffer));
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommands.commands));
+	gBufferPreviousPool = commandPool;
 }
 
 void Renderer::updateGBufferCommands()
@@ -391,9 +392,12 @@ void Renderer::updateGBufferCommands()
 	//gBufferCmdsNeedUpdate = false;
 
 	/// TODO: each thread will have a dynamic number of fences we will have to wait for all of them to signal (from the previous frame)
-	VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferFence, true, std::numeric_limits<u64>::max()));
 
-	//VK_CHECK_RESULT(vkResetCommandPool(device, commandPool, 0));
+	VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, true, std::numeric_limits<u64>::max()));
+	
+	freeCommandBuffer(&gBufferCommands.commands, gBufferPreviousPool);
+
+	createGBufferCommands();
 
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -401,7 +405,7 @@ void Renderer::updateGBufferCommands()
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommandBuffer));
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommands.commands));
 
 	// From now on until we reset the gbuffer fence at the end of this function we cant submit a gBuffer command buffer
 
@@ -409,10 +413,10 @@ void Renderer::updateGBufferCommands()
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-	VK_CHECK_RESULT(vkBeginCommandBuffer(gBufferCommandBuffer, &beginInfo));
+	VK_CHECK_RESULT(vkBeginCommandBuffer(gBufferCommands.commands, &beginInfo));
 
-	VK_VALIDATE(vkCmdResetQueryPool(gBufferCommandBuffer, queryPool, 0, NUM_GPU_TIMESTAMPS));
-	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, BEGIN_GBUFFER));
+	VK_VALIDATE(vkCmdResetQueryPool(gBufferCommands.commands, queryPool, 0, NUM_GPU_TIMESTAMPS));
+	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommands.commands, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, BEGIN_GBUFFER));
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -429,26 +433,26 @@ void Renderer::updateGBufferCommands()
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
-	VK_VALIDATE(vkCmdBeginRenderPass(gBufferCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+	VK_VALIDATE(vkCmdBeginRenderPass(gBufferCommands.commands, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-	VK_VALIDATE(vkCmdBindPipeline(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline));
+	VK_VALIDATE(vkCmdBindPipeline(gBufferCommands.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline));
 
-	VK_VALIDATE(vkCmdBindDescriptorSets(gBufferCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet, 0, nullptr));
+	VK_VALIDATE(vkCmdBindDescriptorSets(gBufferCommands.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet, 0, nullptr));
 
 	VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
 	VkDeviceSize offsets[] = { 0 };
-	VK_VALIDATE(vkCmdBindVertexBuffers(gBufferCommandBuffer, 0, 1, vertexBuffers, offsets));
-	VK_VALIDATE(vkCmdBindIndexBuffer(gBufferCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
+	VK_VALIDATE(vkCmdBindVertexBuffers(gBufferCommands.commands, 0, 1, vertexBuffers, offsets));
+	VK_VALIDATE(vkCmdBindIndexBuffer(gBufferCommands.commands, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
 
-	VK_VALIDATE(vkCmdDrawIndexedIndirect(gBufferCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
+	VK_VALIDATE(vkCmdDrawIndexedIndirect(gBufferCommands.commands, drawCmdBuffer.getBuffer(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
-	VK_VALIDATE(vkCmdEndRenderPass(gBufferCommandBuffer));
+	VK_VALIDATE(vkCmdEndRenderPass(gBufferCommands.commands));
 
-	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, END_GBUFFER));
+	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommands.commands, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, END_GBUFFER));
 
-	VK_CHECK_RESULT(vkEndCommandBuffer(gBufferCommandBuffer));
+	VK_CHECK_RESULT(vkEndCommandBuffer(gBufferCommands.commands));
 
-	VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferFence));
+	VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferCommands.fence));
 }
 
 void Renderer::destroyGBufferAttachments()
@@ -488,5 +492,5 @@ void Renderer::destroyGBufferDescriptorSets()
 
 void Renderer::destroyGBufferCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &gBufferCommandBuffer));
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &gBufferCommands.commands));
 }

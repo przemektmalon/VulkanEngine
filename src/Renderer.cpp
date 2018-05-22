@@ -292,12 +292,12 @@ void Renderer::render()
 	submitInfo.pWaitDstStageMask = 0;
 
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &gBufferCommandBuffer;
+	submitInfo.pCommandBuffers = &gBufferCommands.commands;
 
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, gBufferFence));
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, gBufferCommands.fence));
 	// From now on we cant update the gBuffer command buffer until the fence is signalled at some point in the future
 	// GBuffer command update will block
 	// Later we want to implement a double(or triple) buffering for command buffers and fences, so we can start updating next frames command buffer without blocking
@@ -309,7 +309,7 @@ void Renderer::render()
 	submitInfo.pCommandBuffers = &shadowCommandBuffer;
 	submitInfo.pSignalSemaphores = &shadowFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, shadowFence));
 
 
 	submitInfo.pWaitSemaphores = &shadowFinishedSemaphore;
@@ -413,6 +413,13 @@ void Renderer::reloadShaders()
 	updateScreenCommands();
 }
 
+void Renderer::freeCommandBuffer(VkCommandBuffer* buffer, VkCommandPool pool)
+{
+	bufferFreeMutex.lock();
+	vkFreeCommandBuffers(device, pool, 1, buffer);
+	bufferFreeMutex.unlock();
+}
+
 void Renderer::populateDrawCmdBuffer()
 {
 	VkDrawIndexedIndirectCommand* cmd = new VkDrawIndexedIndirectCommand[Engine::world.instancesToDraw.size()];
@@ -473,6 +480,7 @@ void Renderer::createDataBuffers()
 {
 	/// TODO: set appropriate size
 	drawCmdBuffer.create(sizeof(VkDrawIndexedIndirectCommand) * 1000, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	drawCmdBuffer.createPersistantStaging();
 
 	createVertexIndexBuffers();
 
@@ -550,7 +558,7 @@ void Renderer::createLogicalDevice()
 */
 void Renderer::createCommandPool()
 {
-	DBG_INFO("Creating Vulkan command pool");
+	//DBG_INFO("Creating Vulkan command pool");
 
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -564,7 +572,8 @@ void Renderer::createCommandPool()
 	fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 	fci.pNext = 0;
 
-	VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &gBufferFence));
+	VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &gBufferCommands.fence));
+	VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &shadowFence));
 }
 
 void Renderer::createPerThreadCommandPools()
@@ -652,7 +661,8 @@ void Renderer::createUBOs()
 	cameraUBO.create(sizeof(CameraUBOData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	// 8 MB of transforms can support around 125k model instances
-	transformUBO.create(8 * 1024 * 1024, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	transformUBO.create(8 * 1024 * 1024, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	transformUBO.createPersistantStaging();
 }
 
 /*
@@ -780,11 +790,17 @@ VkSubmitInfo Renderer::endTransferCommands(VkCommandBuffer commandBuffer)
 	return submitInfo;
 }
 
-void Renderer::submitTransferOperation(VkSubmitInfo submitInfo, VkFence fence)
+void Renderer::submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence)
 {
-	VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
-	VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue)); /// TODO: non blocking queue submissions !
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, submitInfo.pCommandBuffers));
+	auto submitJobFunc = [&]() -> void
+	{
+		VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
+		VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue)); /// TODO: non blocking queue submissions !
+		VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, submitInfo.pCommandBuffers));
+		// To free command buffer for non blocking jobs we will need to know when the gpu finished it !
+	};
+	auto submitJob = new Job<>(submitJobFunc, defaultJobDoneFunc);
+	Engine::threading->addGPUTransferJob(submitJob, 0); /// TODO: make asynchronous
 }
 
 VkCommandBuffer Renderer::beginSingleTimeCommands() 
@@ -845,6 +861,40 @@ void Renderer::updateCameraBuffer()
 */
 void Renderer::updateTransformBuffer()
 {
+	/*PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
+
+	//glm::fmat4* transform = (glm::fmat4*)transformUBO.map();
+	glm::fmat4* transform = (glm::fmat4*)transformUBO.staging->map();
+
+	int i = 0;
+	for (auto& m : Engine::world.instancesToDraw)
+	{
+		transform[m->transformIndex] = m->transform.getTransformMat();
+		++i;
+	}
+
+	//transformUBO.unmap();
+	transformUBO.staging->unmap();
+
+	VkCommandBuffer commandBuffer = Engine::renderer->beginTransferCommands();
+
+	VkBufferCopy copyRegion = {};
+	copyRegion.srcOffset = 0;
+	copyRegion.dstOffset = 0;
+	copyRegion.size = VK_WHOLE_SIZE;
+	VK_VALIDATE(vkCmdCopyBuffer(commandBuffer, transformUBO.staging->getBuffer(), transformUBO.getBuffer(), 1, &copyRegion));
+
+	Engine::renderer->endTransferCommands(commandBuffer);
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers, &commandBuffer;
+
+	Engine::renderer->submitTransferCommands(submitInfo, VK_NULL_HANDLE);
+
+	Engine::threading->instanceTransformMutex.unlock();*/
+
 	PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
 
 	glm::fmat4* transform = (glm::fmat4*)transformUBO.map();

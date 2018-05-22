@@ -5,11 +5,14 @@
 class Buffer
 {
 public:
-	Buffer() : buffer(0), memory(0), size(0), usage(0), memFlags(0) {}
+	Buffer() : buffer(0), memory(0), size(0), usage(0), memFlags(0), staging(0) {}
 	~Buffer() {}
 
 	void create(VkDeviceSize pSize, VkBufferUsageFlags pUsage, VkMemoryPropertyFlags pMemFlags);
 	void destroy();
+
+	void createPersistantStaging();
+	void destroyPersistantStaging();
 
 	void* map();
 	void* map(VkDeviceSize offset, VkDeviceSize pSize);
@@ -26,10 +29,16 @@ public:
 	VkBufferUsageFlags getUsage() { return usage; }
 	VkMemoryPropertyFlags getMemFlags() { return memFlags; }
 
-private:
+//private:
+	Buffer* staging;
+
+//private:
 	VkBuffer buffer;
 	VkDeviceMemory memory;
 	VkDeviceSize size;
 	VkBufferUsageFlags usage;
 	VkMemoryPropertyFlags memFlags;
+
+	
+
 };

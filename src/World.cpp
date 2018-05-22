@@ -65,13 +65,18 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 
 			m->getAvailability() |= Asset::LOADING_TO_RAM;
 			m->getAvailability() |= Asset::LOADING_TO_GPU;
-			auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, defaultJobDoneFunc);
+			
 			if (Engine::initialised == 1) {
-				job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, defaultAsyncJobDoneFunc));
+				// Engine running, add async transfer job to run in transfer queue to prevent blocking rendering thread
+				auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, defaultAsyncJobDoneFunc);
+				job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, defaultTransferJobDoneFunc, JobBase::Type::Transfer));
 				Engine::threading->addJob(job, 1);
+				//Engine::threading->addJob(job, 1);
 			}
 			else {
-				job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, defaultTransferJobDoneFunc));
+				// Engine is initialising so add a non async job, its ok to block during initialisation
+				auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, defaultJobDoneFunc);
+				job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, defaultJobDoneFunc));
 				Engine::threading->addJob(job);
 			}
 		}
