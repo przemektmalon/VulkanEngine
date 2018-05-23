@@ -27,6 +27,7 @@ public:
 	static void start();
 	static void engineLoop();
 	static void eventLoop();
+	static void processMainThreadJobs();
 	static void createVulkanInstance();
 	static void queryVulkanPhysicalDeviceDetails();
 	static void createWindow();

@@ -10,32 +10,39 @@
 static auto physicsJobFunc = []() -> void {
 	PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock());
 	PROFILE_START("physics");
-	Engine::physicsWorld.step(Engine::frameTime);
+	static u64 endTime = Engine::clock.now();
+	u64 timeSinceLastPhysics = Engine::clock.now() - endTime;
+	Engine::physicsWorld.step(float(timeSinceLastPhysics)/1000.f);
+	endTime = Engine::clock.now();
 	PROFILE_END("physics");
 	Engine::threading->physBulletMutex.unlock();
+
+
 };
 
 static auto physicsToEngineJobFunc = []() -> void {
-	//PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
-	//PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
-	PROFILE_START("physics");
+	//PROFILE_START("physics");
+	PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock());
 	Engine::physicsWorld.updateModels();
-	PROFILE_END("physics");
-	//Engine::threading->instanceTransformMutex.unlock();
-	//Engine::threading->physToEngineMutex.unlock();
+	Engine::threading->physBulletMutex.unlock();
+	//PROFILE_END("physics");
 };
 
 static auto physicsToGPUJobFunc = []() -> void {
 	PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
-	PROFILE_START("physics");
+	//PROFILE_START("physics");
 	Engine::renderer->updateTransformBuffer();
-	PROFILE_END("physics");
+	//PROFILE_END("physics");
 	Engine::threading->physToEngineMutex.unlock();
 };
 
 static auto renderJobFunc = []() -> void {
-	PROFILE_START("setuprender");
 
+	PROFILE_START("qwaitidle");
+	vkQueueWaitIdle(Engine::renderer->graphicsQueue);
+	PROFILE_END("qwaitidle");
+
+	PROFILE_START("commands");
 	PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
 	PROFILE_START("cullingdrawbuffer");
 	Engine::world.frustumCulling(&Engine::camera);
@@ -43,9 +50,9 @@ static auto renderJobFunc = []() -> void {
 	Engine::threading->physToEngineMutex.unlock();
 	PROFILE_END("cullingdrawbuffer");
 
-	PROFILE_START("commands");
-	Engine::renderer->updateShadowCommands(); // Mutex with engine model transform update
+	PROFILE_START("setuprender");
 	Engine::renderer->updateGBufferCommands();
+	Engine::renderer->updateShadowCommands(); // Mutex with engine model transform update
 	Engine::renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
 	PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
 	Engine::renderer->updateCameraBuffer();

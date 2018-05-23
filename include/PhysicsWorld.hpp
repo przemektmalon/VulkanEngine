@@ -44,9 +44,9 @@ public:
 
 	}
 
-	void step(Time& dt)
+	void step(float dt)
 	{
-		dynamicsWorld->stepSimulation(dt.getMilliSecondsf(), 10, 1.f/60.f);
+		dynamicsWorld->stepSimulation(dt, 10, 1.f/60.f);
 	}
 
 	void updateModels();

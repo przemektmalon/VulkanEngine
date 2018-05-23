@@ -1,5 +1,6 @@
 #include "PCH.hpp"
 #include "Renderer.hpp"
+#include "Profiler.hpp"
 
 void Renderer::createShadowRenderPass()
 {
@@ -264,13 +265,13 @@ void Renderer::createShadowCommands()
 }
 
 void Renderer::updateShadowCommands()
-{
-	VkResult status;
-	status = vkGetFenceStatus(device, shadowFence);
-
+{	
+	PROFILE_START("shadowfence");
 	vkWaitForFences(device, 1, &shadowFence, true, std::numeric_limits<u64>::max());
+	PROFILE_END("shadowfence");
 	freeCommandBuffer(&shadowCommandBuffer, shadowPreviousPool);
 	createShadowCommands();
+	
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

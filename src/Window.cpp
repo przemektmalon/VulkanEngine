@@ -332,7 +332,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_INPUT:
 	{
-		PROFILE_START("msgevent");
+		//PROFILE_START("msgevent");
 		UINT dwSize;
 
 		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
@@ -355,7 +355,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				mouseEvent.constructMouse(0, glm::ivec2(Mouse::getWindowPosition(Engine::window)), glm::ivec2(0,0), raw->data.mouse.usButtonData);
 				Engine::window->eventQ.pushEvent(mouseEvent);
 				delete[] lpb;
-				PROFILE_END("msgevent");
+				//PROFILE_END("msgevent");
 				break;
 			}
 			
@@ -436,7 +436,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 
 		delete[] lpb;
-		PROFILE_END("msgevent");
+		//PROFILE_END("msgevent");
 		break;
 	}
 	case WM_CLOSE:

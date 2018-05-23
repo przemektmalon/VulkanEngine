@@ -282,13 +282,13 @@ void Renderer::cleanupForReInit()
 */
 void Renderer::render()
 {
-	PROFILE_START("qwaitidle");
+	//PROFILE_START("qwaitidle");
 
 	VK_CHECK_RESULT(vkQueueWaitIdle(presentQueue));
 
 	VK_CHECK_RESULT(vkGetQueryPoolResults(device, queryPool, 0, NUM_GPU_TIMESTAMPS, sizeof(u64) * NUM_GPU_TIMESTAMPS, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT));
 
-	PROFILE_END("qwaitidle");
+	//PROFILE_END("qwaitidle");
 
 	PROFILE_START("submitrender");
 
@@ -422,7 +422,9 @@ void Renderer::freeCommandBuffer(VkCommandBuffer* buffer, VkCommandPool pool)
 
 void Renderer::populateDrawCmdBuffer()
 {
-	VkDrawIndexedIndirectCommand* cmd = new VkDrawIndexedIndirectCommand[Engine::world.instancesToDraw.size()];
+	//VkDrawIndexedIndirectCommand* cmd = new VkDrawIndexedIndirectCommand[Engine::world.instancesToDraw.size()];
+
+	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)drawCmdBuffer.map();
 
 	int i = 0;
 	
@@ -451,9 +453,11 @@ void Renderer::populateDrawCmdBuffer()
 		++i;
 	}
 
-	drawCmdBuffer.setMem(cmd, Engine::world.modelNames.size() * sizeof(VkDrawIndexedIndirectCommand), 0);
+	drawCmdBuffer.unmap();
 
-	delete[] cmd;
+	//drawCmdBuffer.setMem(cmd, Engine::world.modelNames.size() * sizeof(VkDrawIndexedIndirectCommand), 0);
+
+	//delete[] cmd;
 }
 
 void Renderer::createVertexIndexBuffers()
@@ -481,8 +485,9 @@ void Renderer::pushModelDataToGPU(Model & model)
 void Renderer::createDataBuffers()
 {
 	/// TODO: set appropriate size
-	drawCmdBuffer.create(sizeof(VkDrawIndexedIndirectCommand) * 1000, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	drawCmdBuffer.createPersistantStaging();
+	drawCmdBuffer.create(sizeof(VkDrawIndexedIndirectCommand) * 1000, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	//drawCmdBuffer.create(sizeof(VkDrawIndexedIndirectCommand) * 1000, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	//drawCmdBuffer.createPersistantStaging();
 
 	createVertexIndexBuffers();
 
@@ -659,8 +664,9 @@ void Renderer::createUBOs()
 	cameraUBO.create(sizeof(CameraUBOData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	// 8 MB of transforms can support around 125k model instances
-	transformUBO.create(8 * 1024 * 1024, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	transformUBO.createPersistantStaging();
+	//transformUBO.create(8 * 1024 * 1024, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	transformUBO.create(8 * 1024 * 1024, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	//transformUBO.createPersistantStaging();
 }
 
 /*
@@ -860,10 +866,6 @@ void Renderer::updateCameraBuffer()
 void Renderer::updateTransformBuffer()
 {
 	//PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
-
-	/*auto result = vkWaitForFences(device, 1, &gBufferCommands.fence, 1, 20);
-	if (result == VK_TIMEOUT)
-		return;*/
 
 	//VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, 1, std::numeric_limits<u64>::max()));
 

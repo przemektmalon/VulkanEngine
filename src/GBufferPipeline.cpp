@@ -406,8 +406,10 @@ void Renderer::updateGBufferCommands()
 
 	/// TODO: each thread will have a dynamic number of fences we will have to wait for all of them to signal (from the previous frame)
 
-	//VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, true, std::numeric_limits<u64>::max()));
-	
+	PROFILE_START("gbufferfence");
+	VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, true, std::numeric_limits<u64>::max()));
+	PROFILE_END("gbufferfence");
+
 	freeCommandBuffer(&gBufferCommands.commands, gBufferPreviousPool);
 
 	createGBufferCommands();
