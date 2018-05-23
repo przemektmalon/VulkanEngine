@@ -265,6 +265,9 @@ void Renderer::createShadowCommands()
 
 void Renderer::updateShadowCommands()
 {
+	VkResult status;
+	status = vkGetFenceStatus(device, shadowFence);
+
 	vkWaitForFences(device, 1, &shadowFence, true, std::numeric_limits<u64>::max());
 	freeCommandBuffer(&shadowCommandBuffer, shadowPreviousPool);
 	createShadowCommands();

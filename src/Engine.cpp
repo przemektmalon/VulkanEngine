@@ -66,20 +66,14 @@ void Engine::start()
 	/*
 		Initialise worker threads (each one needs vulkan logical device before initialising its command pool)
 	*/
-	threading = new Threading(4);
+	int numThreads = 4;
+	waitForProfilerInitMutex.lock();
+	threading = new Threading(numThreads);
 
 	/*
 		Preallocating profiler tags to avoid thread clashes
 	*/
-	int i = 0;
-	std::vector<std::thread::id> threadIDs(4 + 1); // 4 threads created by the main thread so + 1
-	for (auto& thread : threading->workers) {
-		threadIDs[i] = thread->get_id();
-		++i;
-	}
-	threadIDs[i] = std::this_thread::get_id(); // Main thread can also use profiler
-
-	std::vector<std::string> profilerTags = { "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
+	std::vector<std::string> profilerTags = { "init", "assets", "world", "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
 
 		"gbuffer", "shadow", "pbr", "overlay", "overlaycombine",  "screen", "commands", "cullingdrawbuffer", // GPU Tags
 
@@ -87,7 +81,17 @@ void Engine::start()
 		"transformmutex", "modeladdmutex"
 	};
 
+	int i = 0;
+	std::vector<std::thread::id> threadIDs(numThreads);
+	for (auto& thread : threading->workers) {
+		threadIDs[i] = thread->get_id();
+		threading->threadIDAssociations.insert(std::make_pair(i + 1, thread->get_id()));
+		++i;
+	}
+	threadIDs[i] = std::this_thread::get_id(); // Main thread can also use profiler
+
 	Profiler::prealloc(threadIDs, profilerTags);
+	waitForProfilerInitMutex.unlock();
 
 	/*
 		Initialise the rest of the renderer resources (now that threads are initialised we can submit jobs)
@@ -150,7 +154,7 @@ void Engine::start()
 		Wait for all assets to load and be transferred to GPU
 		We wait here because in the next lines descriptor set updates require textures to be on the GPU
 	*/
-	while (!threading->allTransferJobsDone() || !threading->allJobsDone())
+	while (!threading->allTransferJobsDone() || !threading->allRegularJobsDone())
 	{
 		// Submit any gpu transfer jobs that were children of DISK load jobs
 		JobBase* gpuTransferJob;
@@ -185,24 +189,32 @@ void Engine::start()
 			int sh = s / 2;
 			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % 1000) / 5.f + 50.f, s64(rand() % s) - sh);
 			//world.modelNames["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 5) * 2), std::floor(int(i / (int)5) * 2), 0));
-			world.modelNames["hollowbox" + std::to_string(i)]->transform.setTranslation(pos);
-			world.modelNames["hollowbox" + std::to_string(i)]->transform.setScale(glm::fvec3(10));
-			world.modelNames["hollowbox" + std::to_string(i)]->transform.updateMatrix();
+
+			Transform t;
+			t.setTranslation(pos);
+			t.setScale(glm::fvec3(10));
+			t.updateMatrix();
+
+			world.modelNames["hollowbox" + std::to_string(i)]->setTransform(t);
 			world.modelNames["hollowbox" + std::to_string(i)]->setMaterial(assets.getMaterial(materialList[i % 6]));
 			world.modelNames["hollowbox" + std::to_string(i)]->makePhysicsObject();
 		}
 
 		world.addModelInstance("pbrsphere", "pbrsphere");
-		world.modelNames["pbrsphere"]->transform.setTranslation(glm::fvec3(4, 0, 0));
-		world.modelNames["pbrsphere"]->transform.setScale(glm::fvec3(10));
-		world.modelNames["pbrsphere"]->transform.updateMatrix();
+		Transform t;
+		t.setTranslation(glm::fvec3(4,0,0));
+		t.setScale(glm::fvec3(10));
+		t.updateMatrix();
+
+		world.modelNames["pbrsphere"]->setTransform(t);
 		world.modelNames["pbrsphere"]->setMaterial(assets.getMaterial("marble"));
 		world.modelNames["pbrsphere"]->makePhysicsObject();
 
 		world.addModelInstance("ground", "ground");
-		world.modelNames["ground"]->transform.setTranslation(glm::fvec3(0, 0, 0));
-		world.modelNames["ground"]->transform.setScale(glm::fvec3(10));
-		world.modelNames["ground"]->transform.updateMatrix();
+		t.setTranslation(glm::fvec3(0, 0, 0));
+		t.updateMatrix();
+
+		world.modelNames["ground"]->setTransform(t);
 		world.modelNames["ground"]->setMaterial(assets.getMaterial("dirt"));
 		world.modelNames["ground"]->makePhysicsObject();
 
@@ -243,144 +255,85 @@ void Engine::start()
 	mutexStatsText->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	mutexStatsText->setCharSize(20);
 	mutexStatsText->setString("");
-	mutexStatsText->setPosition(glm::fvec2(400, 590));
+	mutexStatsText->setPosition(glm::fvec2(600, 450));
 
 	uiLayer->addElement(mutexStatsText);
+
+	// For per thread stats
+	auto threadStatsText = new Text;
+	threadStatsText->setName("threadstats");
+	threadStatsText->setFont(Engine::assets.getFont("consola"));
+	threadStatsText->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
+	threadStatsText->setCharSize(20);
+	threadStatsText->setString("");
+	threadStatsText->setPosition(glm::fvec2(600, 590));
+
+	uiLayer->addElement(threadStatsText);
+
+	while (!threading->allAsyncJobsDone() || !threading->allGraphicsJobsDone() || !threading->allRegularJobsDone() || !threading->allTransferJobsDone())
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(15));
+	}
 
 	/*
 		These jobs are found in "CommonJobs.hpp"
 		They will be re-added at the end of each frame
 	*/
-	threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc));
-	threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc));
-	threading->addJob(new Job<>(physicsToGPUJobFunc, defaultJobDoneFunc));
-	threading->addGraphicsJob(new Job<>(renderJobFunc, defaultJobDoneFunc));
-	threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc));
+	threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultGraphicsJobDoneFunc), 0);
+	threading->addGraphicsJob(new Job<>(renderJobFunc, defaultGraphicsJobDoneFunc), 0);
+	threading->addJob(new Job<>(physicsJobFunc, defaultAsyncJobDoneFunc), 1);
+	threading->addJob(new Job<>(physicsToEngineJobFunc, defaultAsyncJobDoneFunc), 1);
+	threading->addJob(new Job<>(scriptsJobFunc, defaultAsyncJobDoneFunc), 1);
 
+	threading->threadJobsProcessed[std::this_thread::get_id()] = 0;
+
+	engineLoop();
+}
+
+void Engine::engineLoop()
+{
 	// Used to measure frame time
 	Time frameStart; frameStart = engineStartTime;
-
-	// Used to display stats every X seconds
-	double timeSinceLastStatsUpdate = 0.f;
-
-	// Used to get average frame time
-	int frames = 0;
 
 	// Main engine loop
 	while (engineRunning)
 	{
-		PROFILE_START("msgevent");
-
-		// Process OS messages (user input, etc) and translate them to engine events
-		while (window->processMessages()) { /* Invoke timer ? */ }
-		
-#ifdef _WIN32
-		// We get keyboard state here for SHIFT+KEY events to work properly
-		GetKeyboardState(Keyboard::keyState);
-#endif
-
-		// Process engine events
-		Event ev;
-		while (window->eventQ.pollEvent(ev)) {
-			/*try {
-				scriptEnv.evalString("processEvent()");
-			}
-			catch (chaiscript::exception::eval_error e)
-			{
-				std::cout << e.what() << std::endl;
-			}*/
-			switch (ev.type) {
-			case(Event::TextInput):
-			{
-				console->inputChar(ev.eventUnion.textInputEvent.character);
-				break;
-			}
-			case(Event::MouseWheel):
-			{
-				console->scroll(ev.eventUnion.mouseEvent.wheelDelta);
-				break;
-			}
-			case(Event::MouseDown):
-			{
-				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
-				{
-					PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock()); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
-					glm::fvec3 p = camera.getPosition();
-					btVector3 camPos(p.x, p.y, p.z);
-
-					btVector3 rayFrom = camPos;
-					btVector3 rayTo = physicsWorld.getRayTo(int(ev.eventUnion.mouseEvent.position.x), int(ev.eventUnion.mouseEvent.position.y));
-
-					physicsWorld.pickBody(rayFrom, rayTo);
-					Engine::threading->physBulletMutex.unlock();
-				}
-				break;
-			}
-			case(Event::MouseUp):
-			{
-				if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
-				{
-					PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock()); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
-					physicsWorld.removePickingConstraint();
-					Engine::threading->physBulletMutex.unlock();
-				}
-				break;
-			}
-			case(Event::MouseMove):
-			{
-				if (ev.eventUnion.mouseEvent.code & Mouse::M_RIGHT)
-				{
-					camera.rotate(0, 0.0035 * ev.eventUnion.mouseEvent.move.y, 0.0035 * ev.eventUnion.mouseEvent.move.x);
-					/// TODO: set mouse position to be locked to middle of window
-				}
-				break;
-			}
-			case Event::KeyDown: {
-				auto key = ev.eventUnion.keyEvent.key.code;
-				if (console->isActive())
-					console->moveBlinker(key);
-
-				if (key == Key::KC_ESCAPE)
-				{
-					if (console->isActive())
-						console->toggle();
-					else
-						engineRunning = false;
-				}
-				if (key == Key::KC_TILDE)
-				{
-					console->toggle();
-				}
-				break;
-			}
-			case Event::KeyUp: {
-				break;
-			}
-			}
-			window->eventQ.popEvent();
-		}
-		physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
-
 		/*
-			Submit any gpu transfer jobs
+			Submit any gpu transfer jobs and graphics jobs
 		*/
-		JobBase* gpuTransferJob;
-		while (threading->getGPUTransferJob(gpuTransferJob))
+		JobBase* job;
+		while (threading->getGPUTransferJob(job))
 		{
-			gpuTransferJob->run();
+			job->run();
+			++threading->threadJobsProcessed[std::this_thread::get_id()];
 		}
-
-		PROFILE_END("msgevent");
 
 		/*
 			Once the frame is rendered, render next one by submitting render and update jobs
 		*/
-		if (threading->allJobsDone())
+		if (threading->allRegularJobsDone() && threading->allGraphicsJobsDone())
 		{
+			PROFILE_END("thread_" + Threading::getThisThreadIDString());
+			PROFILE_START("thread_" + Threading::getThisThreadIDString());
+
+			//PROFILE_START("msgevent");
+
+			// Process OS messages (user input, etc) and translate them to engine events
+			while (window->processMessages()) { /* Invoke timer ? */ }
+
+#ifdef _WIN32
+			// We get keyboard state here for SHIFT+KEY events to work properly
+			GetKeyboardState(Keyboard::keyState);
+#endif
+
+			eventLoop();
+
 			frameTime = clock.time() - frameStart;
 			frameStart = clock.time();
 
 			console->update();
+
+			//PROFILE_END("msgevent");
 
 			/*
 				Add GPU timestamps to profiler class
@@ -394,91 +347,254 @@ void Engine::start()
 
 			threading->cleanupJobs(); // Cleanup memory of finished jobs
 
-			// Next frames jobs
-			threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc));
-			threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc));
-			threading->addJob(new Job<>(physicsToGPUJobFunc, defaultJobDoneFunc));
-			threading->addGraphicsJob(new Job<>(renderJobFunc, defaultJobDoneFunc));
-			threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc));
+			renderer->updateGBufferDescriptorSets(); /// TODO: mutex/fence with gbuffer pass
 
+			// Next frames jobs
+			threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultGraphicsJobDoneFunc), 0);
+			threading->addGraphicsJob(new Job<>(renderJobFunc, defaultGraphicsJobDoneFunc), 0);
+			threading->addJob(new Job<>(physicsJobFunc, defaultAsyncJobDoneFunc), 1);
+			threading->addJob(new Job<>(physicsToEngineJobFunc, defaultAsyncJobDoneFunc), 1);
+			threading->addJob(new Job<>(scriptsJobFunc, defaultAsyncJobDoneFunc), 1);
+			
 			// Display performance stats
 			++frames;
 			timeSinceLastStatsUpdate += frameTime.getSeconds();
-			if (timeSinceLastStatsUpdate > 0.75f)
+			if (timeSinceLastStatsUpdate > 1.25f)
 			{
-				double gBufferTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("gbuffer"));
-				double shadowTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("shadow"));
-				double pbrTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("pbr"));
-				double overlayTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("overlay"));
-				double overlayCombineTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("overlaycombine"));
-				double screenTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("screen"));
-
-				double totalGPUTime = gBufferTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
-
-				auto stats = (Text*)uiLayer->getElement("stats");
-
-				stats->setString(
-					"---------------------------\n"
-					"GBuffer pass   : " + std::to_string(gBufferTime) + "ms\n" +
-					"Shadow pass    : " + std::to_string(shadowTime) + "ms\n" +
-					"PBR pass       : " + std::to_string(pbrTime) + "ms\n" +
-					"Overlay pass   : " + std::to_string(overlayTime) + "ms\n" +
-					"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms\n" +
-					"Screen pass    : " + std::to_string(screenTime) + "ms\n\n" +
-
-					"Total GPU time : " + std::to_string(totalGPUTime) + "ms\n" +
-					"GPU FPS        : " + std::to_string((int)(1.0 / (totalGPUTime*0.001))) + "\n\n" +
-
-					"---------------------------\n" +
-					"User input     : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("msgevent"))) + "ms\n" +
-					"Culling & draw : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("cullingdrawbuffer"))) + "ms\n" +
-					"Commands       : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("commands"))) + "ms\n" +
-					"Queue submit   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("submitrender"))) + "ms\n" +
-					"Queue idle     : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("qwaitidle"))) + "ms\n" +
-					"Physics        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("physics"))) + "ms\n" +
-					"Scripts        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("scripts"))) + "ms\n\n" +
-
-					"Avg frame time : " + std::to_string((timeSinceLastStatsUpdate * 1000) / double(frames)) + "ms\n" +
-					"FPS            : " + std::to_string((int)(double(frames) / timeSinceLastStatsUpdate))
-				);
-				timeSinceLastStatsUpdate = 0.f;
-				frames = 0;
-
-				auto mutexStats = (Text*)uiLayer->getElement("mutexstats");
-
-				mutexStats->setString(
-					"----MUTEXES----------------\n"
-					"---------------------------\n"
-					"Physics        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("physmutex"))) + "ms\n" +
-					"Phys->Engine   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("phystoenginemutex"))) + "ms\n" +
-					"Phys->GPU      : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("phystogpumutex"))) + "ms\n" +
-					"Transform      : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("transformmutex"))) + "ms\n"
-				);
-
-				// Reset profiling info
-				/// TODO: running average/min/max for last X frames
-				PROFILE_RESET("msgevent");
-				PROFILE_RESET("setuprender");
-				PROFILE_RESET("submitrender");
-				PROFILE_RESET("physics");
-				PROFILE_RESET("scripts");
-
-				PROFILE_RESET("gbuffer");
-				PROFILE_RESET("shadow");
-				PROFILE_RESET("pbr");
-				PROFILE_RESET("overlay");
-				PROFILE_RESET("overlaycombine");
-				PROFILE_RESET("screen");
-
-				PROFILE_RESET("physmutex");
-				PROFILE_RESET("phystoenginemutex");
-				PROFILE_RESET("phystogpumutex");
-				PROFILE_RESET("transformmutex");
+				updatePerformanceStatsDisplay();
 			}
 		}
 	}
 
+	for (auto t : threading->workers)
+	{
+		t->join();
+	}
+	threading->cleanupJobs(); // Cleanup memory of finished jobs
 	quit();
+}
+
+void Engine::eventLoop()
+{
+	// Process engine events
+	Event ev;
+	while (window->eventQ.pollEvent(ev)) {
+		/*try {
+		scriptEnv.evalString("processEvent()");
+		}
+		catch (chaiscript::exception::eval_error e)
+		{
+		std::cout << e.what() << std::endl;
+		}*/
+		switch (ev.type) {
+		case(Event::TextInput):
+		{
+			console->inputChar(ev.eventUnion.textInputEvent.character);
+			break;
+		}
+		case(Event::MouseWheel):
+		{
+			console->scroll(ev.eventUnion.mouseEvent.wheelDelta);
+			break;
+		}
+		case(Event::MouseDown):
+		{
+			if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
+			{
+				PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock()); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
+				glm::fvec3 p = camera.getPosition();
+				btVector3 camPos(p.x, p.y, p.z);
+
+				btVector3 rayFrom = camPos;
+				btVector3 rayTo = physicsWorld.getRayTo(int(ev.eventUnion.mouseEvent.position.x), int(ev.eventUnion.mouseEvent.position.y));
+
+				physicsWorld.pickBody(rayFrom, rayTo);
+				Engine::threading->physBulletMutex.unlock();
+			}
+			break;
+		}
+		case(Event::MouseUp):
+		{
+			if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
+			{
+				PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock()); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
+				physicsWorld.removePickingConstraint();
+				Engine::threading->physBulletMutex.unlock();
+			}
+			break;
+		}
+		case(Event::MouseMove):
+		{
+			if (ev.eventUnion.mouseEvent.code & Mouse::M_RIGHT)
+			{
+				camera.rotate(0, 0.0035 * ev.eventUnion.mouseEvent.move.y, 0.0035 * ev.eventUnion.mouseEvent.move.x);
+				/// TODO: set mouse position to be locked to middle of window
+			}
+			break;
+		}
+		case Event::KeyDown: {
+			auto key = ev.eventUnion.keyEvent.key.code;
+			if (console->isActive())
+				console->moveBlinker(key);
+
+			if (key == Key::KC_ESCAPE)
+			{
+				if (console->isActive())
+					console->toggle();
+				else
+					engineRunning = false;
+			}
+			if (key == Key::KC_TILDE)
+			{
+				console->toggle();
+			}
+			break;
+		}
+		case Event::KeyUp: {
+			break;
+		}
+		}
+		window->eventQ.popEvent();
+	}
+	physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
+}
+
+void Engine::updatePerformanceStatsDisplay()
+{
+	auto gBufferTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("gbuffer"));
+	auto shadowTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("shadow"));
+	auto pbrTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("pbr"));
+	auto overlayTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("overlay"));
+	auto overlayCombineTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("overlaycombine"));
+	auto screenTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("screen"));
+
+	auto gBufferTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("gbuffer"));
+	auto shadowTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("shadow"));
+	auto pbrTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("pbr"));
+	auto overlayTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("overlay"));
+	auto overlayCombineTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("overlaycombine"));
+	auto screenTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("screen"));
+
+	auto gBufferTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("gbuffer"));
+	auto shadowTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("shadow"));
+	auto pbrTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("pbr"));
+	auto overlayTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("overlay"));
+	auto overlayCombineTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("overlaycombine"));
+	auto screenTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("screen"));
+
+	auto totalGPUTime = gBufferTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
+	auto totalGPUMaxTime = gBufferTimeMax + shadowTimeMax + pbrTimeMax + overlayTimeMax + overlayCombineTimeMax + screenTimeMax;
+	auto totalGPUMinTime = gBufferTimeMin + shadowTimeMin + pbrTimeMin + overlayTimeMin + overlayCombineTimeMin + screenTimeMin;
+
+	auto gpuFPS = 1000.0 / totalGPUTime;
+	auto gpuFPSMin = 1000.0 / totalGPUMinTime;
+	auto gpuFPSMax = 1000.0 / totalGPUMaxTime;
+
+	auto msgTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("msgevent"));
+	auto cullTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("cullingdrawbuffer"));
+	//auto cmdsTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("commands"));
+	auto cmdsTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("setuprender"));
+	auto submitTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("submitrender"));
+	auto qWaitTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("qwaitidle"));
+	auto physicsTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("physics"));
+	auto scriptsTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("scripts"));
+
+	auto msgTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("msgevent"));
+	auto cullTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("cullingdrawbuffer"));
+	//auto cmdsTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("commands"));
+	auto cmdsTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("setuprender"));
+	auto submitTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("submitrender"));
+	auto qWaitTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("qwaitidle"));
+	auto physicsTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("physics"));
+	auto scriptsTimeMax = PROFILE_TO_MS(PROFILE_GET_MAX("scripts"));
+
+	auto msgTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("msgevent"));
+	auto cullTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("cullingdrawbuffer"));
+	//auto cmdsTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("commands"));
+	auto cmdsTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("setuprender"));
+	auto submitTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("submitrender"));
+	auto qWaitTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("qwaitidle"));
+	auto physicsTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("physics"));
+	auto scriptsTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("scripts"));
+
+	auto stats = (Text*)uiLayer->getElement("stats");
+
+	stats->setString(
+		"---------------------------------------------------\n"
+		"GBuffer pass   : " + std::to_string(gBufferTime) + "ms ( " + std::to_string(gBufferTimeMin) + " \\ " + std::to_string(gBufferTimeMax) + " )\n" +
+		"Shadow pass    : " + std::to_string(shadowTime) + "ms ( " + std::to_string(shadowTimeMin) + " \\ " + std::to_string(shadowTimeMax) + " )\n" +
+		"PBR pass       : " + std::to_string(pbrTime) + "ms ( " + std::to_string(pbrTimeMin) + " \\ " + std::to_string(pbrTimeMax) + " )\n" +
+		"Overlay pass   : " + std::to_string(overlayTime) + "ms ( " + std::to_string(overlayTimeMin) + " \\ " + std::to_string(overlayTimeMax) + " )\n" +
+		"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms ( " + std::to_string(overlayCombineTimeMin) + " \\ " + std::to_string(overlayCombineTimeMax) + " )\n" +
+		"Screen pass    : " + std::to_string(screenTime) + "ms ( " + std::to_string(screenTimeMin) + " \\ " + std::to_string(screenTimeMax) + " )\n" +
+
+		"Total GPU time : " + std::to_string(totalGPUTime) + "ms ( " + std::to_string(totalGPUMinTime) + " \\ " + std::to_string(totalGPUMaxTime) + " )\n" +
+		"GPU FPS        : " + std::to_string((int)gpuFPS) + " ( " + std::to_string((int)gpuFPSMax) + " \\ " + std::to_string((int)gpuFPSMin) + " )\n\n" +
+
+		"---------------------------------------------------\n" +
+		"User input     : " + std::to_string(msgTime) + "ms ( " + std::to_string(msgTimeMin) + " \\ " + std::to_string(msgTimeMax) + " )\n" +
+		"Culling & draw : " + std::to_string(cullTime) + "ms ( " + std::to_string(cullTimeMin) + " \\ " + std::to_string(cullTimeMax) + " )\n" +
+		"Commands       : " + std::to_string(cmdsTime) + "ms ( " + std::to_string(cmdsTimeMin) + " \\ " + std::to_string(cmdsTimeMax) + " )\n" +
+		"Queue submit   : " + std::to_string(submitTime) + "ms ( " + std::to_string(submitTimeMin) + " \\ " + std::to_string(submitTimeMax) + " )\n" +
+		"Queue idle     : " + std::to_string(qWaitTime) + "ms ( " + std::to_string(qWaitTimeMin) + " \\ " + std::to_string(qWaitTimeMax) + " )\n" +
+		"Physics        : " + std::to_string(physicsTime) + "ms ( " + std::to_string(physicsTimeMin) + " \\ " + std::to_string(physicsTimeMax) + " )\n" +
+		"Scripts        : " + std::to_string(scriptsTime) + "ms ( " + std::to_string(scriptsTimeMin) + " \\ " + std::to_string(scriptsTimeMax) + " )\n\n" +
+
+		"Avg frame time : " + std::to_string((timeSinceLastStatsUpdate * 1000) / double(frames)) + "ms\n" +
+		"FPS            : " + std::to_string((int)(double(frames) / timeSinceLastStatsUpdate))
+	);
+	timeSinceLastStatsUpdate = 0.f;
+	frames = 0;
+
+	auto mutexStats = (Text*)uiLayer->getElement("mutexstats");
+
+	mutexStats->setString(
+		"----MUTEXES----------------\n"
+		"---------------------------\n"
+		"Physics        : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("physmutex"))) + "ms\n" +
+		"Phys->Engine   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("phystoenginemutex"))) + "ms\n" +
+		"Phys->GPU      : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("phystogpumutex"))) + "ms\n" +
+		"Transform      : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("transformmutex"))) + "ms\n"
+	);
+
+	auto threadStats = (Text*)uiLayer->getElement("threadstats");
+
+	threadStats->setString(
+		"----THREADS-------------------\n"
+		"------------------------------\n"
+		"Thread_1 (main)   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + "ms ( " + std::to_string(threading->threadJobsProcessed[std::this_thread::get_id()]) + " jobs done )\n" +
+		"Thread_2          : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[1])))) + "ms ( " + std::to_string(threading->threadJobsProcessed[threading->threadIDAssociations[1]]) + " jobs done )\n" +
+		"Thread_3          : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[2])))) + "ms ( " + std::to_string(threading->threadJobsProcessed[threading->threadIDAssociations[2]]) + " jobs done )\n" +
+		"Thread_4 (render) : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[3])))) + "ms ( " + std::to_string(threading->threadJobsProcessed[threading->threadIDAssociations[3]]) + " jobs done )"
+	);
+
+	// Reset profiling info
+	/// TODO: running average/min/max for last X frames
+	PROFILE_RESET("msgevent");
+	PROFILE_RESET("setuprender");
+	PROFILE_RESET("submitrender");
+	PROFILE_RESET("qwaitidle");
+	PROFILE_RESET("physics");
+	PROFILE_RESET("scripts");
+	PROFILE_RESET("cullingdrawbuffer");
+	PROFILE_RESET("commands");
+
+	PROFILE_RESET("gbuffer");
+	PROFILE_RESET("shadow");
+	PROFILE_RESET("pbr");
+	PROFILE_RESET("overlay");
+	PROFILE_RESET("overlaycombine");
+	PROFILE_RESET("screen");
+
+	PROFILE_RESET("physmutex");
+	PROFILE_RESET("phystoenginemutex");
+	PROFILE_RESET("phystogpumutex");
+	PROFILE_RESET("transformmutex");
+
+	PROFILE_RESET("thread_" + Threading::getThreadIDString(std::this_thread::get_id()));
+	PROFILE_RESET("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[1]));
+	PROFILE_RESET("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[2]));
+	PROFILE_RESET("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[3]));
 }
 
 /*
@@ -497,8 +613,8 @@ void Engine::createWindow()
 #endif
 	wci.width = 1280;
 	wci.height = 720;
-	wci.posX = 100;
-	wci.posY = 100;
+	wci.posX = 1820-1280;
+	wci.posY = 980-720;
 	wci.title = "Vulkan Engine";
 	wci.borderless = true;
 
@@ -626,7 +742,6 @@ void Engine::quit()
 }
 
 
-
 #ifdef ENABLE_VULKAN_VALIDATION
 /*
 	@brief	Vulkan validation. Debugging output.
@@ -677,3 +792,7 @@ Time Engine::frameTime(0);
 ScriptEnv Engine::scriptEnv;
 Threading* Engine::threading;
 std::atomic_char Engine::initialised = 0;
+std::mutex Engine::waitForProfilerInitMutex;
+VkResult Engine::lastVulkanResult;
+double Engine::timeSinceLastStatsUpdate = 0.f;
+int Engine::frames = 0;

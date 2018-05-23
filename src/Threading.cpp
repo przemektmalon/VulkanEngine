@@ -2,18 +2,23 @@
 #include "Threading.hpp"
 #include "Engine.hpp"
 #include "Renderer.hpp"
+#include "Profiler.hpp"
 
-Threading::Threading(int pNumThreads) : workers(pNumThreads)
+Threading::Threading(int pNumThreads) : workers(pNumThreads-1)
 {
 	totalJobsAdded.store(0);
 	totalJobsFinished.store(0);
 	totalTransferJobsAdded.store(0);
 	totalTransferJobsFinished.store(0);
-	for (int i = 0; i < pNumThreads - 1; ++i)
+	totalGraphicsJobsAdded.store(0);
+	totalGraphicsJobsFinished.store(0);
+	totalAsyncJobsAdded.store(0);
+	totalAsyncJobsFinished.store(0);
+	for (int i = 0; i < pNumThreads - 2; ++i)
 	{
 		workers[i] = new std::thread(&Threading::update, this);
 	}
-	workers[pNumThreads - 1] = new std::thread(&Threading::updateGraphics, this);
+	workers[pNumThreads - 2] = new std::thread(&Threading::updateGraphics, this);
 }
 
 Threading::~Threading()
@@ -29,15 +34,17 @@ void Threading::addJob(JobBase * jobToAdd, int async)
 {
 	jobsQueueMutex.lock();
 	totalJobsAdded.fetch_add(1 - async);
-	jobs.emplace(jobToAdd);
+	totalAsyncJobsAdded.fetch_add(async);
+	jobs.push_front(jobToAdd);
 	jobsQueueMutex.unlock();
 }
 
 void Threading::addGraphicsJob(JobBase * jobToAdd, int async)
 {
 	graphicsJobsQueueMutex.lock();
-	totalJobsAdded.fetch_add(1 - async);
-	graphicsJobs.emplace(jobToAdd);
+	totalGraphicsJobsAdded.fetch_add(1 - async);
+	totalAsyncJobsAdded.fetch_add(async);
+	graphicsJobs.push_front(jobToAdd);
 	graphicsJobsQueueMutex.unlock();
 }
 
@@ -45,20 +52,30 @@ void Threading::addGPUTransferJob(JobBase * jobToAdd, int async)
 {
 	gpuTransferJobsQueueMutex.lock();
 	totalTransferJobsAdded.fetch_add(1 - async);
-	gpuTransferJobs.emplace(jobToAdd);
+	totalAsyncJobsAdded.fetch_add(async);
+	gpuTransferJobs.push_front(jobToAdd);
 	gpuTransferJobsQueueMutex.unlock();
 }
 
 bool Threading::getJob(JobBase *& job)
 {
 	jobsQueueMutex.lock();
-	if (jobs.size() == 0)
+	if (jobs.empty())
 	{
 		jobsQueueMutex.unlock();
 		return false;
 	}
-	job = jobs.front();
-	jobs.pop();
+	auto jobItr = jobs.begin();
+	auto prevJob = jobs.before_begin();
+	while ((*jobItr)->getScheduledTime() > Engine::clock.now())
+	{
+		++prevJob;
+		++jobItr;
+		if (jobItr == jobs.end())
+			return false;
+	}
+	job = *jobItr;
+	jobs.erase_after(prevJob);
 	jobsQueueMutex.unlock();
 	return true;
 }
@@ -66,13 +83,22 @@ bool Threading::getJob(JobBase *& job)
 bool Threading::getGraphicsJob(JobBase *& job)
 {
 	graphicsJobsQueueMutex.lock();
-	if (graphicsJobs.size() == 0)
+	if (graphicsJobs.empty())
 	{
 		graphicsJobsQueueMutex.unlock();
 		return false;
 	}
-	job = graphicsJobs.front();
-	graphicsJobs.pop();
+	auto jobItr = graphicsJobs.begin();
+	auto prevJob = graphicsJobs.before_begin();
+	while ((*jobItr)->getScheduledTime() > Engine::clock.now())
+	{
+		++prevJob;
+		++jobItr;
+		if (jobItr == graphicsJobs.end())
+			return false;
+	}
+	job = *jobItr;
+	graphicsJobs.erase_after(prevJob);
 	graphicsJobsQueueMutex.unlock();
 	return true;
 }
@@ -80,46 +106,92 @@ bool Threading::getGraphicsJob(JobBase *& job)
 bool Threading::getGPUTransferJob(JobBase *& job)
 {
 	gpuTransferJobsQueueMutex.lock();
-	if (gpuTransferJobs.size() == 0)
+	if (gpuTransferJobs.empty())
 	{
 		gpuTransferJobsQueueMutex.unlock();
 		return false;
 	}
-	job = gpuTransferJobs.front();
-	gpuTransferJobs.pop();
+	auto jobItr = gpuTransferJobs.begin();
+	auto prevJob = gpuTransferJobs.before_begin();
+	while ((*jobItr)->getScheduledTime() > Engine::clock.now())
+	{
+		++prevJob;
+		++jobItr;
+		if (jobItr == gpuTransferJobs.end())
+			return false;
+	}
+	job = *jobItr;
+	gpuTransferJobs.erase_after(prevJob);
 	gpuTransferJobsQueueMutex.unlock();
 	return true;
 }
 
 void Threading::update()
 {
+	Engine::waitForProfilerInitMutex.lock();
+	Engine::waitForProfilerInitMutex.unlock();
+	initThreadProfilerTagsMutex.lock();
+	Profiler::prealloc(std::vector<std::thread::id>{ std::this_thread::get_id() }, std::vector<std::string>{ "thread_" + getThisThreadIDString() });
+	initThreadProfilerTagsMutex.unlock();
+
+	threadJobsProcessed[std::this_thread::get_id()] = 0;
+	
 	Engine::renderer->createPerThreadCommandPools();
 	JobBase* job;
-	while (true)
+	bool readyToTerminate = false;
+	while (!readyToTerminate)
 	{
+		PROFILE_START("thread_" + getThisThreadIDString());
 		if (getJob(job))
+		{
+			++threadJobsProcessed[std::this_thread::get_id()];
 			job->run();
+		}
 		else
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		{
+			readyToTerminate = !Engine::engineRunning;
+			std::this_thread::sleep_for(std::chrono::milliseconds(0));
+		}
+		PROFILE_END("thread_" + getThisThreadIDString());
 	}
 }
 
 void Threading::updateGraphics()
 {
+	Engine::waitForProfilerInitMutex.lock();
+	Engine::waitForProfilerInitMutex.unlock();
+	initThreadProfilerTagsMutex.lock();
+	Profiler::prealloc(std::vector<std::thread::id>{ std::this_thread::get_id() }, std::vector<std::string>{ "thread_" + getThisThreadIDString() });
+	initThreadProfilerTagsMutex.unlock();
+
+	threadJobsProcessed[std::this_thread::get_id()] = 0;
+
 	Engine::renderer->createPerThreadCommandPools();
 	JobBase* job;
-	while (true)
+	bool readyToTerminate = false;
+	while (!readyToTerminate)
 	{
+		PROFILE_START("thread_" + getThisThreadIDString());
 		if (getGraphicsJob(job)) // Graphics submission jobs have priority (they should be very fast)
+		{
+			++threadJobsProcessed[std::this_thread::get_id()];
 			job->run();
-		else if (getJob(job))
-			job->run();
+		}
+		//else if (getJob(job))
+		//{
+		//	++threadJobsProcessed[std::this_thread::get_id()];
+		//	job->run();
+		//}
 		else
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		{
+			readyToTerminate = !Engine::engineRunning;
+			std::this_thread::sleep_for(std::chrono::milliseconds(0));
+		}
+		PROFILE_END("thread_" + getThisThreadIDString());
 	}
 }
 
-bool Threading::allJobsDone()
+bool Threading::allRegularJobsDone()
 {
 	return totalJobsAdded.load() == totalJobsFinished.load();
 }
@@ -127,6 +199,16 @@ bool Threading::allJobsDone()
 bool Threading::allTransferJobsDone()
 {
 	return totalTransferJobsAdded.load() == totalTransferJobsFinished.load();
+}
+
+bool Threading::allAsyncJobsDone()
+{
+	return totalAsyncJobsAdded.load() == totalAsyncJobsFinished.load();
+}
+
+bool Threading::allGraphicsJobsDone()
+{
+	return totalGraphicsJobsAdded.load() == totalGraphicsJobsFinished.load();
 }
 
 void Threading::freeJob(JobBase * jobToFree)
@@ -145,4 +227,16 @@ void Threading::cleanupJobs()
 	}
 	jobsToFree.clear();
 	jobsFreeMutex.unlock();
+}
+
+void Threading::debugResetJobCounters()
+{
+	totalAsyncJobsAdded = 0;
+	totalAsyncJobsFinished = 0;
+	totalGraphicsJobsAdded = 0;
+	totalGraphicsJobsFinished = 0;
+	totalJobsAdded = 0;
+	totalJobsFinished = 0;
+	totalTransferJobsAdded = 0;
+	totalTransferJobsFinished = 0;
 }

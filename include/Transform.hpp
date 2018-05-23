@@ -32,6 +32,16 @@ public:
 		origin = glm::mix(origin, other.origin, 0.5);
 	}
 
+	void operator=(Transform& other)
+	{
+		translation = other.getTranslation();
+		qRot = other.qRot;
+		scalem = other.scalem;
+		origin = other.origin;
+		transform = other.transform;
+		needUpdate = other.needUpdate;
+	}
+
 	inline Transform& setTranslation(glm::fvec3 p) { translation = p; needUpdate = true; return *this; }
 	inline Transform& translate(glm::fvec3 p) { 
 		translation += p; 

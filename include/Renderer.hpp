@@ -34,7 +34,7 @@ struct CameraUBOData {
 class Renderer
 {
 public:
-	Renderer() : vertexInputByteOffset(0), indexInputByteOffset(0) {}
+	Renderer() : vertexInputByteOffset(0), indexInputByteOffset(0), gBufferDescriptorSetNeedsUpdate(true) {}
 
 	// Top level
 	void initialiseDevice();
@@ -169,6 +169,7 @@ public:
 	// Descriptors
 	VkDescriptorSetLayout gBufferDescriptorSetLayout;
 	VkDescriptorSet gBufferDescriptorSet;
+	bool gBufferDescriptorSetNeedsUpdate;
 
 	// Framebuffer and attachments
 	VkFramebuffer gBufferFramebuffer;
@@ -182,8 +183,6 @@ public:
 
 	// Command buffer
 	CommandsAndFence gBufferCommands;
-	//VkCommandBuffer gBufferCommandBuffer;
-	//VkFence gBufferFence;
 	VkCommandPool gBufferPreviousPool;
 	bool gBufferCmdsNeedUpdate;
 

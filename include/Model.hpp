@@ -145,8 +145,18 @@ public:
 class ModelInstance
 {
 public:
+	void setTransform(Transform& t)
+	{
+		transform[0] = t;
+		transform[1] = t;
+	}
+
 	std::string name;
-	Transform transform;
+	Transform transform[2];
+
+	static u32 toEngineTransformIndex;
+	static u32 toGPUTransformIndex;
+
 	u32 transformIndex; // Index into gpu transform buffer
 	Model * model;
 	Material* material;
@@ -154,7 +164,7 @@ public:
 
 	void setModel(Model* m);
 	void setMaterial(Material* pMaterial);
-	Transform& getTransform() { return transform; }
+	Transform& getTransform() { return transform[0]; }
 
 	//void makePhysicsObject(btCollisionShape* collisionShape, float mass);
 	void makePhysicsObject();

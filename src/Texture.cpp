@@ -182,6 +182,7 @@ void Texture::loadToGPU(void * pCreateStruct)
 	}
 
 	createImageView();
+	Engine::renderer->gBufferDescriptorSetNeedsUpdate = true;
 }
 
 void Texture::generateMipMaps()

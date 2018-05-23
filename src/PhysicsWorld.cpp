@@ -11,16 +11,20 @@
 
 void PhysicsWorld::updateModels()
 {
+	auto tIndex = ModelInstance::toEngineTransformIndex;
+
 	btTransform t;
 	for (auto o : objects)
 	{
 		o->rigidBody->getMotionState()->getWorldTransform(t);
 		btQuaternion q = t.getRotation();
 		btVector3 p = t.getOrigin();
-		o->instance->transform.setTranslation(glm::fvec3(p.x(), p.y(), p.z()));
-		o->instance->transform.setQuat(glm::fquat(q.w(), q.x(), q.y(), q.z()));
-		o->instance->transform.updateMatrix();
+		o->instance->transform[tIndex].setTranslation(glm::fvec3(p.x(), p.y(), p.z()));
+		o->instance->transform[tIndex].setQuat(glm::fquat(q.w(), q.x(), q.y(), q.z()));
+		o->instance->transform[tIndex].updateMatrix();
 	}
+
+	ModelInstance::toEngineTransformIndex = tIndex == 0 ? 1 : 0;
 }
 
 btVector3 PhysicsWorld::getRayTo(int x, int y)

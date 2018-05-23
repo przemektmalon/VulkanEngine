@@ -90,7 +90,7 @@ void Renderer::initialise()
 		int sh = s / 2;
 		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 50, s64(r() % s) - sh));
 		glm::fvec3 col(1.0, 0.8, 1.0);
-		/*switch (i % 7)
+		switch (i % 7)
 		{
 		case 0: {
 			col = glm::fvec3(1, 0.5, 0.5);
@@ -113,7 +113,7 @@ void Renderer::initialise()
 		case 6: {
 			col = glm::fvec3(1, 1, 1);
 			break; }
-		}*/
+		}
 		pl.setColour(col * glm::fvec3(2.3));
 		pl.setLinear(0.001);
 		pl.setQuadratic(0.001);
@@ -282,6 +282,14 @@ void Renderer::cleanupForReInit()
 */
 void Renderer::render()
 {
+	PROFILE_START("qwaitidle");
+
+	VK_CHECK_RESULT(vkQueueWaitIdle(presentQueue));
+
+	VK_CHECK_RESULT(vkGetQueryPoolResults(device, queryPool, 0, NUM_GPU_TIMESTAMPS, sizeof(u64) * NUM_GPU_TIMESTAMPS, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT));
+
+	PROFILE_END("qwaitidle");
+
 	PROFILE_START("submitrender");
 
 	VkSubmitInfo submitInfo = {};
@@ -374,14 +382,6 @@ void Renderer::render()
 	VK_CHECK_RESULT(vkQueuePresentKHR(presentQueue, &presentInfo));
 
 	PROFILE_END("submitrender");
-
-	PROFILE_START("qwaitidle");
-
-	VK_CHECK_RESULT(vkQueueWaitIdle(presentQueue));
-
-	PROFILE_END("qwaitidle");
-
-	VK_CHECK_RESULT(vkGetQueryPoolResults(device, queryPool, 0, NUM_GPU_TIMESTAMPS, sizeof(u64) * NUM_GPU_TIMESTAMPS, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT));
 }
 
 void Renderer::reloadShaders()
@@ -426,9 +426,11 @@ void Renderer::populateDrawCmdBuffer()
 
 	int i = 0;
 	
+	auto tIndex = ModelInstance::toGPUTransformIndex;
+
 	for (auto& m : Engine::world.instancesToDraw)
 	{
-		glm::fvec3 modelPos = m->transform.getTranslation();
+		glm::fvec3 modelPos = m->transform[tIndex].getTranslation();
 		float distanceToCam = glm::length(Engine::camera.getPosition() - modelPos);
 
 		int lodIndex = 0;
@@ -558,8 +560,6 @@ void Renderer::createLogicalDevice()
 */
 void Renderer::createCommandPool()
 {
-	//DBG_INFO("Creating Vulkan command pool");
-
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = 0;
@@ -578,8 +578,6 @@ void Renderer::createCommandPool()
 
 void Renderer::createPerThreadCommandPools()
 {
-	DBG_INFO("Creating Vulkan command pool");
-
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = 0;
@@ -799,7 +797,7 @@ void Renderer::submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence)
 		VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, submitInfo.pCommandBuffers));
 		// To free command buffer for non blocking jobs we will need to know when the gpu finished it !
 	};
-	auto submitJob = new Job<>(submitJobFunc, defaultJobDoneFunc);
+	auto submitJob = new Job<>(submitJobFunc, defaultTransferJobDoneFunc);
 	Engine::threading->addGPUTransferJob(submitJob, 0); /// TODO: make asynchronous
 }
 
@@ -833,8 +831,8 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fenc
 
 	Engine::threading->physToGPUMutex.lock();
 	
-	VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
-	VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue)); /// TODO: non blocking queue submissions !
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence));
+	VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue)); /// TODO: non blocking queue submissions !
 
 	Engine::threading->physToGPUMutex.unlock();
 
@@ -861,54 +859,32 @@ void Renderer::updateCameraBuffer()
 */
 void Renderer::updateTransformBuffer()
 {
-	/*PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
+	//PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
 
-	//glm::fmat4* transform = (glm::fmat4*)transformUBO.map();
-	glm::fmat4* transform = (glm::fmat4*)transformUBO.staging->map();
+	/*auto result = vkWaitForFences(device, 1, &gBufferCommands.fence, 1, 20);
+	if (result == VK_TIMEOUT)
+		return;*/
 
-	int i = 0;
-	for (auto& m : Engine::world.instancesToDraw)
-	{
-		transform[m->transformIndex] = m->transform.getTransformMat();
-		++i;
-	}
+	//VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, 1, std::numeric_limits<u64>::max()));
 
-	//transformUBO.unmap();
-	transformUBO.staging->unmap();
-
-	VkCommandBuffer commandBuffer = Engine::renderer->beginTransferCommands();
-
-	VkBufferCopy copyRegion = {};
-	copyRegion.srcOffset = 0;
-	copyRegion.dstOffset = 0;
-	copyRegion.size = VK_WHOLE_SIZE;
-	VK_VALIDATE(vkCmdCopyBuffer(commandBuffer, transformUBO.staging->getBuffer(), transformUBO.getBuffer(), 1, &copyRegion));
-
-	Engine::renderer->endTransferCommands(commandBuffer);
-
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers, &commandBuffer;
-
-	Engine::renderer->submitTransferCommands(submitInfo, VK_NULL_HANDLE);
-
-	Engine::threading->instanceTransformMutex.unlock();*/
-
-	PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
+	auto tIndex = ModelInstance::toGPUTransformIndex;
 
 	glm::fmat4* transform = (glm::fmat4*)transformUBO.map();
 
 	int i = 0;
 	for (auto& m : Engine::world.instancesToDraw)
 	{
-		transform[m->transformIndex] = m->transform.getTransformMat();
+		transform[m->transformIndex] = m->transform[tIndex].getTransformMat();
 		++i;
 	}
 
 	transformUBO.unmap();
 
-	Engine::threading->instanceTransformMutex.unlock();
+	//VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferCommands.fence));
+
+	ModelInstance::toGPUTransformIndex = tIndex == 0 ? 1 : 0;
+
+	//Engine::threading->instanceTransformMutex.unlock();
 }
 
 void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount, VkImageAspectFlags aspect)

@@ -313,6 +313,11 @@ void Renderer::createGBufferDescriptorSets()
 
 void Renderer::updateGBufferDescriptorSets()
 {
+	if (!gBufferDescriptorSetNeedsUpdate)
+		return;
+
+	gBufferDescriptorSetNeedsUpdate = false;
+
 	VkDescriptorBufferInfo bufferInfo = {};
 	bufferInfo.buffer = cameraUBO.getBuffer();
 	bufferInfo.offset = 0;
@@ -334,12 +339,20 @@ void Renderer::updateGBufferDescriptorSets()
 	u32 i = 0;
 	for (auto& material : Engine::assets.materials)
 	{
-		imageInfo[i].imageView = material.second.albedoSpec->getImageViewHandle();
+		if (material.second.albedoSpec->getImageHandle())
+			imageInfo[i].imageView = material.second.albedoSpec->getImageViewHandle();
+		else
+			imageInfo[i].imageView = Engine::assets.getTexture("blank")->getImageViewHandle();
 
 		if (material.second.normalRough)
-			imageInfo[i + 1].imageView = material.second.normalRough->getImageViewHandle();
+		{
+			if (material.second.normalRough->getImageViewHandle())
+				imageInfo[i + 1].imageView = material.second.normalRough->getImageViewHandle();
+			else
+				imageInfo[i + 1].imageView = Engine::assets.getTexture("black")->getImageViewHandle();
+		}
 		else
-			imageInfo[i + 1].imageView = material.second.albedoSpec->getImageViewHandle(); /// TODO: some null texture
+			imageInfo[i + 1].imageView = Engine::assets.getTexture("black")->getImageViewHandle();
 		i += 2;
 	}
 
@@ -393,7 +406,7 @@ void Renderer::updateGBufferCommands()
 
 	/// TODO: each thread will have a dynamic number of fences we will have to wait for all of them to signal (from the previous frame)
 
-	VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, true, std::numeric_limits<u64>::max()));
+	//VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, true, std::numeric_limits<u64>::max()));
 	
 	freeCommandBuffer(&gBufferCommands.commands, gBufferPreviousPool);
 

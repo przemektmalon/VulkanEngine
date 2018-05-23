@@ -25,10 +25,14 @@ public:
 	~Engine() {}
 
 	static void start();
+	static void engineLoop();
+	static void eventLoop();
 	static void createVulkanInstance();
 	static void queryVulkanPhysicalDeviceDetails();
 	static void createWindow();
 	static void quit();
+
+	static void updatePerformanceStatsDisplay();
 
 	static VkPhysicalDevice getPhysicalDevice() { return vkPhysicalDevice; }
 	static PhysicalDeviceDetails& getPhysicalDeviceDetails() { return physicalDevicesDetails[physicalDeviceIndex]; }
@@ -55,11 +59,13 @@ public:
 	static Console* console;
 	static ScriptEnv scriptEnv;
 	static Threading* threading;
+	
 
 	static VkInstance vkInstance;
 	static VkPhysicalDevice vkPhysicalDevice;
 	static std::vector<PhysicalDeviceDetails> physicalDevicesDetails;
 	static int physicalDeviceIndex;
+	static VkResult lastVulkanResult;
 	
 	static Time frameTime;
 	static bool engineRunning;
@@ -71,4 +77,11 @@ public:
 	static OLayer* uiLayer;
 	static u64 gpuTimeStamps[12];
 	static std::atomic_char initialised;
+	static std::mutex waitForProfilerInitMutex;
+	
+	// Used to display stats every X seconds
+	static double timeSinceLastStatsUpdate;
+
+	// Used to get average frame time
+	static int frames;
 };

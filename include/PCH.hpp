@@ -53,7 +53,7 @@
 }
 
 #define VK_VALIDATE_W_RESULT(f) \
-	auto result = f; \
+	Engine::lastVulkanResult = f; \
 	if (Engine::validationWarning) { \
 			DBG_WARNING(Engine::validationMessage); \
 			Engine::validationWarning = false; \
@@ -62,8 +62,8 @@
 
 #define VK_CHECK_RESULT(f) { \
 	VK_VALIDATE_W_RESULT(f); \
-	if (result != VK_SUCCESS) { \
-		switch(result){ \
+	if (Engine::lastVulkanResult != VK_SUCCESS) { \
+		switch(Engine::lastVulkanResult){ \
 			case(VK_ERROR_OUT_OF_HOST_MEMORY): \
 				DBG_SEVERE("VK_ERROR_OUT_OF_HOST_MEMORY"); break; \
 			case(VK_ERROR_OUT_OF_DEVICE_MEMORY): \
@@ -123,16 +123,13 @@
 	#define DBG_SEVERE(msg) { \
 			std::stringstream ss; \
 			ss << msg; \
-			if (Engine::console) { \
-				/*Engine::console->postMessage(ss.str(), glm::fvec3(1.f,0.2,0.2));*/ } \
-			else { \
-				SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b11001111); \
-				std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
-				std::cout << "! SEVERE  -"; \
-				SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
-				std::cout << " " << ss.str() << std::endl; \
-				MessageBoxA(NULL, LPCSTR(ss.str().c_str()), "Severe Error!", MB_OK); \
-				DebugBreak(); } }
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b11001111); \
+			std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
+			std::cout << "! SEVERE  -"; \
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
+			std::cout << " " << ss.str() << std::endl; \
+			MessageBoxA(NULL, LPCSTR(ss.str().c_str()), "Severe Error!", MB_OK); \
+			DebugBreak(); } 
 	#else
 		#define DBG_SEVERE(msg) { \
 			std::stringstream ss; \
@@ -147,25 +144,19 @@
 	#define DBG_WARNING(msg) { \
 		std::stringstream ss; \
 		ss << msg; \
-		if (Engine::console) { \
-			/* Engine::console->postMessage(ss.str(), glm::fvec3(0.9,0.9,0.2));*/ } \
-		else { \
-			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b01101111); \
-			std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
-			std::cout << "! Warning -"; \
-			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
-			std::cout << " " << ss.str() << std::endl; } }
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b01101111); \
+		std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
+		std::cout << "! Warning -"; \
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
+		std::cout << " " << ss.str() << std::endl; } 
 
 	#define DBG_INFO(msg) { \
 		std::stringstream ss; \
 		ss << msg; \
-		if (Engine::console) { \
-			/*Engine::console->postMessage(ss.str(), glm::fvec3(0.2,0.2,1));*/ } \
-		else { \
-			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00011111); \
-			std::cout << " Info     -"; \
-			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
-			std::cout << " " << ss.str() << std::endl; } }
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00011111); \
+		std::cout << " Info     -"; \
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
+		std::cout << " " << ss.str() << std::endl; } 
 #else
 	#ifdef __linux__
 		#define DBG_SEVERE(msg) { \
@@ -226,6 +217,8 @@
 #include <vector>
 
 #include <list>
+
+#include <forward_list>
 
 #include <set>
 

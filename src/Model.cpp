@@ -122,11 +122,11 @@ void ModelInstance::makePhysicsObject()
 	auto generateCollisionShape = [&nodeToFloat, this](rapidxml::xml_node<>* shapeNode) -> btCollisionShape* {
 		std::string shapeType = shapeNode->first_attribute("type")->value();
 
-		glm::fvec3 scale = this->transform.getScale();
+		glm::fvec3 scale = this->transform[0].getScale();
 
 		if (shapeType == "sphere")
 		{
-			float radius = nodeToFloat(shapeNode->first_node("radius")) * this->transform.getScale().x;
+			float radius = nodeToFloat(shapeNode->first_node("radius")) * this->transform[0].getScale().x;
 			return new btSphereShape(radius);
 		}
 		else if (shapeType == "box")
@@ -194,7 +194,7 @@ void ModelInstance::makePhysicsObject()
 				if (shapeNode->first_node("posx"))
 				{
 					float posx, posy, posz;
-					auto scale = transform.getScale();
+					auto scale = transform[0].getScale();
 					posx = nodeToFloat(shapeNode->first_node("posx"));
 					posy = nodeToFloat(shapeNode->first_node("posy"));
 					posz = nodeToFloat(shapeNode->first_node("posz"));
@@ -224,9 +224,12 @@ void ModelInstance::makePhysicsObject()
 
 	physicsObject = new PhysicsObject();
 	physicsObject->instance = this;
-	physicsObject->create(transform.getTranslation(), transform.getQuat(), colShape, mass);
+	physicsObject->create(transform[0].getTranslation(), transform[0].getQuat(), colShape, mass);
 	physicsObject->setDamping(linearDamping, angularDamping);
 	physicsObject->setFriction(friction);
 	physicsObject->setRestitution(restitution);
 	Engine::physicsWorld.addRigidBody(physicsObject);
 }
+
+u32 ModelInstance::toEngineTransformIndex = 0;
+u32 ModelInstance::toGPUTransformIndex = 1;

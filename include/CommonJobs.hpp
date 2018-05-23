@@ -16,13 +16,13 @@ static auto physicsJobFunc = []() -> void {
 };
 
 static auto physicsToEngineJobFunc = []() -> void {
-	PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
-	PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
+	//PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
+	//PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
 	PROFILE_START("physics");
 	Engine::physicsWorld.updateModels();
 	PROFILE_END("physics");
-	Engine::threading->instanceTransformMutex.unlock();
-	Engine::threading->physToEngineMutex.unlock();
+	//Engine::threading->instanceTransformMutex.unlock();
+	//Engine::threading->physToEngineMutex.unlock();
 };
 
 static auto physicsToGPUJobFunc = []() -> void {
@@ -47,7 +47,9 @@ static auto renderJobFunc = []() -> void {
 	Engine::renderer->updateShadowCommands(); // Mutex with engine model transform update
 	Engine::renderer->updateGBufferCommands();
 	Engine::renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
+	PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
 	Engine::renderer->updateCameraBuffer();
+	Engine::threading->instanceTransformMutex.unlock();
 	PROFILE_END("commands");
 
 	PROFILE_MUTEX("phystogpumutex", Engine::threading->physToGPUMutex.lock());

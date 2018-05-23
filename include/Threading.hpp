@@ -10,7 +10,8 @@ class JobBase
 public:
 	enum Type { Regular, Graphics, Transfer };
 
-	JobBase(Type pType) : type(pType), child(nullptr) {}
+	JobBase(Type pType) : type(pType), child(nullptr), scheduledTime(0) {}
+	JobBase(Type pType, u64 pScheduledTime) : type(pType), child(nullptr), scheduledTime(pScheduledTime) {}
 
 	virtual void run() = 0;
 
@@ -29,8 +30,19 @@ public:
 		return type;
 	}
 
+	void setScheduledTime(u64 pScheduledTime)
+	{
+		scheduledTime = pScheduledTime;
+	}
+
+	u64 getScheduledTime()
+	{
+		return scheduledTime;
+	}
+
 protected:
 
+	u64 scheduledTime;
 	JobBase * child;
 	Type type;
 };
@@ -83,6 +95,24 @@ public:
 	// Terminate worker threads
 	~Threading();
 
+	// Get thread ID strings
+	static std::string getThisThreadIDString() 
+	{ 
+		std::stringstream ss;
+		ss << std::this_thread::get_id();
+		return ss.str();
+	}
+	static std::string getThreadIDString(std::thread::id id) 
+	{ 
+		std::stringstream ss;
+		ss << id;
+		return ss.str();
+	}
+
+	std::mutex initThreadProfilerTagsMutex;
+	std::unordered_map<int, std::thread::id> threadIDAssociations;
+	std::unordered_map<std::thread::id, int> threadJobsProcessed;
+
 	// 'async' jobs are not counted in job total and finish counters so as to not block on frame borders
 
 	// Systems add their jobs to the queue
@@ -112,11 +142,17 @@ public:
 	// Executed by graphics submission thread before regular update
 	void updateGraphics();
 
-	// Are all (non-transfer) jobs done
-	bool allJobsDone();
+	// Are all regular jobs done
+	bool allRegularJobsDone();
 
 	// Are all transfer jobs done
 	bool allTransferJobsDone();
+
+	// Are all 'async' jobs done
+	bool allAsyncJobsDone();
+
+	// Are all graphics jobs done
+	bool allGraphicsJobsDone();
 
 	// Mark job for freeing memory
 	void freeJob(JobBase* jobToFree);
@@ -124,13 +160,16 @@ public:
 	// Free marked jobs
 	void cleanupJobs();
 
-	std::queue<JobBase*> jobs;
+	// Sometimes (on console open close) some jobs seem to finish but not add to the counter, this resets job counters
+	void debugResetJobCounters();
+
+	std::forward_list<JobBase*> jobs;
 	std::mutex jobsQueueMutex;
 
-	std::queue<JobBase*> graphicsJobs;
+	std::forward_list<JobBase*> graphicsJobs;
 	std::mutex graphicsJobsQueueMutex;
 	
-	std::queue<JobBase*> gpuTransferJobs;
+	std::forward_list<JobBase*> gpuTransferJobs;
 	std::mutex gpuTransferJobsQueueMutex;
 
 	std::list<JobBase*> jobsToFree;
@@ -141,6 +180,12 @@ public:
 
 	std::atomic_char32_t totalTransferJobsAdded;
 	std::atomic_char32_t totalTransferJobsFinished;
+
+	std::atomic_char32_t totalAsyncJobsAdded;
+	std::atomic_char32_t totalAsyncJobsFinished;
+
+	std::atomic_char32_t totalGraphicsJobsAdded;
+	std::atomic_char32_t totalGraphicsJobsFinished;
 
 	std::vector<std::thread*> workers;
 
@@ -162,6 +207,11 @@ static void defaultJobDoneFunc()
 	Engine::threading->totalJobsFinished.fetch_add(1);
 }
 
+static void defaultGraphicsJobDoneFunc()
+{
+	Engine::threading->totalGraphicsJobsFinished.fetch_add(1);
+}
+
 static void defaultTransferJobDoneFunc()
 {
 	Engine::threading->totalTransferJobsFinished.fetch_add(1);
@@ -169,4 +219,5 @@ static void defaultTransferJobDoneFunc()
 
 static void defaultAsyncJobDoneFunc()
 {
+	Engine::threading->totalAsyncJobsFinished.fetch_add(1);
 }
