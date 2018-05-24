@@ -160,6 +160,14 @@
 	</model>
 
 	<model>
+		<path>_box.obj</path>
+		<name>box</name>
+
+		<material>bamboo</material>
+		<physics>_boxphysics.xml</physics>
+	</model>
+
+	<model>
 		<path>_ground.obj</path>
 		<name>ground</name>
 		<material>dirt</material>

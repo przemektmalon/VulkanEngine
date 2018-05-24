@@ -37,7 +37,7 @@ public:
 	void resize(u32 newResX, u32 newResY);
 	void destroy();
 	// Returns true if all messages have been processed
-	bool processMessages();
+	void processMessages();
 #ifdef __linux__
 	bool isWmDeleteWin(xcb_atom_t message);
 #endif

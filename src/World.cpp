@@ -16,7 +16,7 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 	if (modelNames.find(instanceName) != modelNames.end())
 		return; // Instance exists
 
-	int transformIndex = 0; // Dependant on list<vector<>> the instance is in
+	int transformIndex = allInstances.size() * 100; // Dependant on list<vector<>> the instance is in
 
 	ModelInstance* insertPosition = nullptr;
 	for (auto listInsert = allInstances.begin(); listInsert != allInstances.end(); ++listInsert)

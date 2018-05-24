@@ -35,6 +35,7 @@ void Engine::start()
 	createVulkanInstance();
 	createWindow();
 	queryVulkanPhysicalDeviceDetails();
+	initialiseCommonJobs();
 	rand.seed(0);
 
 	/// TODO: A more convenient utility for this \/ \/ \/
@@ -67,7 +68,7 @@ void Engine::start()
 	/*
 		Initialise worker threads (each one needs vulkan logical device before initialising its command pool)
 	*/
-	int numThreads = 2;
+	int numThreads = 4;
 	waitForProfilerInitMutex.lock();
 	threading = new Threading(numThreads);
 
@@ -159,7 +160,7 @@ void Engine::start()
 	while (!threading->allTransferJobsDone() || !threading->allRegularJobsDone())
 	{
 		// Submit any gpu transfer jobs that were children of DISK load jobs
-		processMainThreadJobs();
+		processAllMainThreadJobs();
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 
@@ -180,9 +181,9 @@ void Engine::start()
 	{
 		std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahog", "copper" };
 
-		for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < 50; ++i)
 		{
-			world.addModelInstance("hollowbox", "hollowbox" + std::to_string(i));
+			world.addModelInstance("box", "hollowbox" + std::to_string(i));
 			int s = 100;
 			int sh = s / 2;
 			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % 10000) / 5.f + 50.f, s64(rand() % s) - sh);
@@ -270,7 +271,7 @@ void Engine::start()
 
 	while (!threading->allAsyncJobsDone() || !threading->allGraphicsJobsDone() || !threading->allRegularJobsDone() || !threading->allTransferJobsDone())
 	{
-		processMainThreadJobs();
+		processAllMainThreadJobs();
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 
@@ -278,11 +279,13 @@ void Engine::start()
 		These jobs are found in "CommonJobs.hpp"
 		They will be re-added at the end of each frame
 	*/
-	threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultGraphicsJobDoneFunc), 0);
-	threading->addGraphicsJob(new Job<>(renderJobFunc, defaultGraphicsJobDoneFunc), 0);
-	threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc), 0);
-	threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc), 0);
-	threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc), 0);
+	threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultAsyncJobDoneFunc), 1);
+	threading->addGraphicsJob(new Job<>(renderJobFunc, defaultAsyncJobDoneFunc), 1);
+	//threading->addGraphicsJob(new Job<>(renderJobFunc, defaultGraphicsJobDoneFunc), 0);
+	threading->addJob(new Job<>(physicsJobFunc, defaultAsyncJobDoneFunc), 1);
+	threading->addJob(new Job<>(physicsToEngineJobFunc, defaultAsyncJobDoneFunc), 1);
+	threading->addJob(new Job<>(scriptsJobFunc, defaultAsyncJobDoneFunc), 1);
+	threading->addJob(new Job<>(cleanupJobsJobFunc, defaultAsyncJobDoneFunc), 1);
 
 	threading->threadJobsProcessed[std::this_thread::get_id()] = 0;
 
@@ -297,66 +300,42 @@ void Engine::engineLoop()
 	// Main engine loop
 	while (engineRunning)
 	{
-		processMainThreadJobs();
+		PROFILE_START("thread_" + Threading::getThisThreadIDString());
 
-		/*
-			Once the frame is rendered, render next one by submitting render and update jobs
-		*/
-		if (threading->allRegularJobsDone() && threading->allGraphicsJobsDone())
-		{
-			PROFILE_END("thread_" + Threading::getThisThreadIDString());
-			PROFILE_START("thread_" + Threading::getThisThreadIDString());
+		processNextMainThreadJob();
 
-			PROFILE_START("msgevent");
+		//PROFILE_START("msgevent");
 
-			// Process OS messages (user input, etc) and translate them to engine events
-			while (window->processMessages()) { /* Invoke timer ? */ }
+		// Process OS messages (user input, etc) and translate them to engine events
+		PROFILE_START("msgevent");
+		window->processMessages();
+		PROFILE_END("msgevent");
 
 #ifdef _WIN32
-			// We get keyboard state here for SHIFT+KEY events to work properly
-			GetKeyboardState(Keyboard::keyState);
+		// We get keyboard state here for SHIFT+KEY events to work properly
+		GetKeyboardState(Keyboard::keyState);
 #endif
 
-			eventLoop();
+		eventLoop();
 
-			frameTime = clock.time() - frameStart;
-			frameStart = clock.time();
+		frameTime = clock.time() - frameStart;
+		frameStart = clock.time();
 
-			console->update();
+		console->update();
 
-			//PROFILE_END("msgevent");
+		//PROFILE_END("msgevent");
 
-			/*
-				Add GPU timestamps to profiler class
-			*/
-			PROFILE_GPU_ADD_TIME("gbuffer", Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER], Engine::gpuTimeStamps[Renderer::END_GBUFFER]);
-			PROFILE_GPU_ADD_TIME("shadow", Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW], Engine::gpuTimeStamps[Renderer::END_SHADOW]);
-			PROFILE_GPU_ADD_TIME("pbr", Engine::gpuTimeStamps[Renderer::BEGIN_PBR], Engine::gpuTimeStamps[Renderer::END_PBR]);
-			PROFILE_GPU_ADD_TIME("overlay", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY], Engine::gpuTimeStamps[Renderer::END_OVERLAY]);
-			PROFILE_GPU_ADD_TIME("overlaycombine", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE], Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE]);
-			PROFILE_GPU_ADD_TIME("screen", Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN], Engine::gpuTimeStamps[Renderer::END_SCREEN]);
-
-			threading->cleanupJobs(); // Cleanup memory of finished jobs
-
-			renderer->updateGBufferDescriptorSets(); /// TODO: mutex/fence with gbuffer pass
-
-			// Next frames jobs
-			threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultGraphicsJobDoneFunc), 0);
-			threading->addGraphicsJob(new Job<>(renderJobFunc, defaultGraphicsJobDoneFunc), 0);
-			threading->addJob(new Job<>(physicsJobFunc, defaultJobDoneFunc), 0);
-			threading->addJob(new Job<>(physicsToEngineJobFunc, defaultJobDoneFunc), 0);
-			threading->addJob(new Job<>(scriptsJobFunc, defaultJobDoneFunc), 0);
-			
-			// Display performance stats
-			++frames;
-			timeSinceLastStatsUpdate += frameTime.getSeconds();
-			if (timeSinceLastStatsUpdate > 1.25f)
-			{
-				updatePerformanceStatsDisplay();
-			}
-
-			PROFILE_END("msgevent");
+		// Display performance stats
+		++frames;
+		timeSinceLastStatsUpdate += frameTime.getSeconds();
+		if (timeSinceLastStatsUpdate > 0.15f)
+		{
+			updatePerformanceStatsDisplay();
 		}
+
+		//PROFILE_END("msgevent");
+
+		PROFILE_END("thread_" + Threading::getThisThreadIDString());
 	}
 
 	for (auto t : threading->workers)
@@ -452,19 +431,39 @@ void Engine::eventLoop()
 	physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
 }
 
-void Engine::processMainThreadJobs()
+void Engine::processAllMainThreadJobs()
 {
 	JobBase* job;
-	while (threading->getGPUTransferJob(job))
+	s64 timeUntilNextJob;
+	while (threading->getGPUTransferJob(job, timeUntilNextJob))
 	{
 		job->run();
 		++threading->threadJobsProcessed[std::this_thread::get_id()];
 	}
-	while (threading->getJob(job))
+	while (threading->getJob(job, timeUntilNextJob))
 	{
 		job->run();
 		++threading->threadJobsProcessed[std::this_thread::get_id()];
 	}
+}
+
+bool Engine::processNextMainThreadJob()
+{
+	JobBase* job;
+	s64 timeUntilNextJob;
+	if (threading->getGPUTransferJob(job, timeUntilNextJob))
+	{
+		job->run();
+		++threading->threadJobsProcessed[std::this_thread::get_id()];
+		return true;
+	}
+	else if (threading->getJob(job, timeUntilNextJob))
+	{
+		job->run();
+		++threading->threadJobsProcessed[std::this_thread::get_id()];
+		return true;
+	}
+	return false;
 }
 
 void Engine::updatePerformanceStatsDisplay()
@@ -569,7 +568,7 @@ void Engine::updatePerformanceStatsDisplay()
 
 	std::string threadStatsString;
 
-	threadStatsString = "----THREADS-------------------\n------------------------------\n"
+	/*threadStatsString = "----THREADS-------------------\n------------------------------\n"
 		"Thread_1 (main)   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + "ms ( " + std::to_string(threading->threadJobsProcessed[std::this_thread::get_id()]) + " jobs done )\n";
 
 	int i = 2;
@@ -578,13 +577,32 @@ void Engine::updatePerformanceStatsDisplay()
 		if (t == threading->workers.back()) // last thread is render thread so add that label
 		{
 			threadStatsString += std::string("Thread_") + std::to_string(i) + " (render) : " +
-				std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[1])))) + "ms ( " + std::to_string(threading->threadJobsProcessed[threading->threadIDAssociations[i - 1]]) + " jobs done )\n";
+				std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1])))) + "ms ( " + std::to_string(threading->threadJobsProcessed[threading->threadIDAssociations[i - 1]]) + " jobs done )\n";
 		}
 		else
 		{
 			threadStatsString += std::string("Thread_") + std::to_string(i) + "          : " +
-				std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[1])))) + "ms ( " + std::to_string(threading->threadJobsProcessed[threading->threadIDAssociations[i - 1]]) + " jobs done )\n";
+				std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1])))) + "ms ( " + std::to_string(threading->threadJobsProcessed[threading->threadIDAssociations[i - 1]]) + " jobs done )\n";
 		}
+	}*/
+
+	threadStatsString = "----THREADS-------------------\n------------------------------\n"
+		"Thread_1 (main)   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_MAX("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + " )\n";
+
+	int i = 2;
+	for (auto t : threading->workers)
+	{
+		if (t == threading->workers.back()) // last thread is render thread so add that label
+		{
+			threadStatsString += std::string("Thread_") + std::to_string(i) + " (render) : " +
+				std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1])))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i - 1])))) + " )\n";
+		}
+		else
+		{
+			threadStatsString += std::string("Thread_") + std::to_string(i) + "          : " +
+				std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1])))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i - 1])))) + " )\n";
+		}
+		++i;
 	}
 
 	threadStats->setString(threadStatsString);
@@ -599,13 +617,6 @@ void Engine::updatePerformanceStatsDisplay()
 	PROFILE_RESET("scripts");
 	PROFILE_RESET("cullingdrawbuffer");
 	PROFILE_RESET("commands");
-
-	PROFILE_RESET("gbuffer");
-	PROFILE_RESET("shadow");
-	PROFILE_RESET("pbr");
-	PROFILE_RESET("overlay");
-	PROFILE_RESET("overlaycombine");
-	PROFILE_RESET("screen");
 
 	PROFILE_RESET("physmutex");
 	PROFILE_RESET("phystoenginemutex");

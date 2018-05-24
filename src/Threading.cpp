@@ -35,7 +35,7 @@ void Threading::addJob(JobBase * jobToAdd, int async)
 	jobsQueueMutex.lock();
 	totalJobsAdded.fetch_add(1 - async);
 	totalAsyncJobsAdded.fetch_add(async);
-	jobs.push_front(jobToAdd);
+	jobs.push_back(jobToAdd);
 	jobsQueueMutex.unlock();
 }
 
@@ -44,7 +44,7 @@ void Threading::addGraphicsJob(JobBase * jobToAdd, int async)
 	graphicsJobsQueueMutex.lock();
 	totalGraphicsJobsAdded.fetch_add(1 - async);
 	totalAsyncJobsAdded.fetch_add(async);
-	graphicsJobs.push_front(jobToAdd);
+	graphicsJobs.push_back(jobToAdd);
 	graphicsJobsQueueMutex.unlock();
 }
 
@@ -53,11 +53,11 @@ void Threading::addGPUTransferJob(JobBase * jobToAdd, int async)
 	gpuTransferJobsQueueMutex.lock();
 	totalTransferJobsAdded.fetch_add(1 - async);
 	totalAsyncJobsAdded.fetch_add(async);
-	gpuTransferJobs.push_front(jobToAdd);
+	gpuTransferJobs.push_back(jobToAdd);
 	gpuTransferJobsQueueMutex.unlock();
 }
 
-bool Threading::getJob(JobBase *& job)
+bool Threading::getJob(JobBase *& job, s64& timeUntilNextJob)
 {
 	jobsQueueMutex.lock();
 	if (jobs.empty())
@@ -66,21 +66,24 @@ bool Threading::getJob(JobBase *& job)
 		return false;
 	}
 	auto jobItr = jobs.begin();
-	auto prevJob = jobs.before_begin();
-	while ((*jobItr)->getScheduledTime() > Engine::clock.now())
+	timeUntilNextJob = std::max((s64)0, (*jobItr)->getScheduledTime() - (s64)Engine::clock.now());
+	while (timeUntilNextJob != 0)
 	{
-		++prevJob;
 		++jobItr;
 		if (jobItr == jobs.end())
+		{
+			jobsQueueMutex.unlock();
 			return false;
+		}
+		timeUntilNextJob = std::max((s64)0, std::min((*jobItr)->getScheduledTime() - (s64)Engine::clock.now(), timeUntilNextJob));
 	}
 	job = *jobItr;
-	jobs.erase_after(prevJob);
+	jobs.erase(jobItr);
 	jobsQueueMutex.unlock();
 	return true;
 }
 
-bool Threading::getGraphicsJob(JobBase *& job)
+bool Threading::getGraphicsJob(JobBase *& job, s64& timeUntilNextJob)
 {
 	graphicsJobsQueueMutex.lock();
 	if (graphicsJobs.empty())
@@ -89,21 +92,24 @@ bool Threading::getGraphicsJob(JobBase *& job)
 		return false;
 	}
 	auto jobItr = graphicsJobs.begin();
-	auto prevJob = graphicsJobs.before_begin();
-	while ((*jobItr)->getScheduledTime() > Engine::clock.now())
+	timeUntilNextJob = std::max((s64)0, (*jobItr)->getScheduledTime() - (s64)Engine::clock.now());
+	while (timeUntilNextJob > 0)
 	{
-		++prevJob;
 		++jobItr;
 		if (jobItr == graphicsJobs.end())
+		{
+			graphicsJobsQueueMutex.unlock();
 			return false;
+		}
+		timeUntilNextJob = std::max((s64)0, std::min((*jobItr)->getScheduledTime() - (s64)Engine::clock.now(), timeUntilNextJob));
 	}
 	job = *jobItr;
-	graphicsJobs.erase_after(prevJob);
+	graphicsJobs.erase(jobItr);
 	graphicsJobsQueueMutex.unlock();
 	return true;
 }
 
-bool Threading::getGPUTransferJob(JobBase *& job)
+bool Threading::getGPUTransferJob(JobBase *& job, s64& timeUntilNextJob)
 {
 	gpuTransferJobsQueueMutex.lock();
 	if (gpuTransferJobs.empty())
@@ -112,16 +118,19 @@ bool Threading::getGPUTransferJob(JobBase *& job)
 		return false;
 	}
 	auto jobItr = gpuTransferJobs.begin();
-	auto prevJob = gpuTransferJobs.before_begin();
-	while ((*jobItr)->getScheduledTime() > Engine::clock.now())
+	timeUntilNextJob = std::max((s64)0, (*jobItr)->getScheduledTime() - (s64)Engine::clock.now());
+	while (timeUntilNextJob != 0)
 	{
-		++prevJob;
 		++jobItr;
 		if (jobItr == gpuTransferJobs.end())
+		{
+			gpuTransferJobsQueueMutex.unlock();
 			return false;
+		}
+		timeUntilNextJob = std::max((s64)0, std::min((*jobItr)->getScheduledTime() - (s64)Engine::clock.now(), timeUntilNextJob));
 	}
 	job = *jobItr;
-	gpuTransferJobs.erase_after(prevJob);
+	gpuTransferJobs.erase(jobItr);
 	gpuTransferJobsQueueMutex.unlock();
 	return true;
 }
@@ -139,10 +148,11 @@ void Threading::update()
 	Engine::renderer->createPerThreadCommandPools();
 	JobBase* job;
 	bool readyToTerminate = false;
+	s64 timeUntilNextJob;
 	while (!readyToTerminate)
 	{
 		PROFILE_START("thread_" + getThisThreadIDString());
-		if (getJob(job))
+		if (getJob(job, timeUntilNextJob))
 		{
 			++threadJobsProcessed[std::this_thread::get_id()];
 			job->run();
@@ -150,7 +160,9 @@ void Threading::update()
 		else
 		{
 			readyToTerminate = !Engine::engineRunning;
-			std::this_thread::sleep_for(std::chrono::milliseconds(0));
+			//std::this_thread::sleep_for(std::chrono::milliseconds(0));
+			if (timeUntilNextJob > 10'000)
+				std::this_thread::yield();
 		}
 		PROFILE_END("thread_" + getThisThreadIDString());
 	}
@@ -169,10 +181,11 @@ void Threading::updateGraphics()
 	Engine::renderer->createPerThreadCommandPools();
 	JobBase* job;
 	bool readyToTerminate = false;
+	s64 timeUntilNextJob;
 	while (!readyToTerminate)
 	{
 		PROFILE_START("thread_" + getThisThreadIDString());
-		if (getGraphicsJob(job)) // Graphics submission jobs have priority (they should be very fast)
+		if (getGraphicsJob(job, timeUntilNextJob)) // Graphics submission jobs have priority (they should be very fast)
 		{
 			++threadJobsProcessed[std::this_thread::get_id()];
 			job->run();
@@ -185,7 +198,9 @@ void Threading::updateGraphics()
 		else
 		{
 			readyToTerminate = !Engine::engineRunning;
-			std::this_thread::sleep_for(std::chrono::milliseconds(0));
+			//std::this_thread::sleep_for(std::chrono::milliseconds(0));
+			if (timeUntilNextJob > 10'000)
+				std::this_thread::yield();
 		}
 		PROFILE_END("thread_" + getThisThreadIDString());
 	}

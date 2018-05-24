@@ -1,7 +1,10 @@
 def updateCamera()
 {
 	auto& camera = getCamera();
-	auto mv = fvec4(0, 0, 100*getFrameTime(), 1) * camera.getMatYaw();
+	//auto mv = fvec4(0, 0, 100*getFrameTime(), 1) * camera.getMatYaw();
+	auto dt = 0.01;
+	auto mv = fvec4(0, 0, 100*dt, 1) * camera.getMatYaw();
+
 	auto m = fvec3(mv);
 
 	if (isKeyPressed('W'))
@@ -24,11 +27,11 @@ def updateCamera()
 	}
 	if (isKeyPressed('R'))
 	{
-		camera.move(fvec3(0, 100 * getFrameTime(), 0));
+		camera.move(fvec3(0, 100 * dt, 0));
 	}
 	if (isKeyPressed('F'))
 	{
-		camera.move(fvec3(0, -100 * getFrameTime(), 0));
+		camera.move(fvec3(0, -100 * dt, 0));
 	}
 
 	camera.update();

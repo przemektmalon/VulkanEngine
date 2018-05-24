@@ -288,9 +288,23 @@ void Renderer::render()
 
 	VK_CHECK_RESULT(vkGetQueryPoolResults(device, queryPool, 0, NUM_GPU_TIMESTAMPS, sizeof(u64) * NUM_GPU_TIMESTAMPS, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT));
 
+	PROFILE_RESET("gbuffer");
+	PROFILE_RESET("shadow");
+	PROFILE_RESET("pbr");
+	PROFILE_RESET("overlay");
+	PROFILE_RESET("overlaycombine");
+	PROFILE_RESET("screen");
+
+	PROFILE_GPU_ADD_TIME("gbuffer", Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER], Engine::gpuTimeStamps[Renderer::END_GBUFFER]);
+	PROFILE_GPU_ADD_TIME("shadow", Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW], Engine::gpuTimeStamps[Renderer::END_SHADOW]);
+	PROFILE_GPU_ADD_TIME("pbr", Engine::gpuTimeStamps[Renderer::BEGIN_PBR], Engine::gpuTimeStamps[Renderer::END_PBR]);
+	PROFILE_GPU_ADD_TIME("overlay", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY], Engine::gpuTimeStamps[Renderer::END_OVERLAY]);
+	PROFILE_GPU_ADD_TIME("overlaycombine", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE], Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE]);
+	PROFILE_GPU_ADD_TIME("screen", Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN], Engine::gpuTimeStamps[Renderer::END_SCREEN]);
+
 	//PROFILE_END("qwaitidle");
 
-	PROFILE_START("submitrender");
+	
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -345,6 +359,8 @@ void Renderer::render()
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
+	
+
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
@@ -378,6 +394,8 @@ void Renderer::render()
 	presentInfo.pSwapchains = swapChains;
 
 	presentInfo.pImageIndices = &imageIndex;
+
+	PROFILE_START("submitrender");
 
 	VK_CHECK_RESULT(vkQueuePresentKHR(presentQueue, &presentInfo));
 

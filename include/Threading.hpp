@@ -35,14 +35,14 @@ public:
 		scheduledTime = pScheduledTime;
 	}
 
-	u64 getScheduledTime()
+	s64 getScheduledTime()
 	{
 		return scheduledTime;
 	}
 
 protected:
 
-	u64 scheduledTime;
+	s64 scheduledTime;
 	JobBase * child;
 	Type type;
 };
@@ -125,13 +125,13 @@ public:
 	void addGPUTransferJob(JobBase* jobToAdd, int async = 0);
 
 	// Each worker will grab some job
-	bool getJob(JobBase*& job);
+	bool getJob(JobBase*& job, s64& timeUntilNextJob);
 
 	// Graphics submission thread will take these jobs before regular ones
-	bool getGraphicsJob(JobBase*& job);
+	bool getGraphicsJob(JobBase*& job, s64& timeUntilNextJob);
 
 	// The main thread will grab these jobs each iteration of its loop and send them to the GPU
-	bool getGPUTransferJob(JobBase*& job);
+	bool getGPUTransferJob(JobBase*& job, s64& timeUntilNextJob);
 
 
 	// Thread_locals with special construction are initialised in the 'update' (thread entry) functions
@@ -163,13 +163,13 @@ public:
 	// Sometimes (on console open close) some jobs seem to finish but not add to the counter, this resets job counters
 	void debugResetJobCounters();
 
-	std::forward_list<JobBase*> jobs;
+	std::list<JobBase*> jobs;
 	std::mutex jobsQueueMutex;
 
-	std::forward_list<JobBase*> graphicsJobs;
+	std::list<JobBase*> graphicsJobs;
 	std::mutex graphicsJobsQueueMutex;
 	
-	std::forward_list<JobBase*> gpuTransferJobs;
+	std::list<JobBase*> gpuTransferJobs;
 	std::mutex gpuTransferJobsQueueMutex;
 
 	std::list<JobBase*> jobsToFree;

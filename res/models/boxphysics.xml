@@ -1,0 +1,21 @@
+<physics>
+
+	<mass>100</mass>
+	<friction>0.8</friction>
+	<restitution>0.1</restitution>
+	<lineardamping>0.025</lineardamping>
+	<angulardamping>0.05</angulardamping>
+
+	<compound>false</compound>
+
+	<shape type="box">
+		<halfx>1.0</halfx>
+		<halfy>1.0</halfy>
+		<halfz>1.0</halfz>
+
+		<posx>0</posx>
+		<posy>0</posy>
+		<posz>0</posz>
+	</shape>
+
+</physics>

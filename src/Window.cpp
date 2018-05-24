@@ -131,14 +131,13 @@ void Window::destroy()
 	@brief	Process window related messages. 
 	@note	This function should detect user input (keyboard, mouse)
 */
-bool Window::processMessages()
+void Window::processMessages()
 {
 #ifdef _WIN32
 	MSG msg;
-	if (PeekMessage(&msg, win32WindowHandle, 0, 0, PM_REMOVE)) {
-		//TranslateMessage(&msg);
+	while (PeekMessage(&msg, win32WindowHandle, 0, 0, PM_REMOVE)) {
+		TranslateMessage(&msg);
 		DispatchMessage(&msg);
-		return true;
 	}
 #endif
 #ifdef __linux__
@@ -149,8 +148,6 @@ bool Window::processMessages()
 		free(event);
 	}
 #endif
-	return false;
-
 }
 
 Event Window::constructKeyEvent(u8 keyCode, Event::Type eventType)
@@ -322,6 +319,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (textEvent.eventUnion.textInputEvent.character != 0)
 			Engine::window->eventQ.pushEvent(textEvent);
 
+		
 		break;
 	}
 	case WM_KEYUP:
@@ -332,15 +330,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_INPUT:
 	{
-		//PROFILE_START("msgevent");
-		UINT dwSize;
+		
+		UINT dwSize = 0;
 
 		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
 
-		LPBYTE lpb = new BYTE[dwSize];
+		//LPBYTE lpb = new BYTE[dwSize];
+		LPBYTE lpb[48];
 
-		if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
-			OutputDebugString(TEXT("GetRawInputData does not return correct size !\n"));
+		/// WATCH: 48 hard-coded. Is it always 48 ?
+		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
 
 		RAWINPUT* raw = (RAWINPUT*)lpb;
 
@@ -352,13 +351,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				Event::Type eventType = Event::MouseWheel;
 				Event mouseEvent(eventType);
-				mouseEvent.constructMouse(0, glm::ivec2(Mouse::getWindowPosition(Engine::window)), glm::ivec2(0,0), raw->data.mouse.usButtonData);
+				mouseEvent.constructMouse(0, glm::ivec2(Mouse::getWindowPosition(Engine::window)), glm::ivec2(0, 0), raw->data.mouse.usButtonData);
 				Engine::window->eventQ.pushEvent(mouseEvent);
-				delete[] lpb;
+				//delete[] lpb;
 				//PROFILE_END("msgevent");
 				break;
 			}
-			
+
 			const auto anyMouseClick = (RI_MOUSE_LEFT_BUTTON_DOWN | RI_MOUSE_RIGHT_BUTTON_DOWN | RI_MOUSE_MIDDLE_BUTTON_DOWN) & buttonFlag;
 			const auto lMouseClick = RI_MOUSE_LEFT_BUTTON_DOWN & buttonFlag;
 			const auto rMouseClick = RI_MOUSE_RIGHT_BUTTON_DOWN & buttonFlag;
@@ -435,7 +434,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		delete[] lpb;
+		//delete[] lpb;
 		//PROFILE_END("msgevent");
 		break;
 	}
