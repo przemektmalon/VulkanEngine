@@ -232,4 +232,4 @@ void ModelInstance::makePhysicsObject()
 }
 
 u32 ModelInstance::toEngineTransformIndex = 0;
-u32 ModelInstance::toGPUTransformIndex = 1;
+u32 ModelInstance::toGPUTransformIndex = 0;

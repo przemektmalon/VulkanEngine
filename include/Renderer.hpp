@@ -15,6 +15,7 @@
 #include "OverlayElement.hpp"
 #include "OverlayRenderer.hpp"
 #include "CombineOverlaysShader.hpp"
+#include "SunShadowShader.hpp"
 
 struct CameraUBOData {
 	glm::fmat4 view;
@@ -137,6 +138,7 @@ public:
 	SpotShadowShader spotShadowShader;
 	OverlayShader overlayShader;
 	CombineOverlaysShader combineOverlaysShader;
+	SunShadowShader sunShadowShader;
 
 	/// --------------------
 	/// GBuffer pipeline
@@ -213,6 +215,9 @@ public:
 	VkPipeline spotShadowPipeline;
 	VkPipelineLayout spotShadowPipelineLayout;
 
+	VkPipeline sunShadowPipeline;
+	VkPipelineLayout sunShadowPipelineLayout;
+
 	// Descriptors
 	VkDescriptorSetLayout shadowDescriptorSetLayout;
 	VkDescriptorSet shadowDescriptorSet;
@@ -220,6 +225,7 @@ public:
 	// Render pass
 	VkRenderPass pointShadowRenderPass;
 	VkRenderPass spotShadowRenderPass;
+	VkRenderPass sunShadowRenderPass;
 
 	// Command buffer
 	VkCommandBuffer shadowCommandBuffer;

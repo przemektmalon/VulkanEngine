@@ -44,6 +44,14 @@ struct SpotLight
 	mat4 pv;
 };
 
+struct SunLight
+{
+	vec4 colour;
+	vec4 direction;
+	mat4 pv[3];
+	vec4 cascadeEnds;
+};
+
 layout(binding = 10) uniform PointLightBuffer {
 	PointLight data[150];
 } pointLights;
@@ -51,6 +59,10 @@ layout(binding = 10) uniform PointLightBuffer {
 layout(binding = 11) uniform SpotLightBuffer {
 	SpotLight data[150];
 } spotLights;
+
+layout(binding = 16) uniform SunLightBuffer {
+	SunLight data;
+} sunLight;
 
 layout(binding = 12) uniform LightCounts {
 	uint point;
@@ -67,6 +79,7 @@ layout(binding = 9) uniform CameraUBO {
 
 layout(binding = 13) uniform samplerCube pointShadows[150];
 layout(binding = 14) uniform sampler2D spotShadows[150];
+layout(binding = 15) uniform sampler2D sunShadow;
 
 vec3 decodeNormal(vec2 enc)
 {
@@ -509,7 +522,76 @@ void main()
 
 			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
+
+		vec4 colour = sunLight.data.colour;
+		vec4 direction = sunLight.data.direction;
+		direction.y = -direction.y;
+
+		//colour = vec4(10,0,10,0);
+		//direction = vec4(normalize(vec3(1,-1,1)),0);
+
+		vec3 lightDir = direction.xyz;
+
+		vec3 H = normalize(V + lightDir);
+		vec3 radiance = colour.rgb;
+
+		float NDF = distributionGGX(normal, H, roughness);
+		float G = geometrySmith(normal, V, lightDir, roughness);
+		vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+		vec3 kS = F;
+		vec3 kD = vec3(1.f) - kS;
+		kD *= 1.0 - metallic;
+
+		vec3 nominator = NDF * G * F;
+		float denominator = 4.0 * max(dot(normal, V), 0.0) * max(dot(normal, lightDir), 0.0) + 0.001;
+		vec3 specular = nominator / denominator;
+
+		float NdotL  = max(dot(normal, lightDir), 0.0);
+
+		vec4 fragPosLightSpace = sunLight.data.pv[0] * vec4(worldPos,1.f);
+
+		vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;;
+		projCoords.x *= 0.5f; projCoords.x += 0.5f;
+		projCoords.y *= 0.5f; projCoords.y += 0.5f;
+
+		float currentDepth = projCoords.z;
+	    
+		float bias = max(0.01f * (1.0 - dot(normal, lightDir)), 0.01f);
+
+    	const int pres = 2;
+
+		float shadow = 0.f;
+
+		vec2 texelSize = vec2(1.0 / 1280.0, 1.0 / 720.0);
+		for(int x = -pres; x <= pres; ++x)
+		{
+		    for(int y = -pres; y <= pres; ++y)
+		    {
+				float pcfDepth = texture(sunShadow, projCoords.xy + vec2(x, y) * texelSize).r;
+		        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+		    }
+		}
+		shadow /= ((2.f*pres) + 1) * ((2.f*pres) + 1);
+		
+		if(projCoords.z > 1.0)
+        	shadow = 0.0;
+
+		litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
+
+		//float shad = texture(sunShadow, projCoords.xy).r;
+		//litPixel = vec3(shad);
+		//litPixel = fragPosLightSpace.xyz;
 	}
 	
+
+
+	/*if (worldPos.x > orthoData.a.y && worldPos.x < orthoData.a.x &&
+	//	worldPos.y > orthoData.a.z && worldPos.y < orthoData.a.w &&
+		worldPos.z > orthoData.b.y && worldPos.z < orthoData.b.x )
+	{
+		litPixel += vec3(10.0,0.0,10.0);
+	}*/
+
 	imageStore(outColour, pixel, vec4(litPixel,1.f));
 }

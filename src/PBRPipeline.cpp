@@ -90,11 +90,23 @@ void Renderer::createPBRDescriptorSetLayouts()
 	spotShadowsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	spotShadowsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, skyboxLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, lightCountsLayoutBinding, pointShadowsLayoutBinding, spotShadowsLayoutBinding };
+	VkDescriptorSetLayoutBinding sunShadowLayoutBinding = {};
+	sunShadowLayoutBinding.binding = 15;
+	sunShadowLayoutBinding.descriptorCount = 1;
+	sunShadowLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	sunShadowLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	VkDescriptorSetLayoutBinding sunLightLayoutBinding = {};
+	sunLightLayoutBinding.binding = 16;
+	sunLightLayoutBinding.descriptorCount = 1;
+	sunLightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	sunLightLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, skyboxLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, lightCountsLayoutBinding, pointShadowsLayoutBinding, spotShadowsLayoutBinding, sunShadowLayoutBinding, sunLightLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 12;
+	layoutInfo.bindingCount = 14;
 	layoutInfo.pBindings = bindings;
 
 	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout));
@@ -112,6 +124,13 @@ void Renderer::createPBRPipeline()
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = &pbrDescriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+	/*VkPushConstantRange pushConstantRange = {};
+	pushConstantRange.offset = 0;
+	pushConstantRange.size = sizeof(glm::fvec4) * 2; 
+	pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;*/
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pbrPipelineLayout));
 
@@ -341,6 +360,41 @@ void Renderer::updatePBRDescriptorSets()
 		descriptorWrites2.push_back(write);
 	}
 
+	if (lightManager.sunLight.shadowTex)
+	{
+		VkDescriptorImageInfo sunShadowInfo = {};
+
+		sunShadowInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		sunShadowInfo.imageView = lightManager.sunLight.getShadowTexture()->getImageViewHandle();
+		sunShadowInfo.sampler = shadowSampler;
+
+		VkDescriptorBufferInfo sunLightInfo;
+		sunLightInfo.buffer = lightManager.sunLightBuffer.getBuffer();
+		sunLightInfo.offset = 0;
+		sunLightInfo.range = sizeof(SunLight::GPUData);
+
+		VkWriteDescriptorSet write = {};
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet = pbrDescriptorSet;
+		write.dstBinding = 15;
+		write.dstArrayElement = 0;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write.descriptorCount = 1;
+		write.pImageInfo = &sunShadowInfo;
+
+		descriptorWrites2.push_back(write);
+
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet = pbrDescriptorSet;
+		write.dstBinding = 16;
+		write.dstArrayElement = 0;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write.descriptorCount = 1;
+		write.pBufferInfo = &sunLightInfo;
+
+		descriptorWrites2.push_back(write);
+	}
+
 	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites2.size()), descriptorWrites2.data(), 0, nullptr));
 }
 
@@ -367,6 +421,12 @@ void Renderer::updatePBRCommands()
 
 	VK_VALIDATE(vkCmdBindPipeline(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipeline));
 	VK_VALIDATE(vkCmdBindDescriptorSets(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipelineLayout, 0, 1, &pbrDescriptorSet, 0, 0));
+
+	//float push[8];
+	//memcpy(push, lightManager.sunLight.orthoData, sizeof(float) * 6);
+
+	//VK_VALIDATE(vkCmdPushConstants(pbrCommandBuffer, pbrPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(glm::fvec4) * 2, push));
+
 	VK_VALIDATE(vkCmdDispatch(pbrCommandBuffer, renderResolution.width / 16, renderResolution.height / 16, 1));
 
 	setImageLayout(pbrCommandBuffer, gBufferColourAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);

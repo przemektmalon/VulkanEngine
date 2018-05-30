@@ -39,7 +39,6 @@ public:
 protected:
 
 	std::string name;
-
 	Type type;
 	std::atomic_char32_t availability;
 	std::vector<std::string> diskPaths;

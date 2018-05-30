@@ -45,6 +45,8 @@ void Renderer::createShadowRenderPass()
 	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &pointShadowRenderPass));
 
 	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &spotShadowRenderPass));
+
+	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &sunShadowRenderPass));
 }
 
 void Renderer::createShadowDescriptorSetLayouts()
@@ -70,6 +72,7 @@ void Renderer::createShadowPipeline()
 
 	pointShadowShader.compile();
 	spotShadowShader.compile();
+	sunShadowShader.compile();
 
 	// Get the vertex layout format
 	auto bindingDescription = Vertex::getBindingDescription();
@@ -218,6 +221,42 @@ void Renderer::createShadowPipeline()
 	pipelineInfo.renderPass = spotShadowRenderPass;
 
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &spotShadowPipeline));
+
+
+
+	viewport.width = (float)1280; /// TODO: variable resolutions require multiple pipelines or maybe dynamic state ?
+	viewport.height = (float)720;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+
+	scissor.extent.width = 1280;
+	scissor.extent.height = 720;
+
+	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depthStencil.depthTestEnable = VK_TRUE;
+	depthStencil.depthWriteEnable = VK_TRUE;
+	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+	depthStencil.depthBoundsTestEnable = VK_FALSE;
+	depthStencil.minDepthBounds = 0.0f;
+	depthStencil.maxDepthBounds = Engine::maxDepth; /// TODO: make variable
+	pushConstantRange.offset = 0;
+	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	pushConstantRange.size = sizeof(glm::fmat4);
+
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout;
+	pipelineLayoutInfo.pushConstantRangeCount = 1;
+	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+
+	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &sunShadowPipelineLayout));
+
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = sunShadowShader.getShaderStageCreateInfos();
+	pipelineInfo.layout = sunShadowPipelineLayout;
+	pipelineInfo.renderPass = sunShadowRenderPass;
+
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &sunShadowPipeline));
 }
 
 void Renderer::createShadowDescriptorSets()
@@ -357,6 +396,42 @@ void Renderer::updateShadowCommands()
 		VK_VALIDATE(vkCmdEndRenderPass(shadowCommandBuffer));
 	}
 
+	{
+		auto l = lightManager.sunLight;
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = sunShadowRenderPass;
+		renderPassInfo.framebuffer = l.shadowFBO;
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent.width = 1280;
+		renderPassInfo.renderArea.extent.height = 720;
+
+		std::array<VkClearValue, 1> clearValues = {};
+		clearValues[0].depthStencil = { 1.f, 0 };
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
+
+		VK_VALIDATE(vkCmdBeginRenderPass(shadowCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+
+		VK_VALIDATE(vkCmdBindPipeline(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipeline));
+
+		VK_VALIDATE(vkCmdBindDescriptorSets(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipelineLayout, 0, 1, &shadowDescriptorSet, 0, nullptr));
+
+		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
+		VkDeviceSize offsets[] = { 0 };
+		VK_VALIDATE(vkCmdBindVertexBuffers(shadowCommandBuffer, 0, 1, vertexBuffers, offsets));
+		VK_VALIDATE(vkCmdBindIndexBuffer(shadowCommandBuffer, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
+
+		float push[(4 * 4)];
+		glm::fmat4 pv = *l.getProjView();
+		memcpy(push, &pv, sizeof(glm::fmat4));
+
+		VK_VALIDATE(vkCmdPushConstants(shadowCommandBuffer, sunShadowPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4), &push));
+		VK_VALIDATE(vkCmdDrawIndexedIndirect(shadowCommandBuffer, drawCmdBuffer.getBuffer(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
+
+		VK_VALIDATE(vkCmdEndRenderPass(shadowCommandBuffer));
+	}
+
 	VK_VALIDATE(vkCmdWriteTimestamp(shadowCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, END_SHADOW));
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(shadowCommandBuffer));
@@ -366,6 +441,7 @@ void Renderer::destroyShadowRenderPass()
 {
 	VK_VALIDATE(vkDestroyRenderPass(device, pointShadowRenderPass, 0));
 	VK_VALIDATE(vkDestroyRenderPass(device, spotShadowRenderPass, 0));
+	VK_VALIDATE(vkDestroyRenderPass(device, sunShadowRenderPass, 0));
 }
 
 void Renderer::destroyShadowDescriptorSetLayouts()
@@ -379,8 +455,11 @@ void Renderer::destroyShadowPipeline()
 	VK_VALIDATE(vkDestroyPipeline(device, pointShadowPipeline, 0));
 	VK_VALIDATE(vkDestroyPipelineLayout(device, spotShadowPipelineLayout, 0));
 	VK_VALIDATE(vkDestroyPipeline(device, spotShadowPipeline, 0));
+	VK_VALIDATE(vkDestroyPipelineLayout(device, sunShadowPipelineLayout, 0));
+	VK_VALIDATE(vkDestroyPipeline(device, sunShadowPipeline, 0));
 	pointShadowShader.destroy();
 	spotShadowShader.destroy();
+	sunShadowShader.destroy();
 }
 
 void Renderer::destroyShadowDescriptorSets()

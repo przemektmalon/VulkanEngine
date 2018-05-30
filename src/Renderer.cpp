@@ -82,7 +82,7 @@ void Renderer::initialise()
 	overlayRenderer.createOverlayAttachmentsFramebuffers();
 	overlayRenderer.createOverlayCommands();
 
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < 0; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
@@ -115,8 +115,8 @@ void Renderer::initialise()
 			break; }
 		}
 		pl.setColour(col * glm::fvec3(2.3));
-		pl.setLinear(0.001);
-		pl.setQuadratic(0.001);
+		pl.setLinear(0.0001);
+		pl.setQuadratic(0.0001);
 		pl.setFadeStart(10000);
 		pl.setFadeLength(500);
 	}
@@ -124,6 +124,13 @@ void Renderer::initialise()
 	lightManager.updateLightCounts();
 	lightManager.updateAllPointLights();
 	lightManager.updateAllSpotLights();
+
+	lightManager.sunLight.setDirection(glm::normalize(glm::fvec3(1, -1, 1)));
+	lightManager.sunLight.setColour(glm::fvec3(2, 2, 2));
+	lightManager.sunLight.initTexture(glm::ivec2(1280, 720));
+	lightManager.sunLight.calcProjs();
+
+	lightManager.updateSunLight();
 }
 
 void Renderer::reInitialise()
@@ -663,6 +670,7 @@ void Renderer::createTextureSampler()
 	samplerInfo.anisotropyEnable = VK_FALSE;
 	samplerInfo.maxAnisotropy = 0;
 	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	//samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
@@ -902,7 +910,7 @@ void Renderer::updateTransformBuffer()
 
 	//VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferCommands.fence));
 
-	ModelInstance::toGPUTransformIndex = tIndex == 0 ? 1 : 0;
+	//ModelInstance::toGPUTransformIndex = tIndex == 0 ? 1 : 0;
 
 	//Engine::threading->instanceTransformMutex.unlock();
 }

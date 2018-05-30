@@ -132,25 +132,30 @@ public:
 	public:
 		glm::fmat4 projView[3];
 		float cascadeEnds[4];
-		glm::fvec4 box[2];
 	};
 
 	SunLight()
 	{
 		/// TODO: create shadow texture
 		gpuData = new GPUData();
-		gpuData->cascadeEnds[0] = 250;
-		gpuData->cascadeEnds[1] = 1050;
+		gpuData->cascadeEnds[0] = 0.01;
+		gpuData->cascadeEnds[1] = 100;
 		gpuData->cascadeEnds[2] = 3000;
 		gpuData->cascadeEnds[3] = 5000;
 	}
 
-	void initShadowTexture(int* resolution)
-	{
-		/// TODO: create shadow texture
-	}
+	//float orthoData[8];
+
+	void initTexture(glm::ivec2 resolution);
+	void calcProjs();
 
 	glm::fvec3 getDirection() { return gpuData->direction.separate.direction; }
+	void setDirection(glm::fvec3 d) { gpuData->direction.separate.direction = d; }
+
+	glm::fvec3 getColour() { return gpuData->colour.separate.colour; }
+	void setColour(glm::fvec3 c) { gpuData->colour.separate.colour = c; }
+
+	float* getCascadeEnds() { return gpuData->cascadeEnds; }
 
 	glm::fmat4* getProjView() { return gpuData->projView; }
 	void setProjView(int index, glm::fmat4& projView) { gpuData->projView[index] = projView; }
@@ -527,7 +532,12 @@ public: ///TODO: Max light count is 150, add setters etc
 
 	void updateSunLight()
 	{
-
+		SunLight::GPUData* d = (SunLight::GPUData*)sunLightBuffer.map();
+		d->colour.separate.colour = sunLight.getColour();
+		d->direction.separate.direction = sunLight.getDirection();
+		memcpy(d->projView, sunLight.getProjView(), sizeof(glm::fmat4) * 3);
+		memcpy(d->cascadeEnds, sunLight.getCascadeEnds(), sizeof(float) * 4);
+		sunLightBuffer.unmap();
 	}
 
 	Buffer lightCountsBuffer;

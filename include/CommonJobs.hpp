@@ -26,10 +26,20 @@ static void initialiseCommonJobs()
 		PROFILE_END("physics");
 		Engine::threading->physBulletMutex.unlock();
 
+		PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock());
+		Engine::physicsWorld.updateModels();
+		Engine::threading->physBulletMutex.unlock();
+
+		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
+		//PROFILE_START("physics");
+		Engine::renderer->updateTransformBuffer();
+		//PROFILE_END("physics");
+		Engine::threading->physToEngineMutex.unlock();
+
 		if (Engine::engineRunning)
 		{
-			//u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
-			u64 microsecondsBetweenPhysicsUpdates = 0;
+			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
+			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
 			auto nextPhysicsJob = new Job<>(physicsJobFunc, defaultAsyncJobDoneFunc);
 			nextPhysicsJob->setScheduledTime(endTime + microsecondsBetweenPhysicsUpdates);
@@ -46,8 +56,8 @@ static void initialiseCommonJobs()
 
 		if (Engine::engineRunning)
 		{
-			//u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
-			u64 microsecondsBetweenPhysicsUpdates = 0;
+			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
+			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
 			auto nextPhysicsJob = new Job<>(physicsToEngineJobFunc, defaultAsyncJobDoneFunc);
 			nextPhysicsJob->setScheduledTime(Engine::clock.now() + microsecondsBetweenPhysicsUpdates);
@@ -64,8 +74,8 @@ static void initialiseCommonJobs()
 
 		if (Engine::engineRunning)
 		{
-			//u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
-			u64 microsecondsBetweenPhysicsUpdates = 0;
+			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
+			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
 			auto nextPhysicsJob = new Job<>(physicsToGPUJobFunc, defaultAsyncJobDoneFunc);
 			nextPhysicsJob->setScheduledTime(Engine::clock.now() + microsecondsBetweenPhysicsUpdates);
@@ -78,9 +88,10 @@ static void initialiseCommonJobs()
 		vkQueueWaitIdle(Engine::renderer->graphicsQueue);
 		PROFILE_END("qwaitidle");
 
+		Engine::renderer->lightManager.sunLight.calcProjs();
+		Engine::renderer->lightManager.updateSunLight();
 		Engine::renderer->updateGBufferDescriptorSets();
 
-		PROFILE_START("commands");
 		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
 		PROFILE_START("cullingdrawbuffer");
 		Engine::world.frustumCulling(&Engine::camera);
@@ -89,6 +100,8 @@ static void initialiseCommonJobs()
 		PROFILE_END("cullingdrawbuffer");
 
 		PROFILE_START("setuprender");
+		PROFILE_START("commands");
+		Engine::renderer->updatePBRCommands();
 		Engine::renderer->updateGBufferCommands();
 		Engine::renderer->updateShadowCommands(); // Mutex with engine model transform update
 		Engine::renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals

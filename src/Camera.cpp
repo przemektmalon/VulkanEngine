@@ -98,6 +98,7 @@ void Camera::update()
 		viewRays[i] = inverseProj * viewRays[i];
 		viewRays[i] /= viewRays[i].w;
 		viewRays[i] /= viewRays[i].z;
+		viewRays[i].w = 1;
 	}
 }
 

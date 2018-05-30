@@ -42,7 +42,7 @@ public:
 
 	glm::fvec4 getViewRays() { return glm::fvec4(viewRays[2].x, viewRays[2].y, viewRays[0].x, viewRays[0].y); }
 
-private:
+//private:
 
 	float ler(float a, float b, float N)
 	{
