@@ -49,6 +49,28 @@ endif()
 
 
 ################################################################
+################    SET VULKAN DEV UTILITY PATH
+################################################################
+
+if(NOT LIB_VDU_INCLUDE_DIR)
+	message(WARNING "Vulkan dev utility path not found")
+	set(LIB_VDU_INCLUDE_DIR "" CACHE PATH "Path to your Vulkan Dev Utility include folder")
+	set(ERROR "YES")
+endif()
+if(NOT LIB_VDU_LIBRARY_DEBUG)
+	message(WARNING "Vulkan dev utility debug library not found")
+	set(LIB_VDU_LIBRARY_DEBUG "" CACHE FILEPATH "Path to your Vulkan Dev Utility debug library")
+	set(ERROR "YES")
+endif()
+if(NOT LIB_VDU_LIBRARY_RELEASE)
+	message(WARNING "Vulkan dev utility release library not found")
+	set(LIB_VDU_LIBRARY_RELEASE "" CACHE FILEPATH "Path to your Vulkan Dev Utility release library")
+	set(ERROR "YES")
+endif()
+
+
+
+################################################################
 ################    SET VULKAN INCLUDES AND LIBRARY
 ################################################################
 
@@ -208,7 +230,7 @@ endif()
 ################    SPECIFY INCLUDE DIRECTORIES
 ################################################################
 
-include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_BULLET_INCLUDE_DIR} ${LIB_FREETYPE_INCLUDE_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR} ${LIB_ASSIMP_INCLUDE_DIR})
+include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_CHAI_INCLUDE_DIR} ${LIB_VDU_INCLUDE_DIR} ${LIB_BULLET_INCLUDE_DIR} ${LIB_FREETYPE_INCLUDE_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR} ${LIB_ASSIMP_INCLUDE_DIR})
 
 
 
@@ -247,6 +269,11 @@ target_link_libraries (VulkanEngine
 target_link_libraries (VulkanEngine
     debug ${LIB_BULLET_MATH_LIBRARY_DEBUG}
     optimized ${LIB_BULLET_MATH_LIBRARY_RELEASE})
+target_link_libraries (VulkanEngine
+    debug ${LIB_VDU_LIBRARY_DEBUG}
+    optimized ${LIB_VDU_LIBRARY_RELEASE})
+
+
 
 ################################################################
 ################    SET MSVC STARTUP PROJECT AND WORKING DIR

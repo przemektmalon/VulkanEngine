@@ -10,6 +10,8 @@
 #include "Console.hpp"
 #include "Scripting.hpp"
 
+#include "VDU.hpp"
+
 class Threading;
 class OLayer;
 class Window;
@@ -62,7 +64,7 @@ public:
 	static ScriptEnv scriptEnv;
 	static Threading* threading;
 	
-
+	static vdu::Instance instance;
 	static VkInstance vkInstance;
 	static VkPhysicalDevice vkPhysicalDevice;
 	static std::vector<PhysicalDeviceDetails> physicalDevicesDetails;

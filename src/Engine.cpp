@@ -52,10 +52,10 @@ void Engine::start()
 	} */
 
 	/// TODO: temporary, we need a configurations manager
-	maxDepth = 5000.f; 
+	maxDepth = 10000.f; 
 
 	/// TODO: cameras should be objects in the world
-	camera.initialiseProj(float(window->resX) / float(window->resY), glm::pi<float>() / 2.f, 0.1, maxDepth);
+	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(120.f), 0.1, maxDepth);
 	camera.setPosition(glm::fvec3(50, 50, 50));
 	camera.update();
 
@@ -181,12 +181,13 @@ void Engine::start()
 	{
 		std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahog", "copper" };
 
-		for (int i = 0; i < 50; ++i)
+		for (int i = 0; i < 3; ++i)
 		{
 			world.addModelInstance("box", "hollowbox" + std::to_string(i));
 			int s = 100;
+			int h = 100;
 			int sh = s / 2;
-			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % 10000) / 5.f + 50.f, s64(rand() % s) - sh);
+			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % h) / 5.f + 50.f, s64(rand() % s) - sh);
 			//world.modelNames["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 5) * 2), std::floor(int(i / (int)5) * 2), 0));
 
 			Transform t;
@@ -214,7 +215,7 @@ void Engine::start()
 		t.updateMatrix();
 
 		world.modelNames["ground"]->setTransform(t);
-		world.modelNames["ground"]->setMaterial(assets.getMaterial("dirt"));
+		world.modelNames["ground"]->setMaterial(assets.getMaterial("marble"));
 		world.modelNames["ground"]->makePhysicsObject();
 
 		//world.addModelInstance("monkey");
@@ -279,11 +280,10 @@ void Engine::start()
 		These jobs are found in "CommonJobs.hpp"
 		They will be re-added at the end of each frame
 	*/
-	threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultAsyncJobDoneFunc), 1);
+	//threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultAsyncJobDoneFunc), 1);
 	threading->addGraphicsJob(new Job<>(renderJobFunc, defaultAsyncJobDoneFunc), 1);
-	//threading->addGraphicsJob(new Job<>(renderJobFunc, defaultGraphicsJobDoneFunc), 0);
 	threading->addJob(new Job<>(physicsJobFunc, defaultAsyncJobDoneFunc), 1);
-	threading->addJob(new Job<>(physicsToEngineJobFunc, defaultAsyncJobDoneFunc), 1);
+	//threading->addJob(new Job<>(physicsToEngineJobFunc, defaultAsyncJobDoneFunc), 1);
 	threading->addJob(new Job<>(scriptsJobFunc, defaultAsyncJobDoneFunc), 1);
 	threading->addJob(new Job<>(cleanupJobsJobFunc, defaultAsyncJobDoneFunc), 1);
 
@@ -302,6 +302,9 @@ void Engine::engineLoop()
 	{
 		PROFILE_START("thread_" + Threading::getThisThreadIDString());
 
+		frameTime = clock.time() - frameStart;
+		frameStart = clock.time();
+
 		processNextMainThreadJob();
 
 		//PROFILE_START("msgevent");
@@ -318,19 +321,16 @@ void Engine::engineLoop()
 
 		eventLoop();
 
-		frameTime = clock.time() - frameStart;
-		frameStart = clock.time();
-
 		console->update();
-
-		//PROFILE_END("msgevent");
 
 		// Display performance stats
 		++frames;
 		timeSinceLastStatsUpdate += frameTime.getSeconds();
-		if (timeSinceLastStatsUpdate > 0.15f)
+		if (timeSinceLastStatsUpdate > 0.05f)
 		{
 			updatePerformanceStatsDisplay();
+			timeSinceLastStatsUpdate = 0.f;
+			frames = 0;
 		}
 
 		//PROFILE_END("msgevent");
@@ -526,7 +526,7 @@ void Engine::updatePerformanceStatsDisplay()
 
 	auto stats = (Text*)uiLayer->getElement("stats");
 
-	stats->setString(
+	/*stats->setString(
 		"---------------------------------------------------\n"
 		"GBuffer pass   : " + std::to_string(gBufferTime) + "ms ( " + std::to_string(gBufferTimeMin) + " \\ " + std::to_string(gBufferTimeMax) + " )\n" +
 		"Shadow pass    : " + std::to_string(shadowTime) + "ms ( " + std::to_string(shadowTimeMin) + " \\ " + std::to_string(shadowTimeMax) + " )\n" +
@@ -549,9 +549,29 @@ void Engine::updatePerformanceStatsDisplay()
 
 		"Avg frame time : " + std::to_string((timeSinceLastStatsUpdate * 1000) / double(frames)) + "ms\n" +
 		"FPS            : " + std::to_string((int)(double(frames) / timeSinceLastStatsUpdate))
+	);*/
+
+	stats->setString(
+		"---------------------------\n"
+		"GBuffer pass   : " + std::to_string(gBufferTime) + "ms\n" +
+		"Shadow pass    : " + std::to_string(shadowTime) + "ms\n" +
+		"PBR pass       : " + std::to_string(pbrTime) + "ms\n" +
+		"Overlay pass   : " + std::to_string(overlayTime) + "ms\n" +
+		"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms\n" +
+		"Screen pass    : " + std::to_string(screenTime) + "ms\n" +
+
+		"Total GPU time : " + std::to_string(totalGPUTime) + "ms\n" +
+		"GPU FPS        : " + std::to_string((int)gpuFPS) + "\n\n" +
+
+		"---------------------------\n" +
+		"User input     : " + std::to_string(msgTime) + "ms\n" +
+		"Culling & draw : " + std::to_string(cullTime) + "ms\n" +
+		"Commands       : " + std::to_string(cmdsTime) + "ms\n" +
+		"Queue submit   : " + std::to_string(submitTime) + "ms\n" +
+		"Queue idle     : " + std::to_string(qWaitTime) + "ms\n" +
+		"Physics        : " + std::to_string(physicsTime) + "ms\n" +
+		"Scripts        : " + std::to_string(scriptsTime) + "ms\n"
 	);
-	timeSinceLastStatsUpdate = 0.f;
-	frames = 0;
 
 	auto mutexStats = (Text*)uiLayer->getElement("mutexstats");
 
@@ -589,6 +609,8 @@ void Engine::updatePerformanceStatsDisplay()
 	threadStatsString = "----THREADS-------------------\n------------------------------\n"
 		"Thread_1 (main)   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_MAX("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + " )\n";
 
+	PROFILE_RESET("thread_" + Threading::getThreadIDString(std::this_thread::get_id()));
+
 	int i = 2;
 	for (auto t : threading->workers)
 	{
@@ -602,6 +624,7 @@ void Engine::updatePerformanceStatsDisplay()
 			threadStatsString += std::string("Thread_") + std::to_string(i) + "          : " +
 				std::to_string(PROFILE_TO_MS(PROFILE_GET_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1])))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i - 1])))) + " )\n";
 		}
+		PROFILE_RESET("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1]));
 		++i;
 	}
 
@@ -622,11 +645,6 @@ void Engine::updatePerformanceStatsDisplay()
 	PROFILE_RESET("phystoenginemutex");
 	PROFILE_RESET("phystogpumutex");
 	PROFILE_RESET("transformmutex");
-
-	PROFILE_RESET("thread_" + Threading::getThreadIDString(std::this_thread::get_id()));
-	PROFILE_RESET("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[1]));
-	PROFILE_RESET("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[2]));
-	PROFILE_RESET("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[3]));
 }
 
 /*
@@ -660,8 +678,24 @@ void Engine::createWindow()
 */
 void Engine::createVulkanInstance()
 {
+	instance.setApplicationName("App");
+	instance.setEngineName("Engine");
+	instance.addExtension(VK_KHR_SURFACE_EXTENSION_NAME);
+	instance.addExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+	instance.addExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#ifdef ENABLE_VULKAN_VALIDATION
+	instance.setDebugCallbackFunction(debugCallbackFunc);
+	instance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Warning);
+	instance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Error);
+	instance.addLayer("VK_LAYER_LUNARG_standard_validation");
+#endif
+
+	instance.create();
+
+	vkInstance = instance.getInstanceHandle();
+
 	DBG_INFO("Creating vulkan instance");
-	VkApplicationInfo appInfo = {};
+	/*VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pNext = 0;
 	appInfo.apiVersion = VK_API_VERSION_1_0;
@@ -711,7 +745,7 @@ void Engine::createVulkanInstance()
 	auto createDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(vkInstance, "vkCreateDebugReportCallbackEXT");
 
 	VK_CHECK_RESULT(createDebugReportCallbackEXT(vkInstance, &createInfo, nullptr, &debugCallbackInfo));
-#endif
+#endif*/
 }
 
 /*
@@ -767,10 +801,7 @@ void Engine::quit()
 	assets.cleanup();
 	renderer->cleanup();
 	window->destroy();
-#ifdef ENABLE_VULKAN_VALIDATION
-	PFN_vkDestroyDebugReportCallbackEXT(vkGetInstanceProcAddr(vkInstance, "vkDestroyDebugReportCallbackEXT"))(vkInstance, debugCallbackInfo, 0);
-#endif
-	VK_VALIDATE(vkDestroyInstance(vkInstance, nullptr));
+	instance.destroy();
 }
 
 
@@ -828,3 +859,4 @@ std::mutex Engine::waitForProfilerInitMutex;
 VkResult Engine::lastVulkanResult;
 double Engine::timeSinceLastStatsUpdate = 0.f;
 int Engine::frames = 0;
+vdu::Instance Engine::instance;
