@@ -538,8 +538,33 @@ void Renderer::createLogicalDevice()
 {
 	DBG_INFO("Creating Vulkan logical device");
 	
+	VkPhysicalDeviceFeatures pdf = {};
+	pdf.samplerAnisotropy = VK_TRUE;
+	pdf.multiDrawIndirect = VK_TRUE;
+	pdf.shaderStorageImageExtendedFormats = VK_TRUE;
+	pdf.geometryShader = VK_TRUE;
+
+	lGraphicsQueue.prepare(0, 1.f);
+	lTransferQueue.prepare(0, 1.f);
+	
+	logicalDevice.addExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+	logicalDevice.addLayer("VK_LAYER_LUNARG_standard_validation");
+	logicalDevice.addQueue(&lGraphicsQueue);
+	logicalDevice.addQueue(&lTransferQueue);
+	
+	logicalDevice.setEnabledDeviceFeatures(pdf);
+
+	logicalDevice.create(Engine::physicalDevice);
+
+	graphicsQueue = lGraphicsQueue.getHandle();
+	presentQueue = lGraphicsQueue.getHandle();
+	computeQueue = lGraphicsQueue.getHandle();
+	transferQueue = lTransferQueue.getHandle();
+
+	device = logicalDevice.getHandle();
+
 	// Initialise two queues for our device
-	VkDeviceQueueCreateInfo qci = {};
+	/*VkDeviceQueueCreateInfo qci = {};
 	qci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 	qci.pNext = 0;
 	qci.flags = 0;
@@ -547,13 +572,7 @@ void Renderer::createLogicalDevice()
 	qci.queueCount = 2;
 	float priorities[2] = { 1.f, 1.f };
 	qci.pQueuePriorities = priorities;
-
-	VkPhysicalDeviceFeatures pdf = {};
-	pdf.samplerAnisotropy = VK_TRUE;
-	pdf.multiDrawIndirect = VK_TRUE;
-	pdf.shaderStorageImageExtendedFormats = VK_TRUE;
-	pdf.geometryShader = VK_TRUE;
-
+	
 	VkDeviceCreateInfo dci = {};
 	dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	dci.pNext = 0;
@@ -574,7 +593,7 @@ void Renderer::createLogicalDevice()
 	dci.ppEnabledExtensionNames = deviceExtensions;
 	dci.pEnabledFeatures = &pdf;
 
-	VK_CHECK_RESULT(vkCreateDevice(Engine::vkPhysicalDevice, &dci, 0, &device));
+	VK_CHECK_RESULT(vkCreateDevice(Engine::physicalDevice->getHandle(), &dci, 0, &device));
 
 	// All three of these queues are the same queue internally, they're all submitted to from the same 'graphics' dedicated thread
 	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &graphicsQueue));
@@ -582,7 +601,7 @@ void Renderer::createLogicalDevice()
 	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &computeQueue));
 
 	// Separate queue for the 'main' thread for transfer operations
-	VK_VALIDATE(vkGetDeviceQueue(device, 0, 1, &transferQueue));
+	VK_VALIDATE(vkGetDeviceQueue(device, 0, 1, &transferQueue));*/
 }
 
 /*

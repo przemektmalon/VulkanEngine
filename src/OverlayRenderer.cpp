@@ -25,7 +25,7 @@ void OLayer::create(glm::ivec2 pResolution)
 
 	tci.components = 1;
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-	tci.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
+	tci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	tci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
@@ -235,7 +235,7 @@ void OverlayRenderer::createOverlayAttachmentsFramebuffers()
 
 	tci.components = 1;
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-	tci.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
+	tci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	tci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
@@ -271,7 +271,7 @@ void OverlayRenderer::createOverlayRenderPass()
 	colAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription depAttachment = {};
-	depAttachment.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
+	depAttachment.format = Engine::physicalDevice->findOptimalDepthFormat();
 	depAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	depAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

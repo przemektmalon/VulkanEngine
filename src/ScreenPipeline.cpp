@@ -10,14 +10,20 @@
 void Renderer::createScreenSwapChain()
 {
 	Engine::queryVulkanPhysicalDeviceDetails();
-	auto& deviceDets = Engine::getPhysicalDeviceDetails();
+	//auto& deviceDets = Engine::getPhysicalDeviceDetails();
+	const auto physicalDevice = Engine::physicalDevice;
+
+	auto& surfaceCapabilities = physicalDevice->getSurfaceCapabilities();
+	auto& surfaceFormats = physicalDevice->getSurfaceFormats();
+	auto& presentModes = physicalDevice->getPresentModes();
+
 
 	VkSurfaceFormatKHR surfaceFormat;
 	VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
 	VkExtent2D extent;
 
 	// Find a suitable image format for drawing (ie. GL_RGBA8)
-	if (deviceDets.swapChainDetails.formats.size() == 1 && deviceDets.swapChainDetails.formats[0].format == VK_FORMAT_UNDEFINED) {
+	if (surfaceFormats.size() == 1 && surfaceFormats[0].format == VK_FORMAT_UNDEFINED) {
 		// If the only format returned by query is undefined then we can choose any format we want
 		surfaceFormat = { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 	}
@@ -25,7 +31,7 @@ void Renderer::createScreenSwapChain()
 	{
 		// If the query returns a list of formats choose the one we want (RGBA8)
 		bool foundSuitable = false;
-		for (const auto& availableFormat : deviceDets.swapChainDetails.formats) {
+		for (const auto& availableFormat : surfaceFormats) {
 			if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 				surfaceFormat = availableFormat;
 				foundSuitable = true;
@@ -33,11 +39,11 @@ void Renderer::createScreenSwapChain()
 		}
 		// If the device doesn't support the one we want choose the first one returned
 		if (!foundSuitable)
-			surfaceFormat = deviceDets.swapChainDetails.formats[0];
+			surfaceFormat = surfaceFormats[0];
 	}
 
 	// Choose a suitable present mode (Mailbox => double or triple buffering
-	for (const auto& availablePresentMode : deviceDets.swapChainDetails.presentModes) {
+	for (const auto& availablePresentMode : presentModes) {
 		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
 			presentMode = availablePresentMode;
 			break;
@@ -48,24 +54,24 @@ void Renderer::createScreenSwapChain()
 	}
 
 	// Choose a resolution for our drawing image
-	if (deviceDets.swapChainDetails.capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+	if (surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		// If we have a current extent (ie. the size of our surface as filled in when we queried swap chain capabilities) choose that
-		extent = deviceDets.swapChainDetails.capabilities.currentExtent;
+		extent = surfaceCapabilities.currentExtent;
 	}
 	else {
 		// If we dont have a current extent then choose the highest one supported
 		VkExtent2D actualExtent = { Engine::window->resX, Engine::window->resY };
 
-		actualExtent.width = std::max(deviceDets.swapChainDetails.capabilities.minImageExtent.width, std::min(deviceDets.swapChainDetails.capabilities.maxImageExtent.width, actualExtent.width));
-		actualExtent.height = std::max(deviceDets.swapChainDetails.capabilities.minImageExtent.height, std::min(deviceDets.swapChainDetails.capabilities.maxImageExtent.height, actualExtent.height));
+		actualExtent.width = std::max(surfaceCapabilities.minImageExtent.width, std::min(surfaceCapabilities.maxImageExtent.width, actualExtent.width));
+		actualExtent.height = std::max(surfaceCapabilities.minImageExtent.height, std::min(surfaceCapabilities.maxImageExtent.height, actualExtent.height));
 
 		extent = actualExtent;
 	}
 
 	// Choose the number of images we'll have in the swap chain (2 or 3 == double or triple buffering)
-	u32 imageCount = deviceDets.swapChainDetails.capabilities.minImageCount + 1;
-	if (deviceDets.swapChainDetails.capabilities.maxImageCount > 0 && imageCount > deviceDets.swapChainDetails.capabilities.maxImageCount) {
-		imageCount = deviceDets.swapChainDetails.capabilities.maxImageCount;
+	u32 imageCount = surfaceCapabilities.minImageCount + 1;
+	if (surfaceCapabilities.maxImageCount > 0 && imageCount > surfaceCapabilities.maxImageCount) {
+		imageCount = surfaceCapabilities.maxImageCount;
 	}
 
 	// Fill in the create struct for our swap chain with the collected information
@@ -99,7 +105,7 @@ void Renderer::createScreenSwapChain()
 											  }
 											  */
 
-	createInfo.preTransform = deviceDets.swapChainDetails.capabilities.currentTransform;
+	createInfo.preTransform = surfaceCapabilities.currentTransform;
 	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;

@@ -398,7 +398,7 @@ void Texture::createImage(u32 width, u32 height, VkFormat format, VkImageTiling 
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = Engine::getPhysicalDeviceDetails().getMemoryType(memRequirements.memoryTypeBits, properties);
+	allocInfo.memoryTypeIndex = Engine::physicalDevice->findMemoryTypeIndex(memRequirements.memoryTypeBits, properties);
 
 	VK_CHECK_RESULT(vkAllocateMemory(r->device, &allocInfo, nullptr, &imageMemory));
 

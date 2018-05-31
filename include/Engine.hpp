@@ -38,9 +38,6 @@ public:
 
 	static void updatePerformanceStatsDisplay();
 
-	static VkPhysicalDevice getPhysicalDevice() { return vkPhysicalDevice; }
-	static PhysicalDeviceDetails& getPhysicalDeviceDetails() { return physicalDevicesDetails[physicalDeviceIndex]; }
-
 #ifdef ENABLE_VULKAN_VALIDATION
 	static VkDebugReportCallbackEXT debugCallbackInfo;
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallbackFunc(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
@@ -66,9 +63,8 @@ public:
 	
 	static vdu::Instance instance;
 	static VkInstance vkInstance;
-	static VkPhysicalDevice vkPhysicalDevice;
-	static std::vector<PhysicalDeviceDetails> physicalDevicesDetails;
-	static int physicalDeviceIndex;
+	static std::vector<vdu::PhysicalDevice> allPhysicalDevices;
+	static vdu::PhysicalDevice* physicalDevice;
 	static VkResult lastVulkanResult;
 	
 	static Time frameTime;

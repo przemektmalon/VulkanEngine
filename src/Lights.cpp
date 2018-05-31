@@ -8,7 +8,7 @@ void PointLight::initTexture(int resolution)
 	TextureCreateInfo ci = {};
 	ci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	ci.bpp = 32;
-	ci.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
+	ci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	ci.genMipMaps = false;
 	ci.components = 1;
 	ci.height = resolution;
@@ -64,7 +64,7 @@ void SpotLight::initTexture(int resolution)
 	TextureCreateInfo ci = {};
 	ci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	ci.bpp = 32;
-	ci.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
+	ci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	ci.genMipMaps = false;
 	ci.components = 1;
 	ci.height = resolution;
@@ -127,7 +127,7 @@ void SunLight::initTexture(glm::ivec2 resolution)
 	TextureCreateInfo ci = {};
 	ci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	ci.bpp = 32;
-	ci.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
+	ci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	ci.genMipMaps = false;
 	ci.components = 1;
 	ci.height = resolution.y;

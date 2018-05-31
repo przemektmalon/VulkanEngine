@@ -678,6 +678,8 @@ void Engine::createWindow()
 */
 void Engine::createVulkanInstance()
 {
+	DBG_INFO("Creating vulkan instance");
+
 	instance.setApplicationName("App");
 	instance.setEngineName("Engine");
 	instance.addExtension(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -693,59 +695,6 @@ void Engine::createVulkanInstance()
 	instance.create();
 
 	vkInstance = instance.getInstanceHandle();
-
-	DBG_INFO("Creating vulkan instance");
-	/*VkApplicationInfo appInfo = {};
-	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pNext = 0;
-	appInfo.apiVersion = VK_API_VERSION_1_0;
-	appInfo.pApplicationName = "VulkanEngine";
-	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName = "My Vulkan Engine";
-	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-
-	std::vector<const char *> enabledExtensions;
-	enabledExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-#ifdef _WIN32
-	enabledExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#endif
-#ifdef __linux__
-	enabledExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-#endif
-#ifdef ENABLE_VULKAN_VALIDATION
-	enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-	
-#endif
-
-	VkInstanceCreateInfo instInfo = {};
-	instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	instInfo.pNext = 0;
-	instInfo.pApplicationInfo = &appInfo;
-	instInfo.flags = 0;
-	instInfo.enabledExtensionCount = enabledExtensions.size();
-	instInfo.ppEnabledExtensionNames = &enabledExtensions[0];
-#ifdef ENABLE_VULKAN_VALIDATION
-	instInfo.enabledLayerCount = 1;
-	auto layerName = "VK_LAYER_LUNARG_standard_validation";
-	instInfo.ppEnabledLayerNames = &layerName;
-#else
-	instInfo.enabledLayerCount = 0;
-	instInfo.ppEnabledLayerNames = 0;
-#endif
-
-	VK_CHECK_RESULT(vkCreateInstance(&instInfo, nullptr, &vkInstance));
-	
-#ifdef ENABLE_VULKAN_VALIDATION
-	DBG_INFO("Creating validation layer debug callback");
-	VkDebugReportCallbackCreateInfoEXT createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-	createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-	createInfo.pfnCallback = debugCallbackFunc;
-
-	auto createDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(vkInstance, "vkCreateDebugReportCallbackEXT");
-
-	VK_CHECK_RESULT(createDebugReportCallbackEXT(vkInstance, &createInfo, nullptr, &debugCallbackInfo));
-#endif*/
 }
 
 /*
@@ -753,42 +702,9 @@ void Engine::createVulkanInstance()
 */
 void Engine::queryVulkanPhysicalDeviceDetails()
 {
-	DBG_INFO("Picking Vulkan device");
-		uint32_t deviceCount = 0;
-	VK_CHECK_RESULT(vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr));
-
-	if (deviceCount == 0)
-		DBG_SEVERE("No GPUs with Vulkan support!");
-
-	std::vector<VkPhysicalDevice> devices(deviceCount);
-	VK_CHECK_RESULT(vkEnumeratePhysicalDevices(vkInstance, &deviceCount, devices.data()));
-
-	physicalDevicesDetails.clear();
-
-	for (const auto& device : devices)
-	{
-		physicalDevicesDetails.push_back(PhysicalDeviceDetails(device));
-
-		auto& qDevice = physicalDevicesDetails.back();
-
-		qDevice.queryDetails();	
-	}
-
-	s32 highestSuitabilityScore = 0;
-	int i = 0;
-	for (auto& device : physicalDevicesDetails)
-	{
-		if (device.suitabilityScore > highestSuitabilityScore)
-		{
-			highestSuitabilityScore = device.suitabilityScore;
-			vkPhysicalDevice = device.vkPhysicalDevice;
-			physicalDeviceIndex = i;
-		}
-		++i;
-	}
-
-	if (vkPhysicalDevice == VK_NULL_HANDLE)
-		DBG_SEVERE("Faled to find a suitable GPU");
+	vdu::enumeratePhysicalDevices(instance, allPhysicalDevices);
+	physicalDevice = &allPhysicalDevices.front();
+	physicalDevice->querySurfaceCapabilities(window->vkSurface);
 }
 
 /*
@@ -836,9 +752,6 @@ Window* Engine::window;
 Renderer* Engine::renderer;
 VkInstance Engine::vkInstance;
 PhysicsWorld Engine::physicsWorld;
-VkPhysicalDevice Engine::vkPhysicalDevice = VK_NULL_HANDLE;
-std::vector<PhysicalDeviceDetails> Engine::physicalDevicesDetails;
-int Engine::physicalDeviceIndex;
 bool Engine::engineRunning = true;
 Time Engine::engineStartTime;
 Camera Engine::camera;
@@ -860,3 +773,5 @@ VkResult Engine::lastVulkanResult;
 double Engine::timeSinceLastStatsUpdate = 0.f;
 int Engine::frames = 0;
 vdu::Instance Engine::instance;
+vdu::PhysicalDevice* Engine::physicalDevice;
+std::vector<vdu::PhysicalDevice> Engine::allPhysicalDevices;

@@ -59,6 +59,10 @@ public:
 	OverlayRenderer overlayRenderer;
 
 	// Device, queues, swap chain
+	vdu::LogicalDevice logicalDevice;
+	vdu::Queue lTransferQueue;
+	vdu::Queue lGraphicsQueue;
+
 	VkDevice device;
 	VkQueue transferQueue; // Queue for memory transfers (submitted to by the main thread)
 	VkQueue graphicsQueue;

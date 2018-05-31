@@ -24,7 +24,7 @@ void Buffer::create(VkDeviceSize pSize, VkBufferUsageFlags pUsage, VkMemoryPrope
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = Engine::getPhysicalDeviceDetails().getMemoryType(memRequirements.memoryTypeBits, memFlags);
+	allocInfo.memoryTypeIndex = Engine::physicalDevice->findMemoryTypeIndex(memRequirements.memoryTypeBits, memFlags);
 
 	VK_CHECK_RESULT(vkAllocateMemory(Engine::renderer->device, &allocInfo, nullptr, &memory));
 

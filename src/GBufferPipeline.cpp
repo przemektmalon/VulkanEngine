@@ -24,7 +24,7 @@ void Renderer::createGBufferAttachments()
 	gBufferNormalAttachment.loadToGPU(&tci);
 
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-	tci.format = Engine::getPhysicalDeviceDetails().findDepthFormat();
+	tci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	tci.bpp = 32;
 	tci.components = 1;
 	tci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
