@@ -682,49 +682,6 @@ void Renderer::createUBOs()
 */
 void Renderer::createDescriptorPool()
 {
-	/*std::array<VkDescriptorPoolSize, 10> poolSizes = {};
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = 1;
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[1].descriptorCount = 1;
-	poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[2].descriptorCount = 1024;
-	poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[3].descriptorCount = 1;
-	poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[4].descriptorCount = 1;
-	poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	poolSizes[5].descriptorCount = 5;
-	poolSizes[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[6].descriptorCount = 2;
-	poolSizes[7].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[7].descriptorCount = 4;
-	poolSizes[8].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[8].descriptorCount = 3;
-	poolSizes[9].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[9].descriptorCount = 400;
-
-	VkDescriptorPoolCreateInfo poolInfo = {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = 15;
-
-	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool)); */
-
-	/*std::array<VkDescriptorPoolSize, 1> poolSizesFreeable = {};
-	poolSizesFreeable[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizesFreeable[0].descriptorCount = 200;
-
-	VkDescriptorPoolCreateInfo poolInfoFreeable = {};
-	poolInfoFreeable.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfoFreeable.poolSizeCount = static_cast<uint32_t>(poolSizesFreeable.size());
-	poolInfoFreeable.pPoolSizes = poolSizesFreeable.data();
-	poolInfoFreeable.maxSets = 200;
-	poolInfoFreeable.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-
-	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfoFreeable, nullptr, &freeableDescriptorPool));*/
-
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 9);
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1428);
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 12);

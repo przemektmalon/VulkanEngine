@@ -51,19 +51,10 @@ void Renderer::createShadowRenderPass()
 
 void Renderer::createShadowDescriptorSetLayouts()
 {
-	VkDescriptorSetLayoutBinding transLayoutBinding = {};
-	transLayoutBinding.binding = 0;
-	transLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	transLayoutBinding.descriptorCount = 1;
-	transLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	auto& dsl = shadowDescriptorSetLayout;
 
-	std::array<VkDescriptorSetLayoutBinding, 1> bindings = { transLayoutBinding };
-	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-	layoutInfo.pBindings = bindings.data();
-
-	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &shadowDescriptorSetLayout));
+	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex); // transform
+	dsl.create(&logicalDevice);
 }
 
 void Renderer::createShadowPipeline()
@@ -162,7 +153,7 @@ void Renderer::createShadowPipeline()
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout.getHandle();
 	pipelineLayoutInfo.pushConstantRangeCount = 1;
 	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
@@ -209,7 +200,7 @@ void Renderer::createShadowPipeline()
 
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout.getHandle();
 	pipelineLayoutInfo.pushConstantRangeCount = 1;
 	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
@@ -245,7 +236,7 @@ void Renderer::createShadowPipeline()
 
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout.getHandle();
 	pipelineLayoutInfo.pushConstantRangeCount = 1;
 	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
@@ -261,7 +252,7 @@ void Renderer::createShadowPipeline()
 
 void Renderer::createShadowDescriptorSets()
 {
-	VkDescriptorSetLayout layouts[] = { shadowDescriptorSetLayout };
+	VkDescriptorSetLayout layouts[] = { shadowDescriptorSetLayout.getHandle() };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool.getHandle();
@@ -446,7 +437,7 @@ void Renderer::destroyShadowRenderPass()
 
 void Renderer::destroyShadowDescriptorSetLayouts()
 {
-	VK_VALIDATE(vkDestroyDescriptorSetLayout(device, shadowDescriptorSetLayout, 0));
+	shadowDescriptorSetLayout.destroy();
 }
 
 void Renderer::destroyShadowPipeline()

@@ -175,26 +175,12 @@ void Renderer::createScreenRenderPass()
 
 void Renderer::createScreenDescriptorSetLayouts()
 {
-	VkDescriptorSetLayoutBinding colLayoutBinding = {};
-	colLayoutBinding.binding = 0;
-	colLayoutBinding.descriptorCount = 1;
-	colLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	colLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	auto& dsl = screenDescriptorSetLayout;
 
-	VkDescriptorSetLayoutBinding overLayoutBinding = {};
-	overLayoutBinding.binding = 1;
-	overLayoutBinding.descriptorCount = 1;
-	overLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	overLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 0, 1, vdu::ShaderStage::Fragment); // scene
+	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 1, 1, vdu::ShaderStage::Fragment); // overlay
 
-	VkDescriptorSetLayoutBinding bindings[] = { colLayoutBinding, overLayoutBinding };
-
-	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 2;
-	layoutInfo.pBindings = bindings;
-
-	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &screenDescriptorSetLayout));
+	dsl.create(&logicalDevice);
 }
 
 void Renderer::createScreenPipeline()
@@ -291,7 +277,7 @@ void Renderer::createScreenPipeline()
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &screenDescriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &screenDescriptorSetLayout.getHandle();
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &screenPipelineLayout));
@@ -340,7 +326,7 @@ void Renderer::createScreenFramebuffers()
 
 void Renderer::createScreenDescriptorSets()
 {
-	VkDescriptorSetLayout layouts[] = { screenDescriptorSetLayout };
+	VkDescriptorSetLayout layouts[] = { screenDescriptorSetLayout.getHandle() };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool.getHandle();
@@ -465,7 +451,7 @@ void Renderer::destroyScreenRenderPass()
 
 void Renderer::destroyScreenDescriptorSetLayouts()
 {
-	VK_VALIDATE(vkDestroyDescriptorSetLayout(device, screenDescriptorSetLayout, 0));
+	screenDescriptorSetLayout.getHandle();
 }
 
 void Renderer::destroyScreenPipeline()

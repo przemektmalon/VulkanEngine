@@ -18,98 +18,27 @@ void Renderer::createPBRAttachments()
 
 void Renderer::createPBRDescriptorSetLayouts()
 {
-	VkDescriptorSetLayoutBinding outLayoutBinding = {};
-	outLayoutBinding.binding = 0;
-	outLayoutBinding.descriptorCount = 1;
-	outLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	outLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	auto& dsl = pbrDescriptorSetLayout; // for brevity and readability
 
-	VkDescriptorSetLayoutBinding colLayoutBinding = {};
-	colLayoutBinding.binding = 1;
-	colLayoutBinding.descriptorCount = 1;
-	colLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	colLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	dsl.addBinding(vdu::DescriptorType::StorageImage, 0, 1, vdu::ShaderStage::Compute); // out
+	dsl.addBinding(vdu::DescriptorType::StorageImage, 1, 1, vdu::ShaderStage::Compute); // colour
+	dsl.addBinding(vdu::DescriptorType::StorageImage, 2, 1, vdu::ShaderStage::Compute); // normal
+	dsl.addBinding(vdu::DescriptorType::StorageImage, 3, 1, vdu::ShaderStage::Compute); // pbr
+	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 4, 1, vdu::ShaderStage::Compute); // depth
+	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 5, 1, vdu::ShaderStage::Compute); // skybox
 
-	VkDescriptorSetLayoutBinding norLayoutBinding = {};
-	norLayoutBinding.binding = 2;
-	norLayoutBinding.descriptorCount = 1;
-	norLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	norLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 9, 1, vdu::ShaderStage::Compute); // camera
+	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 10, 1, vdu::ShaderStage::Compute); // point lights data
+	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 11, 1, vdu::ShaderStage::Compute); // spot lights data
+	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 12, 1, vdu::ShaderStage::Compute); // light counts
 
-	VkDescriptorSetLayoutBinding pbrLayoutBinding = {};
-	pbrLayoutBinding.binding = 3;
-	pbrLayoutBinding.descriptorCount = 1;
-	pbrLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	pbrLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 13, 150, vdu::ShaderStage::Compute); // point shadows
+	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 14, 150, vdu::ShaderStage::Compute); // spot shadows
+	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 15, 1, vdu::ShaderStage::Compute); // sun shadow
 
-	VkDescriptorSetLayoutBinding depthLayoutBinding = {};
-	depthLayoutBinding.binding = 4;
-	depthLayoutBinding.descriptorCount = 1;
-	depthLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	depthLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 16, 1, vdu::ShaderStage::Compute); // sun light data
 
-	VkDescriptorSetLayoutBinding pointLightsLayoutBinding = {};
-	pointLightsLayoutBinding.binding = 10;
-	pointLightsLayoutBinding.descriptorCount = 1;
-	pointLightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	pointLightsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	VkDescriptorSetLayoutBinding spotLightsLayoutBinding = {};
-	spotLightsLayoutBinding.binding = 11;
-	spotLightsLayoutBinding.descriptorCount = 1;
-	spotLightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	spotLightsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	VkDescriptorSetLayoutBinding lightCountsLayoutBinding = {};
-	lightCountsLayoutBinding.binding = 12;
-	lightCountsLayoutBinding.descriptorCount = 1;
-	lightCountsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	lightCountsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	VkDescriptorSetLayoutBinding cameraLayoutBinding = {};
-	cameraLayoutBinding.binding = 9;
-	cameraLayoutBinding.descriptorCount = 1;
-	cameraLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	cameraLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	VkDescriptorSetLayoutBinding skyboxLayoutBinding = {};
-	skyboxLayoutBinding.binding = 5;
-	skyboxLayoutBinding.descriptorCount = 1;
-	skyboxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	skyboxLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	VkDescriptorSetLayoutBinding pointShadowsLayoutBinding = {};
-	pointShadowsLayoutBinding.binding = 13;
-	pointShadowsLayoutBinding.descriptorCount = 150;
-	pointShadowsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pointShadowsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	VkDescriptorSetLayoutBinding spotShadowsLayoutBinding = {};
-	spotShadowsLayoutBinding.binding = 14;
-	spotShadowsLayoutBinding.descriptorCount = 150;
-	spotShadowsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	spotShadowsLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	VkDescriptorSetLayoutBinding sunShadowLayoutBinding = {};
-	sunShadowLayoutBinding.binding = 15;
-	sunShadowLayoutBinding.descriptorCount = 1;
-	sunShadowLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	sunShadowLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	VkDescriptorSetLayoutBinding sunLightLayoutBinding = {};
-	sunLightLayoutBinding.binding = 16;
-	sunLightLayoutBinding.descriptorCount = 1;
-	sunLightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	sunLightLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	VkDescriptorSetLayoutBinding bindings[] = { outLayoutBinding, colLayoutBinding, norLayoutBinding, pbrLayoutBinding, depthLayoutBinding, skyboxLayoutBinding, pointLightsLayoutBinding, spotLightsLayoutBinding, cameraLayoutBinding, lightCountsLayoutBinding, pointShadowsLayoutBinding, spotShadowsLayoutBinding, sunShadowLayoutBinding, sunLightLayoutBinding };
-
-	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 14;
-	layoutInfo.pBindings = bindings;
-
-	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &pbrDescriptorSetLayout));
+	dsl.create(&logicalDevice);
 }
 
 void Renderer::createPBRPipeline()
@@ -122,7 +51,7 @@ void Renderer::createPBRPipeline()
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &pbrDescriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &pbrDescriptorSetLayout.getHandle();
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pbrPipelineLayout));
@@ -138,7 +67,7 @@ void Renderer::createPBRPipeline()
 
 void Renderer::createPBRDescriptorSets()
 {
-	VkDescriptorSetLayout layouts[] = { pbrDescriptorSetLayout };
+	VkDescriptorSetLayout layouts[] = { pbrDescriptorSetLayout.getHandle() };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool.getHandle();
@@ -436,7 +365,7 @@ void Renderer::destroyPBRAttachments()
 
 void Renderer::destroyPBRDescriptorSetLayouts()
 {
-	VK_VALIDATE(vkDestroyDescriptorSetLayout(device, pbrDescriptorSetLayout, 0));
+	pbrDescriptorSetLayout.destroy();
 }
 
 void Renderer::destroyPBRPipeline()

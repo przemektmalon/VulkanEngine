@@ -106,8 +106,6 @@ public:
 	// Memory pools
 	vdu::DescriptorPool descriptorPool;
 	vdu::DescriptorPool freeableDescriptorPool;
-	//VkDescriptorPool descriptorPool;
-	//VkDescriptorPool freeableDescriptorPool;
 	VkQueryPool queryPool;
 
 	// Semaphores
@@ -172,7 +170,7 @@ public:
 	VkPipelineLayout gBufferPipelineLayout;
 	
 	// Descriptors
-	VkDescriptorSetLayout gBufferDescriptorSetLayout;
+	vdu::DescriptorSetLayout gBufferDescriptorSetLayout;
 	VkDescriptorSet gBufferDescriptorSet;
 	bool gBufferDescriptorSetNeedsUpdate;
 
@@ -222,7 +220,7 @@ public:
 	VkPipelineLayout sunShadowPipelineLayout;
 
 	// Descriptors
-	VkDescriptorSetLayout shadowDescriptorSetLayout;
+	vdu::DescriptorSetLayout shadowDescriptorSetLayout;
 	VkDescriptorSet shadowDescriptorSet;
 
 	// Render pass
@@ -260,7 +258,7 @@ public:
 	VkPipelineLayout pbrPipelineLayout;
 
 	// Descriptors
-	VkDescriptorSetLayout pbrDescriptorSetLayout;
+	vdu::DescriptorSetLayout pbrDescriptorSetLayout;
 	VkDescriptorSet pbrDescriptorSet;
 
 	// Framebuffer and attachments
@@ -302,7 +300,7 @@ public:
 	VkPipelineLayout screenPipelineLayout;
 	
 	// Descriptors
-	VkDescriptorSetLayout screenDescriptorSetLayout;
+	vdu::DescriptorSetLayout screenDescriptorSetLayout;
 	VkDescriptorSet screenDescriptorSet;
 
 	// Framebuffer and attachments

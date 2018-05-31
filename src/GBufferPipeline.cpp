@@ -121,32 +121,13 @@ void Renderer::createGBufferRenderPass()
 
 void Renderer::createGBufferDescriptorSetLayouts()
 {
-	VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-	uboLayoutBinding.binding = 0;
-	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uboLayoutBinding.descriptorCount = 1;
-	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	auto& dsl = gBufferDescriptorSetLayout;
 
-	VkDescriptorSetLayoutBinding transLayoutBinding = {};
-	transLayoutBinding.binding = 1;
-	transLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	transLayoutBinding.descriptorCount = 1;
-	transLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex | vdu::ShaderStage::Fragment); // camera
+	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 1, 1, vdu::ShaderStage::Vertex); // transforms
+	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 2, 1000, vdu::ShaderStage::Fragment); // textures
 
-	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
-	samplerLayoutBinding.binding = 2;
-	samplerLayoutBinding.descriptorCount = 1000;
-	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.pImmutableSamplers = nullptr;
-	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboLayoutBinding, transLayoutBinding, samplerLayoutBinding };
-	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-	layoutInfo.pBindings = bindings.data();
-
-	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &gBufferDescriptorSetLayout));
+	dsl.create(&logicalDevice);
 }
 
 void Renderer::createGBufferPipeline()
@@ -253,7 +234,7 @@ void Renderer::createGBufferPipeline()
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &gBufferDescriptorSetLayout;
+	pipelineLayoutInfo.pSetLayouts = &gBufferDescriptorSetLayout.getHandle();
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &gBufferPipelineLayout));
@@ -301,7 +282,7 @@ void Renderer::createGBufferFramebuffers()
 
 void Renderer::createGBufferDescriptorSets()
 {
-	VkDescriptorSetLayout layouts[] = { gBufferDescriptorSetLayout };
+	VkDescriptorSetLayout layouts[] = { gBufferDescriptorSetLayout.getHandle() };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool.getHandle();
@@ -485,7 +466,7 @@ void Renderer::destroyGBufferRenderPass()
 
 void Renderer::destroyGBufferDescriptorSetLayouts()
 {
-	VK_VALIDATE(vkDestroyDescriptorSetLayout(device, gBufferDescriptorSetLayout, 0));
+	gBufferDescriptorSetLayout.destroy();
 }
 
 void Renderer::destroyGBufferPipeline()
