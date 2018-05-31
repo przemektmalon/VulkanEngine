@@ -104,8 +104,10 @@ public:
 
 
 	// Memory pools
-	VkDescriptorPool descriptorPool;
-	VkDescriptorPool freeableDescriptorPool;
+	vdu::DescriptorPool descriptorPool;
+	vdu::DescriptorPool freeableDescriptorPool;
+	//VkDescriptorPool descriptorPool;
+	//VkDescriptorPool freeableDescriptorPool;
 	VkQueryPool queryPool;
 
 	// Semaphores

@@ -304,7 +304,7 @@ void Renderer::createGBufferDescriptorSets()
 	VkDescriptorSetLayout layouts[] = { gBufferDescriptorSetLayout };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = descriptorPool;
+	allocInfo.descriptorPool = descriptorPool.getHandle();
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
@@ -502,7 +502,7 @@ void Renderer::destroyGBufferFramebuffers()
 
 void Renderer::destroyGBufferDescriptorSets()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool, 1, &gBufferDescriptorSet));
+	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &gBufferDescriptorSet));
 }
 
 void Renderer::destroyGBufferCommands()

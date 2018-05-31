@@ -231,8 +231,11 @@ void Renderer::cleanup()
 
 	overlayRenderer.cleanup();
 
-	VK_VALIDATE(vkDestroyDescriptorPool(device, descriptorPool, nullptr));
-	VK_VALIDATE(vkDestroyDescriptorPool(device, freeableDescriptorPool, nullptr));
+
+	//VK_VALIDATE(vkDestroyDescriptorPool(device, descriptorPool, nullptr));
+	//VK_VALIDATE(vkDestroyDescriptorPool(device, freeableDescriptorPool, nullptr));
+	descriptorPool.destroy();
+	freeableDescriptorPool.destroy();
 	VK_VALIDATE(vkDestroyCommandPool(device, commandPool, 0));
 	VK_VALIDATE(vkDestroyQueryPool(device, queryPool, 0));
 
@@ -679,7 +682,7 @@ void Renderer::createUBOs()
 */
 void Renderer::createDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 10> poolSizes = {};
+	/*std::array<VkDescriptorPoolSize, 10> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = 1;
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -707,9 +710,9 @@ void Renderer::createDescriptorPool()
 	poolInfo.pPoolSizes = poolSizes.data();
 	poolInfo.maxSets = 15;
 
-	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool));
+	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool)); */
 
-	std::array<VkDescriptorPoolSize, 1> poolSizesFreeable = {};
+	/*std::array<VkDescriptorPoolSize, 1> poolSizesFreeable = {};
 	poolSizesFreeable[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizesFreeable[0].descriptorCount = 200;
 
@@ -720,7 +723,20 @@ void Renderer::createDescriptorPool()
 	poolInfoFreeable.maxSets = 200;
 	poolInfoFreeable.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfoFreeable, nullptr, &freeableDescriptorPool));
+	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &poolInfoFreeable, nullptr, &freeableDescriptorPool));*/
+
+	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 9);
+	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1428);
+	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 12);
+	descriptorPool.addSetCount(15);
+
+	descriptorPool.create(&logicalDevice);
+
+	freeableDescriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 200);
+	freeableDescriptorPool.addSetCount(200);
+	freeableDescriptorPool.setFreeable(true);
+
+	freeableDescriptorPool.create(&logicalDevice);
 }
 
 /*

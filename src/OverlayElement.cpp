@@ -8,7 +8,7 @@ OverlayElement::OverlayElement(Type pType) : type(pType), draw(true)
 	VkDescriptorSetLayout layouts[] = { Engine::renderer->overlayRenderer.getDescriptorSetLayout() };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = Engine::renderer->freeableDescriptorPool;
+	allocInfo.descriptorPool = Engine::renderer->freeableDescriptorPool.getHandle();
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
@@ -21,5 +21,5 @@ OverlayElement::OverlayElement(Type pType) : type(pType), draw(true)
 
 OverlayElement::~OverlayElement()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(Engine::renderer->device, Engine::renderer->freeableDescriptorPool, 1, &descSet));
+	VK_CHECK_RESULT(vkFreeDescriptorSets(Engine::renderer->device, Engine::renderer->freeableDescriptorPool.getHandle(), 1, &descSet));
 }

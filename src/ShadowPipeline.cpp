@@ -264,7 +264,7 @@ void Renderer::createShadowDescriptorSets()
 	VkDescriptorSetLayout layouts[] = { shadowDescriptorSetLayout };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = descriptorPool;
+	allocInfo.descriptorPool = descriptorPool.getHandle();
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
@@ -464,7 +464,7 @@ void Renderer::destroyShadowPipeline()
 
 void Renderer::destroyShadowDescriptorSets()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool, 1, &shadowDescriptorSet));
+	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &shadowDescriptorSet));
 }
 
 void Renderer::destroyShadowCommands()

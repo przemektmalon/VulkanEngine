@@ -141,7 +141,7 @@ void Renderer::createPBRDescriptorSets()
 	VkDescriptorSetLayout layouts[] = { pbrDescriptorSetLayout };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = descriptorPool;
+	allocInfo.descriptorPool = descriptorPool.getHandle();
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
@@ -448,7 +448,7 @@ void Renderer::destroyPBRPipeline()
 
 void Renderer::destroyPBRDescriptorSets()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool, 1, &pbrDescriptorSet));
+	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &pbrDescriptorSet));
 }
 
 void Renderer::destroyPBRCommands()

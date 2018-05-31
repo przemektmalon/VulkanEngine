@@ -343,7 +343,7 @@ void Renderer::createScreenDescriptorSets()
 	VkDescriptorSetLayout layouts[] = { screenDescriptorSetLayout };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = descriptorPool;
+	allocInfo.descriptorPool = descriptorPool.getHandle();
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
@@ -483,7 +483,7 @@ void Renderer::destroyScreenFramebuffers()
 
 void Renderer::destroyScreenDescriptorSets()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool, 1, &screenDescriptorSet));
+	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &screenDescriptorSet));
 }
 
 void Renderer::destroyScreenCommands()

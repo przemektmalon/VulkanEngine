@@ -47,7 +47,7 @@ void OLayer::create(glm::ivec2 pResolution)
 
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = Engine::renderer->descriptorPool;
+	allocInfo.descriptorPool = Engine::renderer->descriptorPool.getHandle();
 	allocInfo.descriptorSetCount = 1;
 	auto layout = Engine::renderer->overlayRenderer.getDescriptorSetLayout();
 	allocInfo.pSetLayouts = &layout;
