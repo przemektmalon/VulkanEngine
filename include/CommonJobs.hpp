@@ -85,7 +85,7 @@ static void initialiseCommonJobs()
 
 	renderJobFunc = []() -> void {
 		PROFILE_START("qwaitidle");
-		vkQueueWaitIdle(Engine::renderer->graphicsQueue);
+		VK_CHECK_RESULT(vkQueueWaitIdle(Engine::renderer->graphicsQueue));
 		PROFILE_END("qwaitidle");
 
 		Engine::renderer->lightManager.sunLight.calcProjs();

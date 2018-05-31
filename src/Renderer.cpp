@@ -16,7 +16,7 @@ void Renderer::initialiseDevice()
 }
 
 /*
-	@brief	Initialise renderer and Vulkan objects
+@brief	Initialise renderer and Vulkan objects
 */
 void Renderer::initialise()
 {
@@ -38,24 +38,24 @@ void Renderer::initialise()
 	createGBufferAttachments();
 	createPBRAttachments();
 	createScreenAttachments();
-	
+
 	// Pipeline render passes
 	createGBufferRenderPass();
 	createShadowRenderPass();
 	createScreenRenderPass();
-	
+
 	// Pipeline descriptor set layouts
 	createGBufferDescriptorSetLayouts();
 	createShadowDescriptorSetLayouts();
 	createPBRDescriptorSetLayouts();
 	createScreenDescriptorSetLayouts();
-	
+
 	// Pipeline objects
 	createGBufferPipeline();
 	createShadowPipeline();
 	createPBRPipeline();
 	createScreenPipeline();
-	
+
 	// Pipeline framebuffers
 	createGBufferFramebuffers();
 	createScreenFramebuffers();
@@ -74,7 +74,7 @@ void Renderer::initialise()
 	createShadowCommands();
 	createPBRCommands();
 	createScreenCommands();
-	
+
 	overlayRenderer.createOverlayRenderPass();
 	overlayRenderer.createOverlayDescriptorSetLayouts();
 	overlayRenderer.createOverlayDescriptorSets();
@@ -82,7 +82,7 @@ void Renderer::initialise()
 	overlayRenderer.createOverlayAttachmentsFramebuffers();
 	overlayRenderer.createOverlayCommands();
 
-	for (int i = 0; i < 0; ++i)
+	for (int i = 0; i < 1; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
@@ -146,7 +146,7 @@ void Renderer::reInitialise()
 	createGBufferAttachments();
 	createPBRAttachments();
 	createScreenAttachments();
-	
+
 	// Pipeline render passes
 	createGBufferRenderPass();
 	createScreenRenderPass();
@@ -168,7 +168,7 @@ void Renderer::reInitialise()
 	createPBRCommands();
 	createScreenCommands();
 	overlayRenderer.createOverlayCommands();
-	
+
 	// Pipeline descriptor sets
 	updateGBufferDescriptorSets();
 	updatePBRDescriptorSets();
@@ -185,7 +185,7 @@ void Renderer::reInitialise()
 }
 
 /*
-	@brief	Cleanup Vulkan objects
+@brief	Cleanup Vulkan objects
 */
 void Renderer::cleanup()
 {
@@ -255,7 +255,7 @@ void Renderer::cleanup()
 	screenQuadBuffer.destroy();
 
 	lightManager.cleanup();
-	
+
 	combineOverlaysShader.destroy();
 	overlayShader.destroy();
 
@@ -285,7 +285,7 @@ void Renderer::cleanupForReInit()
 }
 
 /*
-	@brief	Render
+@brief	Render
 */
 void Renderer::render()
 {
@@ -311,7 +311,7 @@ void Renderer::render()
 
 	//PROFILE_END("qwaitidle");
 
-	
+
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -366,7 +366,7 @@ void Renderer::render()
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
-	
+
 
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
@@ -378,7 +378,7 @@ void Renderer::render()
 		//recreateVulkanSwapChain();
 		return;
 	}
-	
+
 	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSemaphore waitSems[] = { imageAvailableSemaphore, pbrFinishedSemaphore, overlayCombineFinishedSemaphore };
 	submitInfo.pWaitSemaphores = waitSems;
@@ -452,7 +452,7 @@ void Renderer::populateDrawCmdBuffer()
 	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)drawCmdBuffer.map();
 
 	int i = 0;
-	
+
 	auto tIndex = ModelInstance::toGPUTransformIndex;
 
 	for (auto& m : Engine::world.instancesToDraw)
@@ -532,12 +532,12 @@ void Renderer::createDataBuffers()
 }
 
 /*
-	@brief	Creates a Vulkan logical device (from the optimal physical device) with specific features and queues
+@brief	Creates a Vulkan logical device (from the optimal physical device) with specific features and queues
 */
 void Renderer::createLogicalDevice()
 {
 	DBG_INFO("Creating Vulkan logical device");
-	
+
 	VkPhysicalDeviceFeatures pdf = {};
 	pdf.samplerAnisotropy = VK_TRUE;
 	pdf.multiDrawIndirect = VK_TRUE;
@@ -546,12 +546,12 @@ void Renderer::createLogicalDevice()
 
 	lGraphicsQueue.prepare(0, 1.f);
 	lTransferQueue.prepare(0, 1.f);
-	
+
 	logicalDevice.addExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	logicalDevice.addLayer("VK_LAYER_LUNARG_standard_validation");
 	logicalDevice.addQueue(&lGraphicsQueue);
 	logicalDevice.addQueue(&lTransferQueue);
-	
+
 	logicalDevice.setEnabledDeviceFeatures(pdf);
 
 	logicalDevice.create(Engine::physicalDevice);
@@ -562,50 +562,10 @@ void Renderer::createLogicalDevice()
 	transferQueue = lTransferQueue.getHandle();
 
 	device = logicalDevice.getHandle();
-
-	// Initialise two queues for our device
-	/*VkDeviceQueueCreateInfo qci = {};
-	qci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	qci.pNext = 0;
-	qci.flags = 0;
-	qci.queueFamilyIndex = 0;
-	qci.queueCount = 2;
-	float priorities[2] = { 1.f, 1.f };
-	qci.pQueuePriorities = priorities;
-	
-	VkDeviceCreateInfo dci = {};
-	dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	dci.pNext = 0;
-	dci.flags = 0;
-	dci.queueCreateInfoCount = 1;
-	dci.pQueueCreateInfos = &qci;
-	// Enable validation for vulkan calls, for debugging
-	#ifdef ENABLE_VULKAN_VALIDATION
-		dci.enabledLayerCount = 1;
-		auto layerName = "VK_LAYER_LUNARG_standard_validation";
-		dci.ppEnabledLayerNames = &layerName;
-	#else
-		dci.enabledLayerCount = 0;
-		dci.ppEnabledLayerNames = 0;
-	#endif
-	dci.enabledExtensionCount = 1;
-	const char* deviceExtensions[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-	dci.ppEnabledExtensionNames = deviceExtensions;
-	dci.pEnabledFeatures = &pdf;
-
-	VK_CHECK_RESULT(vkCreateDevice(Engine::physicalDevice->getHandle(), &dci, 0, &device));
-
-	// All three of these queues are the same queue internally, they're all submitted to from the same 'graphics' dedicated thread
-	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &graphicsQueue));
-	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &presentQueue)); /// Todo: Support for AMD gpus which have non-universal queues
-	VK_VALIDATE(vkGetDeviceQueue(device, 0, 0, &computeQueue));
-
-	// Separate queue for the 'main' thread for transfer operations
-	VK_VALIDATE(vkGetDeviceQueue(device, 0, 1, &transferQueue));*/
 }
 
 /*
-	@brief	Create Vulkan command pool for submitting commands to a particular queue
+@brief	Create Vulkan command pool for submitting commands to a particular queue
 */
 void Renderer::createCommandPool()
 {
@@ -702,7 +662,7 @@ void Renderer::createTextureSampler()
 }
 
 /*
-	@brief	Create vulkan uniform buffer for MVP matrices
+@brief	Create vulkan uniform buffer for MVP matrices
 */
 void Renderer::createUBOs()
 {
@@ -715,7 +675,7 @@ void Renderer::createUBOs()
 }
 
 /*
-	@brief	Create Vulkan descriptor pool
+@brief	Create Vulkan descriptor pool
 */
 void Renderer::createDescriptorPool()
 {
@@ -733,11 +693,11 @@ void Renderer::createDescriptorPool()
 	poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	poolSizes[5].descriptorCount = 5;
 	poolSizes[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[6].descriptorCount = 1;
+	poolSizes[6].descriptorCount = 2;
 	poolSizes[7].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[7].descriptorCount = 4;
 	poolSizes[8].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[8].descriptorCount = 2;
+	poolSizes[8].descriptorCount = 3;
 	poolSizes[9].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[9].descriptorCount = 400;
 
@@ -764,7 +724,7 @@ void Renderer::createDescriptorPool()
 }
 
 /*
-	@brief	Create Vulkan semaphores
+@brief	Create Vulkan semaphores
 */
 void Renderer::createSemaphores()
 {
@@ -782,7 +742,7 @@ void Renderer::createSemaphores()
 }
 
 /*
-	@brief	Copies data to staging buffer
+@brief	Copies data to staging buffer
 */
 void Renderer::copyToStagingBuffer(Buffer& stagingBuffer, void * srcData, VkDeviceSize size, VkDeviceSize dstOffset)
 {
@@ -792,7 +752,7 @@ void Renderer::copyToStagingBuffer(Buffer& stagingBuffer, void * srcData, VkDevi
 }
 
 /*
-	@brief	Creates staging buffer with requested size
+@brief	Creates staging buffer with requested size
 */
 void Renderer::createStagingBuffer(Buffer& stagingBuffer, VkDeviceSize size)
 {
@@ -800,7 +760,7 @@ void Renderer::createStagingBuffer(Buffer& stagingBuffer, VkDeviceSize size)
 }
 
 /*
-	@brief	Destroys staging buffer
+@brief	Destroys staging buffer
 */
 void Renderer::destroyStagingBuffer(Buffer& stagingBuffer)
 {
@@ -852,36 +812,36 @@ void Renderer::submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence)
 	Engine::threading->addGPUTransferJob(submitJob, 0); /// TODO: make asynchronous
 }
 
-VkCommandBuffer Renderer::beginSingleTimeCommands() 
+VkCommandBuffer Renderer::beginSingleTimeCommands()
 {
-    VkCommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = commandPool;
-    allocInfo.commandBufferCount = 1;
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = commandPool;
+	allocInfo.commandBufferCount = 1;
 
-    VkCommandBuffer commandBuffer;
+	VkCommandBuffer commandBuffer;
 	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer));
 
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 	VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
-    return commandBuffer;
+	return commandBuffer;
 }
 
 void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fence) {
 	VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
 
 	Engine::threading->physToGPUMutex.lock();
-	
+
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence));
 	VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue)); /// TODO: non blocking queue submissions !
 
@@ -891,7 +851,7 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fenc
 }
 
 /*
-	@brief	Update camera buffer
+@brief	Update camera buffer
 */
 void Renderer::updateCameraBuffer()
 {
@@ -906,7 +866,7 @@ void Renderer::updateCameraBuffer()
 }
 
 /*
-	@brief	Update transforms buffer
+@brief	Update transforms buffer
 */
 void Renderer::updateTransformBuffer()
 {
@@ -979,7 +939,7 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 	else if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		
+
 		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	}

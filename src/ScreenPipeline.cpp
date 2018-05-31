@@ -9,7 +9,7 @@
 */
 void Renderer::createScreenSwapChain()
 {
-	Engine::queryVulkanPhysicalDeviceDetails();
+	//Engine::queryVulkanPhysicalDeviceDetails();
 	//auto& deviceDets = Engine::getPhysicalDeviceDetails();
 	const auto physicalDevice = Engine::physicalDevice;
 

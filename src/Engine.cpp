@@ -68,7 +68,7 @@ void Engine::start()
 	/*
 		Initialise worker threads (each one needs vulkan logical device before initialising its command pool)
 	*/
-	int numThreads = 4;
+	int numThreads = 2;
 	waitForProfilerInitMutex.lock();
 	threading = new Threading(numThreads);
 

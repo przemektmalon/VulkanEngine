@@ -583,8 +583,6 @@ void main()
 		//litPixel = vec3(shad);
 		//litPixel = fragPosLightSpace.xyz;
 	}
-	
-
 
 	/*if (worldPos.x > orthoData.a.y && worldPos.x < orthoData.a.x &&
 	//	worldPos.y > orthoData.a.z && worldPos.y < orthoData.a.w &&

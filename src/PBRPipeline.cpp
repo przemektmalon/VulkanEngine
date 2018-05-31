@@ -125,13 +125,6 @@ void Renderer::createPBRPipeline()
 	pipelineLayoutInfo.pSetLayouts = &pbrDescriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-	/*VkPushConstantRange pushConstantRange = {};
-	pushConstantRange.offset = 0;
-	pushConstantRange.size = sizeof(glm::fvec4) * 2; 
-	pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;*/
-
 	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pbrPipelineLayout));
 
 	// Collate all the data necessary to create pipeline
@@ -282,7 +275,7 @@ void Renderer::updatePBRDescriptorSets()
 
 	if (lightManager.pointLights.size())
 	{
-		VkDescriptorImageInfo* pointShadowsInfo = new VkDescriptorImageInfo[lightManager.pointLights.size()];
+		VkDescriptorImageInfo* pointShadowsInfo = new VkDescriptorImageInfo[lightManager.pointLights.size()]; /// TODO: delete
 
 		int i = 0;
 		for (auto& s : lightManager.pointLights)
@@ -322,7 +315,7 @@ void Renderer::updatePBRDescriptorSets()
 
 	if (lightManager.spotLights.size())
 	{
-		VkDescriptorImageInfo* spotShadowsInfo = new VkDescriptorImageInfo[lightManager.spotLights.size()];
+		VkDescriptorImageInfo* spotShadowsInfo = new VkDescriptorImageInfo[lightManager.spotLights.size()]; /// TODO: delete
 
 		int i = 0;
 		for (auto& s : lightManager.spotLights)
@@ -362,16 +355,16 @@ void Renderer::updatePBRDescriptorSets()
 
 	if (lightManager.sunLight.shadowTex)
 	{
-		VkDescriptorImageInfo sunShadowInfo = {};
+		auto sunShadowInfo = new VkDescriptorImageInfo;
 
-		sunShadowInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		sunShadowInfo.imageView = lightManager.sunLight.getShadowTexture()->getImageViewHandle();
-		sunShadowInfo.sampler = shadowSampler;
+		sunShadowInfo->imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		sunShadowInfo->imageView = lightManager.sunLight.getShadowTexture()->getImageViewHandle();
+		sunShadowInfo->sampler = shadowSampler;
 
-		VkDescriptorBufferInfo sunLightInfo;
-		sunLightInfo.buffer = lightManager.sunLightBuffer.getBuffer();
-		sunLightInfo.offset = 0;
-		sunLightInfo.range = sizeof(SunLight::GPUData);
+		auto sunLightInfo = new VkDescriptorBufferInfo;
+		sunLightInfo->buffer = lightManager.sunLightBuffer.getBuffer();
+		sunLightInfo->offset = 0;
+		sunLightInfo->range = sizeof(SunLight::GPUData);
 
 		VkWriteDescriptorSet write = {};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -380,7 +373,7 @@ void Renderer::updatePBRDescriptorSets()
 		write.dstArrayElement = 0;
 		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write.descriptorCount = 1;
-		write.pImageInfo = &sunShadowInfo;
+		write.pImageInfo = sunShadowInfo;
 
 		descriptorWrites2.push_back(write);
 
@@ -390,7 +383,7 @@ void Renderer::updatePBRDescriptorSets()
 		write.dstArrayElement = 0;
 		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		write.descriptorCount = 1;
-		write.pBufferInfo = &sunLightInfo;
+		write.pBufferInfo = sunLightInfo;
 
 		descriptorWrites2.push_back(write);
 	}
@@ -421,11 +414,6 @@ void Renderer::updatePBRCommands()
 
 	VK_VALIDATE(vkCmdBindPipeline(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipeline));
 	VK_VALIDATE(vkCmdBindDescriptorSets(pbrCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipelineLayout, 0, 1, &pbrDescriptorSet, 0, 0));
-
-	//float push[8];
-	//memcpy(push, lightManager.sunLight.orthoData, sizeof(float) * 6);
-
-	//VK_VALIDATE(vkCmdPushConstants(pbrCommandBuffer, pbrPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(glm::fvec4) * 2, push));
 
 	VK_VALIDATE(vkCmdDispatch(pbrCommandBuffer, renderResolution.width / 16, renderResolution.height / 16, 1));
 

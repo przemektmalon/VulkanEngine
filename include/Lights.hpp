@@ -535,8 +535,8 @@ public: ///TODO: Max light count is 150, add setters etc
 		SunLight::GPUData* d = (SunLight::GPUData*)sunLightBuffer.map();
 		d->colour.separate.colour = sunLight.getColour();
 		d->direction.separate.direction = sunLight.getDirection();
-		memcpy(d->projView, sunLight.getProjView(), sizeof(glm::fmat4) * 3);
-		memcpy(d->cascadeEnds, sunLight.getCascadeEnds(), sizeof(float) * 4);
+		memcpy(&d->projView[0], sunLight.getProjView(), sizeof(glm::fmat4) * 3);
+		memcpy(&d->cascadeEnds[0], sunLight.getCascadeEnds(), sizeof(float) * 4);
 		sunLightBuffer.unmap();
 	}
 

@@ -72,9 +72,6 @@ public:
 	VkFormat swapChainImageFormat;
 	VkExtent2D renderResolution;
 
-
-
-
 	// Thread safe command pools and fencing
 
 	// For now just make sure each thread has its own command pool
