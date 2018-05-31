@@ -171,7 +171,7 @@ public:
 	
 	// Descriptors
 	vdu::DescriptorSetLayout gBufferDescriptorSetLayout;
-	VkDescriptorSet gBufferDescriptorSet;
+	vdu::DescriptorSet gBufferDescriptorSet;
 	bool gBufferDescriptorSetNeedsUpdate;
 
 	// Framebuffer and attachments
@@ -221,7 +221,7 @@ public:
 
 	// Descriptors
 	vdu::DescriptorSetLayout shadowDescriptorSetLayout;
-	VkDescriptorSet shadowDescriptorSet;
+	vdu::DescriptorSet shadowDescriptorSet;
 
 	// Render pass
 	VkRenderPass pointShadowRenderPass;
@@ -259,7 +259,7 @@ public:
 
 	// Descriptors
 	vdu::DescriptorSetLayout pbrDescriptorSetLayout;
-	VkDescriptorSet pbrDescriptorSet;
+	vdu::DescriptorSet pbrDescriptorSet;
 
 	// Framebuffer and attachments
 	Texture pbrOutput;
@@ -301,7 +301,7 @@ public:
 	
 	// Descriptors
 	vdu::DescriptorSetLayout screenDescriptorSetLayout;
-	VkDescriptorSet screenDescriptorSet;
+	vdu::DescriptorSet screenDescriptorSet;
 
 	// Framebuffer and attachments
 	std::vector<VkFramebuffer> screenFramebuffers;

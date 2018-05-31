@@ -123,9 +123,9 @@ void Renderer::createGBufferDescriptorSetLayouts()
 {
 	auto& dsl = gBufferDescriptorSetLayout;
 
-	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex | vdu::ShaderStage::Fragment); // camera
-	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 1, 1, vdu::ShaderStage::Vertex); // transforms
-	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 2, 1000, vdu::ShaderStage::Fragment); // textures
+	dsl.addBinding("camera", vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex | vdu::ShaderStage::Fragment);
+	dsl.addBinding("transforms", vdu::DescriptorType::UniformBuffer, 1, 1, vdu::ShaderStage::Vertex);
+	dsl.addBinding("textures", vdu::DescriptorType::CombinedImageSampler, 2, 1000, vdu::ShaderStage::Fragment);
 
 	dsl.create(&logicalDevice);
 }
@@ -282,14 +282,7 @@ void Renderer::createGBufferFramebuffers()
 
 void Renderer::createGBufferDescriptorSets()
 {
-	VkDescriptorSetLayout layouts[] = { gBufferDescriptorSetLayout.getHandle() };
-	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = descriptorPool.getHandle();
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = layouts;
-
-	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &gBufferDescriptorSet));
+	gBufferDescriptorSet.create(&logicalDevice, &gBufferDescriptorSetLayout, &descriptorPool);
 }
 
 void Renderer::updateGBufferDescriptorSets()
@@ -299,71 +292,51 @@ void Renderer::updateGBufferDescriptorSets()
 
 	gBufferDescriptorSetNeedsUpdate = false;
 
-	VkDescriptorBufferInfo bufferInfo = {};
-	bufferInfo.buffer = cameraUBO.getBuffer();
-	bufferInfo.offset = 0;
-	bufferInfo.range = VK_WHOLE_SIZE;
+	auto updater = gBufferDescriptorSet.makeUpdater();
 
-	VkDescriptorBufferInfo bufferInfo2 = {};
-	bufferInfo2.buffer = transformUBO.getBuffer();;
-	bufferInfo2.offset = 0;
-	bufferInfo2.range = VK_WHOLE_SIZE;
+	auto cameraUpdate = updater->addBufferUpdater("camera");
 
-	VkDescriptorImageInfo	imageInfo[1000];
+	cameraUpdate->buffer = cameraUBO.getBuffer();
+	cameraUpdate->offset = 0;
+	cameraUpdate->range = VK_WHOLE_SIZE;
+
+	auto transformsUpdate = updater->addBufferUpdater("transforms");
+
+	transformsUpdate->buffer = transformUBO.getBuffer();
+	transformsUpdate->offset = 0;
+	transformsUpdate->range = VK_WHOLE_SIZE;
+
+	auto texturesUpdate = updater->addImageUpdater("textures", 0, 1000);
+
 	for (u32 i = 0; i < 1000; ++i)
 	{
-		imageInfo[i].sampler = textureSampler;
-		imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo[i].imageView = Engine::assets.materials.begin()->second.albedoSpec->getImageViewHandle();
+		texturesUpdate[i].sampler = textureSampler;
+		texturesUpdate[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		texturesUpdate[i].imageView = Engine::assets.materials.begin()->second.albedoSpec->getImageViewHandle();
 	}
 
 	u32 i = 0;
 	for (auto& material : Engine::assets.materials)
 	{
 		if (material.second.albedoSpec->getImageHandle())
-			imageInfo[i].imageView = material.second.albedoSpec->getImageViewHandle();
+			texturesUpdate[i].imageView = material.second.albedoSpec->getImageViewHandle();
 		else
-			imageInfo[i].imageView = Engine::assets.getTexture("blank")->getImageViewHandle();
+			texturesUpdate[i].imageView = Engine::assets.getTexture("blank")->getImageViewHandle();
 
 		if (material.second.normalRough)
 		{
 			if (material.second.normalRough->getImageViewHandle())
-				imageInfo[i + 1].imageView = material.second.normalRough->getImageViewHandle();
+				texturesUpdate[i + 1].imageView = material.second.normalRough->getImageViewHandle();
 			else
-				imageInfo[i + 1].imageView = Engine::assets.getTexture("black")->getImageViewHandle();
+				texturesUpdate[i + 1].imageView = Engine::assets.getTexture("black")->getImageViewHandle();
 		}
 		else
-			imageInfo[i + 1].imageView = Engine::assets.getTexture("black")->getImageViewHandle();
+			texturesUpdate[i + 1].imageView = Engine::assets.getTexture("black")->getImageViewHandle();
 		i += 2;
 	}
 
-	std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
-
-	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[0].dstSet = gBufferDescriptorSet;
-	descriptorWrites[0].dstBinding = 0;
-	descriptorWrites[0].dstArrayElement = 0;
-	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorWrites[0].descriptorCount = 1;
-	descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[1].dstSet = gBufferDescriptorSet;
-	descriptorWrites[1].dstBinding = 1;
-	descriptorWrites[1].dstArrayElement = 0;
-	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorWrites[1].descriptorCount = 1;
-	descriptorWrites[1].pBufferInfo = &bufferInfo2;
-
-	descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[2].dstSet = gBufferDescriptorSet;
-	descriptorWrites[2].dstBinding = 2;
-	descriptorWrites[2].dstArrayElement = 0;
-	descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[2].descriptorCount = 1000;
-	descriptorWrites[2].pImageInfo = imageInfo;
-
-	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
+	gBufferDescriptorSet.submitUpdater(updater);
+	gBufferDescriptorSet.destroyUpdater(updater);
 }
 
 void Renderer::createGBufferCommands()
@@ -433,7 +406,7 @@ void Renderer::updateGBufferCommands()
 
 	VK_VALIDATE(vkCmdBindPipeline(gBufferCommands.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline));
 
-	VK_VALIDATE(vkCmdBindDescriptorSets(gBufferCommands.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet, 0, nullptr));
+	VK_VALIDATE(vkCmdBindDescriptorSets(gBufferCommands.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet.getHandle(), 0, nullptr));
 
 	VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
 	VkDeviceSize offsets[] = { 0 };
@@ -483,7 +456,7 @@ void Renderer::destroyGBufferFramebuffers()
 
 void Renderer::destroyGBufferDescriptorSets()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &gBufferDescriptorSet));
+	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &gBufferDescriptorSet.getHandle()));
 }
 
 void Renderer::destroyGBufferCommands()

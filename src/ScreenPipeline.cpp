@@ -177,8 +177,8 @@ void Renderer::createScreenDescriptorSetLayouts()
 {
 	auto& dsl = screenDescriptorSetLayout;
 
-	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 0, 1, vdu::ShaderStage::Fragment); // scene
-	dsl.addBinding(vdu::DescriptorType::CombinedImageSampler, 1, 1, vdu::ShaderStage::Fragment); // overlay
+	dsl.addBinding("scene", vdu::DescriptorType::CombinedImageSampler, 0, 1, vdu::ShaderStage::Fragment);
+	dsl.addBinding("overlay", vdu::DescriptorType::CombinedImageSampler, 1, 1, vdu::ShaderStage::Fragment);
 
 	dsl.create(&logicalDevice);
 }
@@ -326,47 +326,27 @@ void Renderer::createScreenFramebuffers()
 
 void Renderer::createScreenDescriptorSets()
 {
-	VkDescriptorSetLayout layouts[] = { screenDescriptorSetLayout.getHandle() };
-	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = descriptorPool.getHandle();
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = layouts;
-
-	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &screenDescriptorSet));
+	screenDescriptorSet.create(&logicalDevice, &screenDescriptorSetLayout, &descriptorPool);
 }
 
 void Renderer::updateScreenDescriptorSets()
 {
-	VkDescriptorImageInfo colInfoScreen;
-	colInfoScreen.sampler = textureSampler;
-	colInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	colInfoScreen.imageView = pbrOutput.getImageViewHandle();
+	auto updater = screenDescriptorSet.makeUpdater();
 
-	VkDescriptorImageInfo overInfoScreen;
-	overInfoScreen.sampler = textureSampler;
-	overInfoScreen.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	overInfoScreen.imageView = overlayRenderer.combinedLayers.getImageViewHandle();
+	auto sceneUpdate = updater->addImageUpdater("scene");
 
-	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+	sceneUpdate->imageView = pbrOutput.getImageViewHandle();
+	sceneUpdate->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	sceneUpdate->sampler = textureSampler;
 
-	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[0].dstSet = screenDescriptorSet;
-	descriptorWrites[0].dstBinding = 0;
-	descriptorWrites[0].dstArrayElement = 0;
-	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[0].descriptorCount = 1;
-	descriptorWrites[0].pImageInfo = &colInfoScreen;
+	auto overlayUpdate = updater->addImageUpdater("overlay");
 
-	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[1].dstSet = screenDescriptorSet;
-	descriptorWrites[1].dstBinding = 1;
-	descriptorWrites[1].dstArrayElement = 0;
-	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[1].descriptorCount = 1;
-	descriptorWrites[1].pImageInfo = &overInfoScreen;
+	overlayUpdate->imageView = overlayRenderer.combinedLayers.getImageViewHandle();
+	overlayUpdate->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	overlayUpdate->sampler = textureSampler;
 
-	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
+	screenDescriptorSet.submitUpdater(updater);
+	screenDescriptorSet.destroyUpdater(updater);
 }
 
 void Renderer::createScreenCommands()
@@ -411,7 +391,7 @@ void Renderer::updateScreenCommands()
 
 		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet, 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { screenQuadBuffer.getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
@@ -469,7 +449,8 @@ void Renderer::destroyScreenFramebuffers()
 
 void Renderer::destroyScreenDescriptorSets()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &screenDescriptorSet));
+	//VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &screenDescriptorSet));
+	screenDescriptorSet.destroy();
 }
 
 void Renderer::destroyScreenCommands()

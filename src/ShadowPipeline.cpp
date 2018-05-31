@@ -53,7 +53,7 @@ void Renderer::createShadowDescriptorSetLayouts()
 {
 	auto& dsl = shadowDescriptorSetLayout;
 
-	dsl.addBinding(vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex); // transform
+	dsl.addBinding("transforms", vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex);
 	dsl.create(&logicalDevice);
 }
 
@@ -252,34 +252,21 @@ void Renderer::createShadowPipeline()
 
 void Renderer::createShadowDescriptorSets()
 {
-	VkDescriptorSetLayout layouts[] = { shadowDescriptorSetLayout.getHandle() };
-	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = descriptorPool.getHandle();
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = layouts;
-
-	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &shadowDescriptorSet));
+	shadowDescriptorSet.create(&logicalDevice, &shadowDescriptorSetLayout, &descriptorPool);
 }
 
 void Renderer::updateShadowDescriptorSets()
 {
-	VkDescriptorBufferInfo transformsInfo = {};
-	transformsInfo.buffer = transformUBO.getBuffer();;
-	transformsInfo.offset = 0;
-	transformsInfo.range = sizeof(glm::fmat4) * 1000;
+	auto updater = shadowDescriptorSet.makeUpdater();
 
-	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
+	auto transformsUpdate = updater->addBufferUpdater("transforms");
 
-	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[0].dstSet = shadowDescriptorSet;
-	descriptorWrites[0].dstBinding = 0;
-	descriptorWrites[0].dstArrayElement = 0;
-	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorWrites[0].descriptorCount = 1;
-	descriptorWrites[0].pBufferInfo = &transformsInfo;
+	transformsUpdate->buffer = transformUBO.getBuffer();
+	transformsUpdate->offset = 0;
+	transformsUpdate->range = sizeof(glm::fmat4) * 1000;
 
-	VK_VALIDATE(vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
+	shadowDescriptorSet.submitUpdater(updater);
+	shadowDescriptorSet.destroyUpdater(updater);
 }
 
 void Renderer::createShadowCommands()
@@ -329,7 +316,7 @@ void Renderer::updateShadowCommands()
 
 		VK_VALIDATE(vkCmdBindPipeline(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipeline));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipelineLayout, 0, 1, &shadowDescriptorSet, 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipelineLayout, 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
@@ -364,7 +351,7 @@ void Renderer::updateShadowCommands()
 
 		VK_VALIDATE(vkCmdBindPipeline(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipeline));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipelineLayout, 0, 1, &shadowDescriptorSet, 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipelineLayout, 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
@@ -406,7 +393,7 @@ void Renderer::updateShadowCommands()
 
 		VK_VALIDATE(vkCmdBindPipeline(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipeline));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipelineLayout, 0, 1, &shadowDescriptorSet, 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(shadowCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipelineLayout, 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
@@ -455,7 +442,7 @@ void Renderer::destroyShadowPipeline()
 
 void Renderer::destroyShadowDescriptorSets()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &shadowDescriptorSet));
+	shadowDescriptorSet.destroy();
 }
 
 void Renderer::destroyShadowCommands()

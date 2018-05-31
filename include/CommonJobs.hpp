@@ -90,7 +90,7 @@ static void initialiseCommonJobs()
 
 		Engine::renderer->lightManager.sunLight.calcProjs();
 		Engine::renderer->lightManager.updateSunLight();
-		Engine::renderer->updateGBufferDescriptorSets();
+		//Engine::renderer->updateGBufferDescriptorSets();
 
 		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
 		PROFILE_START("cullingdrawbuffer");
