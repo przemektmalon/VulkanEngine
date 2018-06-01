@@ -27,6 +27,12 @@ void Engine::start()
 		DBG_SEVERE("Failed to connect to X server using XCB");
 #endif
 
+	{
+		char cwd[_MAX_DIR];
+		GetCurrentDir(cwd, _MAX_DIR);
+		workingDirectory.assign(cwd);
+	}
+
 	PROFILE_START("init");
 
 	/*
@@ -775,3 +781,4 @@ int Engine::frames = 0;
 vdu::Instance Engine::instance;
 vdu::PhysicalDevice* Engine::physicalDevice;
 std::vector<vdu::PhysicalDevice> Engine::allPhysicalDevices;
+std::string Engine::workingDirectory;

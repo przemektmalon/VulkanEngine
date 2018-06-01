@@ -134,6 +134,7 @@ void Renderer::createGBufferPipeline()
 {
 	// Compile GLSL code to SPIR-V
 
+	gBufferShader.create(&logicalDevice);
 	gBufferShader.compile();
 
 	// Get the vertex layout format
@@ -294,19 +295,19 @@ void Renderer::updateGBufferDescriptorSets()
 
 	auto updater = gBufferDescriptorSet.makeUpdater();
 
-	auto cameraUpdate = updater->addBufferUpdater("camera");
+	auto cameraUpdate = updater->addBufferUpdate("camera");
 
 	cameraUpdate->buffer = cameraUBO.getBuffer();
 	cameraUpdate->offset = 0;
 	cameraUpdate->range = VK_WHOLE_SIZE;
 
-	auto transformsUpdate = updater->addBufferUpdater("transforms");
+	auto transformsUpdate = updater->addBufferUpdate("transforms");
 
 	transformsUpdate->buffer = transformUBO.getBuffer();
 	transformsUpdate->offset = 0;
 	transformsUpdate->range = VK_WHOLE_SIZE;
 
-	auto texturesUpdate = updater->addImageUpdater("textures", 0, 1000);
+	auto texturesUpdate = updater->addImageUpdate("textures", 0, 1000);
 
 	for (u32 i = 0; i < 1000; ++i)
 	{

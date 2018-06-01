@@ -187,6 +187,7 @@ void Renderer::createScreenPipeline()
 {
 	// Compile GLSL code to SPIR-V
 
+	screenShader.create(&logicalDevice);
 	screenShader.compile();
 
 	// Get the vertex layout format
@@ -333,13 +334,13 @@ void Renderer::updateScreenDescriptorSets()
 {
 	auto updater = screenDescriptorSet.makeUpdater();
 
-	auto sceneUpdate = updater->addImageUpdater("scene");
+	auto sceneUpdate = updater->addImageUpdate("scene");
 
 	sceneUpdate->imageView = pbrOutput.getImageViewHandle();
 	sceneUpdate->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	sceneUpdate->sampler = textureSampler;
 
-	auto overlayUpdate = updater->addImageUpdater("overlay");
+	auto overlayUpdate = updater->addImageUpdate("overlay");
 
 	overlayUpdate->imageView = overlayRenderer.combinedLayers.getImageViewHandle();
 	overlayUpdate->imageLayout = VK_IMAGE_LAYOUT_GENERAL;

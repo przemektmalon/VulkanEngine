@@ -3,7 +3,6 @@
 #include "Window.hpp"
 #include "VulkanWrappers.hpp"
 #include "File.hpp"
-#include "Shader.hpp"
 #include "Image.hpp"
 #include "Threading.hpp"
 #include "Profiler.hpp"
@@ -28,7 +27,11 @@ void Renderer::initialise()
 	createSemaphores();
 
 	lightManager.init();
+
+	overlayShader.create(&logicalDevice);
 	overlayShader.compile();
+
+	combineOverlaysShader.create(&logicalDevice);
 	combineOverlaysShader.compile();
 
 	// Swap chain
@@ -231,9 +234,6 @@ void Renderer::cleanup()
 
 	overlayRenderer.cleanup();
 
-
-	//VK_VALIDATE(vkDestroyDescriptorPool(device, descriptorPool, nullptr));
-	//VK_VALIDATE(vkDestroyDescriptorPool(device, freeableDescriptorPool, nullptr));
 	descriptorPool.destroy();
 	freeableDescriptorPool.destroy();
 	VK_VALIDATE(vkDestroyCommandPool(device, commandPool, 0));

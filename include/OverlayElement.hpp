@@ -1,6 +1,6 @@
 #pragma once
 #include "PCH.hpp"
-#include "Shader.hpp"
+#include "Shaders.hpp"
 
 class OverlayElement
 {
@@ -16,7 +16,7 @@ public:
 	void* getPushConstData() { return pushConstData; }
 	int getPushConstSize() { return pushConstSize; }
 	VkDescriptorSet getDescriptorSet() { return descSet; }
-	ShaderProgram* getShader() { return shader; }
+	vdu::ShaderProgram* getShader() { return shader; }
 	void setDepth(float pDepth) { depth = pDepth; depthUpdate = true; }
 	float getDepth() { return depth; }
 	Type getType() { return type; }
@@ -38,7 +38,7 @@ protected:
 
 	VkDescriptorSet descSet;
 
-	ShaderProgram* shader;
+	vdu::ShaderProgram* shader;
 
 	float depth;
 	bool depthUpdate;

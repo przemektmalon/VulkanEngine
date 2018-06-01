@@ -3,19 +3,12 @@
 #include "Engine.hpp"
 #include "Model.hpp"
 #include "Texture.hpp"
-#include "GBufferShader.hpp"
-#include "ScreenShader.hpp"
-#include "PBRShader.hpp"
 #include "Buffer.hpp"
 #include "Lights.hpp"
-#include "PointShadowShader.hpp"
-#include "SpotShadowShader.hpp"
-#include "OverlayShader.hpp"
+#include "ShaderSpecs.hpp"
 #include "Text.hpp"
 #include "OverlayElement.hpp"
 #include "OverlayRenderer.hpp"
-#include "CombineOverlaysShader.hpp"
-#include "SunShadowShader.hpp"
 
 struct CameraUBOData {
 	glm::fmat4 view;

@@ -1,6 +1,5 @@
 #pragma once
 #include "PCH.hpp"
-#include "Shader.hpp"
 #include "OverlayElement.hpp"
 #include "Texture.hpp"
 #include "Buffer.hpp"

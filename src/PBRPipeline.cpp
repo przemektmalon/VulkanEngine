@@ -45,6 +45,7 @@ void Renderer::createPBRPipeline()
 {
 	// Compile GLSL code to SPIR-V
 
+	pbrShader.create(&logicalDevice);
 	pbrShader.compile();
 
 	// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources indirectly)
@@ -74,36 +75,36 @@ void Renderer::updatePBRDescriptorSets()
 {
 	auto updater = pbrDescriptorSet.makeUpdater();
 
-	auto outputUpdater = updater->addImageUpdater("output");
+	auto outputUpdater = updater->addImageUpdate("output");
 	*outputUpdater = { textureSampler, pbrOutput.getImageViewHandle(), VK_IMAGE_LAYOUT_GENERAL };
 
-	auto albedoUpdater = updater->addImageUpdater("albedo");
+	auto albedoUpdater = updater->addImageUpdate("albedo");
 	*albedoUpdater = { textureSampler, gBufferColourAttachment.getImageViewHandle(), VK_IMAGE_LAYOUT_GENERAL };
 	
-	auto normalUpdater = updater->addImageUpdater("normal");
+	auto normalUpdater = updater->addImageUpdate("normal");
 	*normalUpdater = { textureSampler, gBufferNormalAttachment.getImageViewHandle(), VK_IMAGE_LAYOUT_GENERAL };
 	
-	auto pbrUpdater = updater->addImageUpdater("pbr");
+	auto pbrUpdater = updater->addImageUpdate("pbr");
 	*pbrUpdater = { textureSampler, gBufferPBRAttachment.getImageViewHandle(), VK_IMAGE_LAYOUT_GENERAL };
 
-	auto depthUpdater = updater->addImageUpdater("depth");
+	auto depthUpdater = updater->addImageUpdate("depth");
 	*depthUpdater = { textureSampler, gBufferDepthAttachment.getImageViewHandle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
 
-	auto skyboxUpdater = updater->addImageUpdater("skybox");
+	auto skyboxUpdater = updater->addImageUpdate("skybox");
 	*skyboxUpdater = { skySampler, Engine::assets.getTexture("skybox")->getImageViewHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 
-	auto lightCountsUpdater = updater->addBufferUpdater("light_counts");
+	auto lightCountsUpdater = updater->addBufferUpdate("light_counts");
 	*lightCountsUpdater = { lightManager.lightCountsBuffer.getBuffer(), 0, 2 * sizeof(u32) };
 
-	auto cameraUpdater = updater->addBufferUpdater("camera");
+	auto cameraUpdater = updater->addBufferUpdate("camera");
 	*cameraUpdater = { cameraUBO.getBuffer(), 0, sizeof(CameraUBOData) };
 
 	if (lightManager.pointLights.size())
 	{
-		auto pointLightsUpdater = updater->addBufferUpdater("point_lights");
+		auto pointLightsUpdater = updater->addBufferUpdate("point_lights");
 		*pointLightsUpdater = { lightManager.pointLightsBuffer.getBuffer(), 0, lightManager.pointLights.size() * sizeof(PointLight::GPUData) };
 
-		auto pointShadowsUpdater = updater->addImageUpdater("point_shadows");
+		auto pointShadowsUpdater = updater->addImageUpdate("point_shadows");
 		int i = 0;
 		for (auto& s : lightManager.pointLights)
 		{
@@ -114,10 +115,10 @@ void Renderer::updatePBRDescriptorSets()
 
 	if (lightManager.spotLights.size())
 	{
-		auto spotLightsUpdater = updater->addBufferUpdater("spot_lights");
+		auto spotLightsUpdater = updater->addBufferUpdate("spot_lights");
 		*spotLightsUpdater = { lightManager.spotLightsBuffer.getBuffer(), 0, lightManager.spotLights.size() * sizeof(SpotLight::GPUData) };
 
-		auto spotShadowsUpdater = updater->addImageUpdater("spot_shadows");
+		auto spotShadowsUpdater = updater->addImageUpdate("spot_shadows");
 		int i = 0;
 		for (auto& s : lightManager.spotLights)
 		{
@@ -128,10 +129,10 @@ void Renderer::updatePBRDescriptorSets()
 
 	if (lightManager.sunLight.shadowTex)
 	{
-		auto sunLightUpdater = updater->addBufferUpdater("sun_light");
+		auto sunLightUpdater = updater->addBufferUpdate("sun_light");
 		*sunLightUpdater = { lightManager.sunLightBuffer.getBuffer(), 0, sizeof(SunLight::GPUData) };
 
-		auto sunShadowUpdater = updater->addImageUpdater("sun_shadow");
+		auto sunShadowUpdater = updater->addImageUpdate("sun_shadow");
 		*sunShadowUpdater = { shadowSampler, lightManager.sunLight.getShadowTexture()->getImageViewHandle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
 	}
 	

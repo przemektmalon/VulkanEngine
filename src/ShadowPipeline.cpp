@@ -61,6 +61,10 @@ void Renderer::createShadowPipeline()
 {
 	// Compile GLSL code to SPIR-V
 
+	pointShadowShader.create(&logicalDevice);
+	spotShadowShader.create(&logicalDevice);
+	sunShadowShader.create(&logicalDevice);
+
 	pointShadowShader.compile();
 	spotShadowShader.compile();
 	sunShadowShader.compile();
@@ -259,7 +263,7 @@ void Renderer::updateShadowDescriptorSets()
 {
 	auto updater = shadowDescriptorSet.makeUpdater();
 
-	auto transformsUpdate = updater->addBufferUpdater("transforms");
+	auto transformsUpdate = updater->addBufferUpdate("transforms");
 
 	transformsUpdate->buffer = transformUBO.getBuffer();
 	transformsUpdate->offset = 0;
