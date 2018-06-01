@@ -7,7 +7,7 @@
 #include "Threading.hpp"
 #include "Profiler.hpp"
 
-thread_local VkCommandPool Renderer::commandPool;
+thread_local vdu::CommandPool Renderer::commandPool;
 
 void Renderer::initialiseDevice()
 {
@@ -236,7 +236,7 @@ void Renderer::cleanup()
 
 	descriptorPool.destroy();
 	freeableDescriptorPool.destroy();
-	VK_VALIDATE(vkDestroyCommandPool(device, commandPool, 0));
+	commandPool.destroy();
 	VK_VALIDATE(vkDestroyQueryPool(device, queryPool, 0));
 
 	VK_VALIDATE(vkDestroySampler(device, textureSampler, nullptr));
@@ -572,12 +572,9 @@ void Renderer::createLogicalDevice()
 */
 void Renderer::createCommandPool()
 {
-	VkCommandPoolCreateInfo poolInfo = {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.queueFamilyIndex = 0;
-	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-	VK_CHECK_RESULT(vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool));
+	commandPool.setFlags(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	commandPool.setQueueFamily(&Engine::physicalDevice->getQueueFamilies().front());
+	commandPool.create(&logicalDevice);
 
 	VkFenceCreateInfo fci = {};
 	fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -590,12 +587,9 @@ void Renderer::createCommandPool()
 
 void Renderer::createPerThreadCommandPools()
 {
-	VkCommandPoolCreateInfo poolInfo = {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.queueFamilyIndex = 0;
-	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-	VK_CHECK_RESULT(vkCreateCommandPool(Engine::renderer->device, &poolInfo, nullptr, &commandPool));
+	commandPool.setFlags(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	commandPool.setQueueFamily(&Engine::physicalDevice->getQueueFamilies().front());
+	commandPool.create(&Engine::renderer->logicalDevice);
 }
 
 void Renderer::createQueryPool()
@@ -745,7 +739,7 @@ VkCommandBuffer Renderer::beginTransferCommands()
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = commandPool;
+	allocInfo.commandPool = commandPool.getHandle();
 	allocInfo.commandBufferCount = 1;
 
 	VkCommandBuffer commandBuffer;
@@ -778,7 +772,7 @@ void Renderer::submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence)
 	{
 		VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
 		VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue)); /// TODO: non blocking queue submissions !
-		VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, submitInfo.pCommandBuffers));
+		VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, submitInfo.pCommandBuffers));
 		// To free command buffer for non blocking jobs we will need to know when the gpu finished it !
 	};
 	auto submitJob = new Job<>(submitJobFunc, defaultTransferJobDoneFunc);
@@ -790,7 +784,7 @@ VkCommandBuffer Renderer::beginSingleTimeCommands()
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = commandPool;
+	allocInfo.commandPool = commandPool.getHandle();
 	allocInfo.commandBufferCount = 1;
 
 	VkCommandBuffer commandBuffer;
@@ -820,7 +814,7 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fenc
 
 	Engine::threading->physToGPUMutex.unlock();
 
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer));
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, &commandBuffer));
 }
 
 /*

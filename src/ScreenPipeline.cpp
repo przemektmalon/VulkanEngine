@@ -357,7 +357,7 @@ void Renderer::createScreenCommands()
 
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
+	allocInfo.commandPool = commandPool.getHandle();
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = (uint32_t)screenCommandBuffers.size();
 
@@ -456,5 +456,5 @@ void Renderer::destroyScreenDescriptorSets()
 
 void Renderer::destroyScreenCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, screenCommandBuffers.size(), &screenCommandBuffers[0]));
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), screenCommandBuffers.size(), &screenCommandBuffers[0]));
 }

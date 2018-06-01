@@ -145,7 +145,7 @@ void Renderer::createPBRCommands()
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
+	allocInfo.commandPool = commandPool.getHandle();
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
@@ -203,5 +203,5 @@ void Renderer::destroyPBRDescriptorSets()
 
 void Renderer::destroyPBRCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &pbrCommandBuffer));
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, &pbrCommandBuffer));
 }

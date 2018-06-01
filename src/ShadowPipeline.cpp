@@ -277,12 +277,12 @@ void Renderer::createShadowCommands()
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
+	allocInfo.commandPool = commandPool.getHandle();
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
 	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &shadowCommandBuffer));
-	shadowPreviousPool = commandPool;
+	shadowPreviousPool = commandPool.getHandle();
 }
 
 void Renderer::updateShadowCommands()
@@ -451,5 +451,5 @@ void Renderer::destroyShadowDescriptorSets()
 
 void Renderer::destroyShadowCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &shadowCommandBuffer));
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, &shadowCommandBuffer));
 }

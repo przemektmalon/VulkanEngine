@@ -68,7 +68,7 @@ public:
 	// Thread safe command pools and fencing
 
 	// For now just make sure each thread has its own command pool
-	static thread_local VkCommandPool commandPool; // [3]
+	static thread_local vdu::CommandPool commandPool; // [3]
 	std::mutex bufferFreeMutex;
 	void freeCommandBuffer(VkCommandBuffer* buffer, VkCommandPool pool);
 

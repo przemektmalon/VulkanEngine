@@ -344,12 +344,12 @@ void Renderer::createGBufferCommands()
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
+	allocInfo.commandPool = commandPool.getHandle();
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
 	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommands.commands));
-	gBufferPreviousPool = commandPool;
+	gBufferPreviousPool = commandPool.getHandle();
 }
 
 void Renderer::updateGBufferCommands()
@@ -371,7 +371,7 @@ void Renderer::updateGBufferCommands()
 
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
+	allocInfo.commandPool = commandPool.getHandle();
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
@@ -462,5 +462,5 @@ void Renderer::destroyGBufferDescriptorSets()
 
 void Renderer::destroyGBufferCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool, 1, &gBufferCommands.commands));
+	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, &gBufferCommands.commands));
 }
