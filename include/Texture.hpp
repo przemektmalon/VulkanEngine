@@ -2,59 +2,52 @@
 #include "PCH.hpp"
 #include "Image.hpp"
 #include "Asset.hpp"
+#include "VDU.hpp"
 
-struct TextureCreateInfo
+struct TextureCreateInfo : vdu::TextureCreateInfo
 {
-	TextureCreateInfo() : width(0), height(0), pData(0), format(VkFormat(0)), bpp(0), components(4), genMipMaps(0), aspectFlags(0), usageFlags(0), layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL), pPaths(0), numLayers(1), name(std::string("Unnamed texture")) {}
-	int width;
-	int height;
-	int bpp;
-	int components;
+	TextureCreateInfo() : pData(0), /*bpp(0), components(4), */genMipMaps(0), name(std::string("Unnamed texture")) {}
+
+	/*int bpp;
+	int components;*/
 	void* pData;
 	bool genMipMaps;
-	VkFormat format;
-	VkImageAspectFlags aspectFlags;
-	VkImageUsageFlags usageFlags;
-	VkImageLayout layout;
-	std::string* pPaths;
-	int numLayers;
+	std::vector<std::string> paths;
+	//std::string* pPaths;
 	std::string name;
 };
 
-class Texture : public Asset
+class Texture : public Asset , public vdu::Texture
 {
 public:
-	Texture() : width(0), height(0), components(0), numLayers(1), maxMipLevel(1), vkImage(0), vkMemory(0), vkImageView(0) {}
+	Texture() : vdu::Texture() {}
 
 	void setName(std::string pName) { name = pName; }
-	VkImage getImageHandle() { return vkImage; }
+	
+	/*
+	VkImage getHandle() { return vkImage; }
 	VkDeviceMemory getMemoryHandle() { return vkMemory; }
-	VkImageView getImageViewHandle() { return vkImageView; }
+	VkImageView getView() { return vkImageView; }
 	VkImageLayout getLayout() { return vkLayout; }
 	VkImageAspectFlags getAspect() { return vkAspect; }
 	int getMaxMipLevel() { return maxMipLevel; }
-	u32 getWidth() { return width; }
-	u32 getHeight() { return height; }
-	int getNumLayers() { return numLayers; }
+	u32 getWidth() { return m_width; }
+	u32 getHeight() { return m_height; }
+	int getNumLayers() { return m_depth; }
 	VkFormat getFormat() { return vkFormat; }
+	*/
 
 	void loadToRAM(void* pCreateStruct = 0, AllocFunc alloc = malloc);
 	void loadToGPU(void* pCreateStruct = 0);
 
-	void destroy();
+	void cleanupRAM(FreeFunc fr = free);
+	void cleanupGPU();
 
-	static void createImage(u32 width, u32 height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, int mipLevels = 1, int numLayers = 1);
-	static VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, int mipLevels, int numLayers = 1);
-	
 private:
 
-	void createImage();
-	void createImageView();
-	void generateMipMaps();
-	void gpuGenerateMipMaps();
+	//int bpp, components;
 
-	int width, height;
-	int bpp, components;
+	/*int m_width, m_height, m_depth;
 	int maxMipLevel;
 	VkImage vkImage;
 	VkDeviceMemory vkMemory;
@@ -62,9 +55,9 @@ private:
 	VkFormat vkFormat;
 	VkImageLayout vkLayout;
 	VkImageAspectFlags vkAspect;
-	VkImageUsageFlags vkUsage;
-	int numLayers;
-	bool mipped;
+	VkImageUsageFlags vkUsage;*/
+
+	bool isMipped;
 	u32 gpuIndex;
 	Image* img;
 };

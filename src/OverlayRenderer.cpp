@@ -14,8 +14,6 @@ void OLayer::create(glm::ivec2 pResolution)
 	TextureCreateInfo tci;
 	tci.width = resolution.x;
 	tci.height = resolution.y;
-	tci.bpp = 32;
-	tci.components = 4;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_R8G8B8A8_UNORM;
 	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
@@ -23,7 +21,6 @@ void OLayer::create(glm::ivec2 pResolution)
 
 	colAttachment.loadToGPU(&tci);
 
-	tci.components = 1;
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	tci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	tci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -31,7 +28,7 @@ void OLayer::create(glm::ivec2 pResolution)
 
 	depAttachment.loadToGPU(&tci);
 
-	VkImageView atts[] = { colAttachment.getImageViewHandle(), depAttachment.getImageViewHandle() };
+	VkImageView atts[] = { colAttachment.getView(), depAttachment.getView() };
 	VkFramebufferCreateInfo framebufferInfo = {};
 	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	framebufferInfo.renderPass = Engine::renderer->overlayRenderer.getRenderPass();
@@ -43,7 +40,9 @@ void OLayer::create(glm::ivec2 pResolution)
 
 	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, &framebuffer));
 
-	quadBuffer.create(sizeof(VertexNoNormal) * 6, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	quadBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	quadBuffer.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+	quadBuffer.create(&Engine::renderer->logicalDevice, sizeof(VertexNoNormal) * 6);
 
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -56,7 +55,7 @@ void OLayer::create(glm::ivec2 pResolution)
 
 	VkDescriptorImageInfo ii = {};
 	ii.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	ii.imageView = colAttachment.getImageViewHandle();
+	ii.imageView = colAttachment.getView();
 	ii.sampler = Engine::renderer->textureSampler;
 
 	VkWriteDescriptorSet wds = {};
@@ -156,9 +155,9 @@ void OLayer::updateVerts()
 	quadVerts.push_back(VertexNoNormal({ glm::fvec3(position,depth) + glm::fvec3(0, resolution.y, 0), glm::fvec2(0,1) }));
 	quadVerts.push_back(VertexNoNormal({ glm::fvec3(position,depth) + glm::fvec3(resolution, 0), glm::fvec2(1,1) }));
 
-	auto data = quadBuffer.map();
+	auto data = quadBuffer.getMemory()->map();
 	memcpy(data, quadVerts.data(), sizeof(VertexNoNormal) * 6);
-	quadBuffer.unmap();
+	quadBuffer.getMemory()->unmap();
 }
 
 bool OLayer::needsDrawUpdate()
@@ -224,8 +223,6 @@ void OverlayRenderer::createOverlayAttachmentsFramebuffers()
 	TextureCreateInfo tci;
 	tci.width = Engine::renderer->renderResolution.width;
 	tci.height = Engine::renderer->renderResolution.height;
-	tci.bpp = 32;
-	tci.components = 4;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_R8G8B8A8_UNORM;
 	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
@@ -233,7 +230,6 @@ void OverlayRenderer::createOverlayAttachmentsFramebuffers()
 
 	combinedLayers.loadToGPU(&tci);
 
-	tci.components = 1;
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	tci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	tci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -241,7 +237,7 @@ void OverlayRenderer::createOverlayAttachmentsFramebuffers()
 
 	combinedLayersDepth.loadToGPU(&tci);
 
-	VkImageView atts[] = { combinedLayers.getImageViewHandle(), combinedLayersDepth.getImageViewHandle() };
+	VkImageView atts[] = { combinedLayers.getView(), combinedLayersDepth.getView() };
 	VkFramebufferCreateInfo framebufferInfo = {};
 	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	framebufferInfo.renderPass = Engine::renderer->overlayRenderer.getRenderPass();
@@ -599,16 +595,18 @@ void OverlayRenderer::createOverlayDescriptorSetLayouts()
 
 void OverlayRenderer::createOverlayDescriptorSets()
 {
-	combineProjUBO.create(sizeof(glm::fmat4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	combineProjUBO.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	combineProjUBO.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+	combineProjUBO.create(&Engine::renderer->logicalDevice, sizeof(glm::fmat4));
 	glm::fmat4 p = glm::ortho<float>(0, 1280, 720, 0, -10, 10);
 	glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f,
 		+0.0f, -1.0f, 0.0f, 0.0f,
 		+0.0f, 0.0f, 0.5f, 0.0f,
 		+0.0f, 0.0f, 0.5f, 1.0f);
 	p = clip * p;
-	auto data = combineProjUBO.map();
+	auto data = combineProjUBO.getMemory()->map();
 	memcpy(data, &p[0][0], sizeof(glm::fmat4));
-	combineProjUBO.unmap();
+	combineProjUBO.getMemory()->unmap();
 }
 
 void OverlayRenderer::createOverlayCommands()
@@ -760,7 +758,7 @@ void OverlayRenderer::updateOverlayCommands()
 
 		VK_VALIDATE(vkCmdBindDescriptorSets(combineCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipelineLayout, 0, 1, &layer->imageDescriptor, 0, nullptr));
 
-		VkBuffer vertexBuffers[] = { layer->quadBuffer.getBuffer() };
+		VkBuffer vertexBuffers[] = { layer->quadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
 		VK_VALIDATE(vkCmdBindVertexBuffers(combineCommandBuffer, 0, 1, vertexBuffers, offsets));
 

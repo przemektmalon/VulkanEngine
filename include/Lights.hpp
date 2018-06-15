@@ -2,13 +2,14 @@
 #include "PCH.hpp"
 #include "Texture.hpp"
 #include "Buffer.hpp"
+#include "VDU.hpp"
 
 class Light
 {
 	friend class LightManager;
 public:
 	Texture* shadowTex;
-	VkFramebuffer shadowFBO;
+	VkFramebuffer* shadowFBO;
 
 	virtual Texture* getShadowTexture() = 0;
 };
@@ -138,13 +139,11 @@ public:
 	{
 		/// TODO: create shadow texture
 		gpuData = new GPUData();
-		gpuData->cascadeEnds[0] = 0.01;
+		gpuData->cascadeEnds[0] = 0.1;
 		gpuData->cascadeEnds[1] = 100;
-		gpuData->cascadeEnds[2] = 3000;
-		gpuData->cascadeEnds[3] = 5000;
+		gpuData->cascadeEnds[2] = 500;
+		gpuData->cascadeEnds[3] = 1000;
 	}
-
-	//float orthoData[8];
 
 	void initTexture(glm::ivec2 resolution);
 	void calcProjs();
@@ -438,18 +437,7 @@ public: ///TODO: Max light count is 150, add setters etc
 	LightManager() {}
 	~LightManager() {}
 
-	void init()
-	{
-		/// TODO: Memory flags, change to device local for performance, then we can't map and have to use staging buffer
-		lightCountsBuffer.create(sizeof(u32) * 2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		spotLightsBuffer.create(sizeof(SpotLight::GPUData) * 150, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		pointLightsBuffer.create(sizeof(PointLight::GPUData) * 150, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		spotLightsGPUData.reserve(150);
-		pointLightsGPUData.reserve(150);
-
-		sunLightBuffer.create(sizeof(SunLight::GPUData) * 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	}
+	void init();
 
 	void cleanup()
 	{
@@ -478,17 +466,17 @@ public: ///TODO: Max light count is 150, add setters etc
 
 	void updateLightCounts()
 	{
-		u32* lc = (u32*)lightCountsBuffer.map();
+		u32* lc = (u32*)lightCountsBuffer.getMemory()->map();
 		lc[0] = pointLights.size();
 		lc[1] = spotLights.size();
-		lightCountsBuffer.unmap();
+		lightCountsBuffer.getMemory()->unmap();
 	}
 
 	void updateAllPointLights()
 	{
 		for (auto& l : pointLights)
 			l.update();
-		PointLight::GPUData* d = (PointLight::GPUData*)pointLightsBuffer.map();
+		PointLight::GPUData* d = (PointLight::GPUData*)pointLightsBuffer.getMemory()->map();
 		for (int i = 0; i < pointLights.size(); ++i)
 		{
 			d[i].colourQuadratic = pointLightsGPUData[i].colourQuadratic;
@@ -497,7 +485,7 @@ public: ///TODO: Max light count is 150, add setters etc
 			for (int j = 0; j < 5; ++j)
 				d[i].projView[j] = pointLightsGPUData[i].projView[j];
 		}
-		pointLightsBuffer.unmap();
+		pointLightsBuffer.getMemory()->unmap();
 	}
 
 	SpotLight& addSpotLight()
@@ -517,7 +505,7 @@ public: ///TODO: Max light count is 150, add setters etc
 	{
 		for (auto& l : spotLights)
 			l.update();
-		SpotLight::GPUData* d = (SpotLight::GPUData*)spotLightsBuffer.map();
+		SpotLight::GPUData* d = (SpotLight::GPUData*)spotLightsBuffer.getMemory()->map();
 		for (int i = 0; i < spotLights.size(); ++i)
 		{
 			d[i].colourQuadratic = spotLightsGPUData[i].colourQuadratic;
@@ -527,31 +515,31 @@ public: ///TODO: Max light count is 150, add setters etc
 			d[i].outer = spotLightsGPUData[i].outer;
 			d[i].projView = spotLightsGPUData[i].projView;
 		}
-		spotLightsBuffer.unmap();
+		spotLightsBuffer.getMemory()->unmap();
 	}
 
 	void updateSunLight()
 	{
-		SunLight::GPUData* d = (SunLight::GPUData*)sunLightBuffer.map();
+		SunLight::GPUData* d = (SunLight::GPUData*)sunLightBuffer.getMemory()->map();
 		d->colour.separate.colour = sunLight.getColour();
 		d->direction.separate.direction = sunLight.getDirection();
 		memcpy(&d->projView[0], sunLight.getProjView(), sizeof(glm::fmat4) * 3);
 		memcpy(&d->cascadeEnds[0], sunLight.getCascadeEnds(), sizeof(float) * 4);
-		sunLightBuffer.unmap();
+		sunLightBuffer.getMemory()->unmap();
 	}
 
-	Buffer lightCountsBuffer;
+	vdu::Buffer lightCountsBuffer;
 
 	std::vector<PointLight> pointLights;
 	std::vector<PointLight::GPUData> pointLightsGPUData;
-	Buffer pointLightsBuffer;
+	vdu::Buffer pointLightsBuffer;
 
 	std::vector<SpotLight> spotLights;
 	std::vector<SpotLight::GPUData> spotLightsGPUData;
-	Buffer spotLightsBuffer;
+	vdu::Buffer spotLightsBuffer;
 
 	SunLight sunLight;
-	Buffer sunLightBuffer;
+	vdu::Buffer sunLightBuffer;
 
 	//std::vector<SpotLight::GPUData> staticSpotLights;
 	//std::vector<PointLight::GPUData> staticPointLightsGPUData;

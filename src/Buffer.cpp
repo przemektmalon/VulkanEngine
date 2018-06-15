@@ -140,7 +140,7 @@ void Buffer::copyTo(Texture * dst, VkDeviceSize srcOffset, int mipLevel, int bas
 	region.imageOffset = offset;
 	region.imageExtent = extent;
 
-	VK_VALIDATE(vkCmdCopyBufferToImage(commandBuffer, buffer, dst->getImageHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region));
+	VK_VALIDATE(vkCmdCopyBufferToImage(commandBuffer, buffer, dst->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region));
 
 	Engine::renderer->endSingleTimeCommands(commandBuffer);
 }

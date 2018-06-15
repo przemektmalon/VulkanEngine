@@ -8,6 +8,7 @@
 #include "Keyboard.hpp"
 #include "Engine.hpp"
 #include "Window.hpp"
+#include "CommonJobs.hpp"
 
 using namespace chaiscript;
 
@@ -204,6 +205,7 @@ void ScriptEnv::initChai()
 	chai.add(fun([]()->float { return Engine::frameTime.getSecondsf(); }), "getFrameTime");
 	chai.add(fun([]()->Camera& { return Engine::camera; }), "getCamera");
 	chai.add(fun([]()->World& { return Engine::world; }), "getWorld");
+	chai.add(fun(resizeJobSubmitFunc), "setResolution");
 }
 
 Boxed_Value ScriptEnv::evalFile(std::string path)

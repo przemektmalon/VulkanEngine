@@ -151,14 +151,12 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 
 	TextureCreateInfo ci = {};
 	ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-	ci.bpp = 8;
-	ci.components = 1;
 	ci.format = VK_FORMAT_R8_UNORM;
 	ci.genMipMaps = false;
 	ci.height = maxYSize;
 	ci.width = maxXSize;
 	ci.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	ci.numLayers = 1;
+	ci.layers = 1;
 	ci.usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	glyphs = new Texture;
@@ -166,11 +164,11 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 
 	const auto& r = Engine::renderer;
 
-	Buffer stagingBuffer;
-	r->createStagingBuffer(stagingBuffer, totalGlyphSetTexSize);
+	vdu::Buffer staging;
+	staging.createStaging(&r->logicalDevice, totalGlyphSetTexSize);
 
 	VkDeviceSize copyOffset = 0;
-	void* data = stagingBuffer.map(0, totalGlyphSetTexSize);
+	void* data = staging.getMemory()->map(0, totalGlyphSetTexSize);
 	for (int i = 1; i < NO_PRINTABLE_CHARS; ++i)
 	{
 		char* dst = (char*)data; dst += copyOffset;
@@ -178,18 +176,39 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 		copyOffset += chars[i].data.size();
 	}
 
-	stagingBuffer.unmap();
+	staging.getMemory()->unmap();
+
+	auto cmd = r->beginSingleTimeCommands();
 
 	copyOffset = 0;
 	for (int i = 1; i < NO_PRINTABLE_CHARS; ++i)
 	{
 		VkOffset3D offset = { coords[i].x, coords[i].y, 0 };
 		VkExtent3D extent = { sizes[i].x, sizes[i].y, 1 };
-		stagingBuffer.copyTo(glyphs, copyOffset, 0, 0, 1, offset, extent);
+
+		//staging.cmdCopyTo(cmd, glyphs, copyOffset, 0, 0, 1, offset, extent);
+
+		VkBufferImageCopy region = {};
+		region.bufferOffset = copyOffset;
+		region.bufferRowLength = 0;
+		region.bufferImageHeight = 0;
+		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.baseArrayLayer = 0;
+		region.imageSubresource.layerCount = 1;
+		region.imageOffset = offset;
+		region.imageExtent = extent;
+
+		vkCmdCopyBufferToImage(cmd, staging.getHandle(), glyphs->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
 		copyOffset += chars[i].data.size();
 	}
 
-	r->destroyStagingBuffer(stagingBuffer);
+	r->endSingleTimeCommands(cmd);
+
+	staging.destroy();
+
+	//r->destroyStagingBuffer(stagingBuffer);
 
 	height = pFace->size->metrics.height >> 6;
 	ascender = pFace->size->metrics.ascender >> 6;

@@ -10,6 +10,6 @@ public:
 
 	Image albedoSpec;
 	Image normalRough;
-	// Ao, height, more ?
+	// Ao, m_height, more ?
 
 };

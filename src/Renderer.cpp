@@ -85,7 +85,7 @@ void Renderer::initialise()
 	overlayRenderer.createOverlayAttachmentsFramebuffers();
 	overlayRenderer.createOverlayCommands();
 
-	for (int i = 0; i < 1; ++i)
+	for (int i = 0; i < 4; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
@@ -128,7 +128,7 @@ void Renderer::initialise()
 	lightManager.updateAllPointLights();
 	lightManager.updateAllSpotLights();
 
-	lightManager.sunLight.setDirection(glm::normalize(glm::fvec3(1, -1, 1)));
+	lightManager.sunLight.setDirection(glm::normalize(glm::fvec3(1, -1, 0)));
 	lightManager.sunLight.setColour(glm::fvec3(2, 2, 2));
 	lightManager.sunLight.initTexture(glm::ivec2(1280, 720));
 	lightManager.sunLight.calcProjs();
@@ -452,7 +452,7 @@ void Renderer::populateDrawCmdBuffer()
 {
 	//VkDrawIndexedIndirectCommand* cmd = new VkDrawIndexedIndirectCommand[Engine::world.instancesToDraw.size()];
 
-	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)drawCmdBuffer.map();
+	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)drawCmdBuffer.getMemory()->map();
 
 	int i = 0;
 
@@ -481,7 +481,7 @@ void Renderer::populateDrawCmdBuffer()
 		++i;
 	}
 
-	drawCmdBuffer.unmap();
+	drawCmdBuffer.getMemory()->unmap();
 
 	//drawCmdBuffer.setMem(cmd, Engine::world.modelNames.size() * sizeof(VkDrawIndexedIndirectCommand), 0);
 
@@ -491,19 +491,46 @@ void Renderer::populateDrawCmdBuffer()
 void Renderer::createVertexIndexBuffers()
 {
 	VkDeviceSize bufferSize = VERTEX_BUFFER_SIZE + INDEX_BUFFER_SIZE;
-	vertexIndexBuffer.create(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	vertexIndexBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	vertexIndexBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+	vertexIndexBuffer.create(&logicalDevice, bufferSize);
 }
 
 void Renderer::pushModelDataToGPU(Model & model)
 {
 	for (auto& lodLevel : model.modelLODs)
 	{
-		vertexIndexBuffer.setMem(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), vertexInputByteOffset);
+		// Copy vertices through staging buffer
+
+		vertexIndexBuffer.createStaging(stagingBuffer);
+		memcpy(stagingBuffer.getMemory()->map(), lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex));
+		stagingBuffer.getMemory()->unmap();
+
+		auto cmd = beginSingleTimeCommands();
+		stagingBuffer.cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.vertexDataLength * sizeof(Vertex), 0, vertexInputByteOffset);
+		endSingleTimeCommands(cmd);
+
+		stagingBuffer.destroy();
+
+		//vertexIndexBuffer.setMem(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), vertexInputByteOffset);
 
 		lodLevel.firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
 		vertexInputByteOffset += lodLevel.vertexDataLength * sizeof(Vertex);
 
-		vertexIndexBuffer.setMem(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), INDEX_BUFFER_BASE + indexInputByteOffset);
+
+		// Copy indices through staging buffer
+
+		vertexIndexBuffer.createStaging(stagingBuffer);
+		memcpy(stagingBuffer.getMemory()->map(), lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32));
+		stagingBuffer.getMemory()->unmap();
+
+		cmd = beginSingleTimeCommands();
+		stagingBuffer.cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.indexDataLength * sizeof(u32), 0, INDEX_BUFFER_BASE + indexInputByteOffset);
+		endSingleTimeCommands(cmd);
+
+		stagingBuffer.destroy();
+
+		//vertexIndexBuffer.setMem(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), INDEX_BUFFER_BASE + indexInputByteOffset);
 
 		lodLevel.firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
 		indexInputByteOffset += lodLevel.indexDataLength * sizeof(u32);
@@ -513,10 +540,11 @@ void Renderer::pushModelDataToGPU(Model & model)
 void Renderer::createDataBuffers()
 {
 	/// TODO: set appropriate size
-	drawCmdBuffer.create(sizeof(VkDrawIndexedIndirectCommand) * 1000, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	//drawCmdBuffer.create(sizeof(VkDrawIndexedIndirectCommand) * 1000, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	//drawCmdBuffer.createPersistantStaging();
 
+	drawCmdBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	drawCmdBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
+	drawCmdBuffer.create(&logicalDevice, sizeof(VkDrawIndexedIndirectCommand) * 1000);
+	
 	createVertexIndexBuffers();
 
 	std::vector<Vertex2D> quad;
@@ -527,9 +555,21 @@ void Renderer::createDataBuffers()
 	quad.push_back({ { 1,-1 },{ 1,0 } });
 	quad.push_back({ { 1,1 },{ 1,1 } });
 
-	screenQuadBuffer.create(quad.size() * sizeof(Vertex2D), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	screenQuadBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+	screenQuadBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	screenQuadBuffer.create(&logicalDevice, quad.size() * sizeof(Vertex2D));
 
-	screenQuadBuffer.setMem(quad.data(), quad.size() * sizeof(Vertex2D), 0);
+	screenQuadBuffer.createStaging(stagingBuffer);
+
+	auto data = stagingBuffer.getMemory()->map();
+	memcpy(data, quad.data(), quad.size() * sizeof(Vertex2D));
+	stagingBuffer.getMemory()->unmap();
+
+	auto cmd = beginSingleTimeCommands();
+	stagingBuffer.cmdCopyTo(cmd, &screenQuadBuffer);
+	endSingleTimeCommands(cmd);
+
+	stagingBuffer.destroy();
 
 	createUBOs();
 }
@@ -645,8 +685,8 @@ void Renderer::createTextureSampler()
 	samplerInfo.addressModeW = samplerInfo.addressModeU;
 	samplerInfo.anisotropyEnable = VK_FALSE;
 	samplerInfo.maxAnisotropy = 0;
-	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	//samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+	//samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
@@ -663,12 +703,14 @@ void Renderer::createTextureSampler()
 */
 void Renderer::createUBOs()
 {
-	cameraUBO.create(sizeof(CameraUBOData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	cameraUBO.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	cameraUBO.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	cameraUBO.create(&logicalDevice, sizeof(CameraUBOData));
 
 	// 8 MB of transforms can support around 125k model instances
-	//transformUBO.create(8 * 1024 * 1024, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	transformUBO.create(8 * 1024 * 1024, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	//transformUBO.createPersistantStaging();
+	transformUBO.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	transformUBO.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	transformUBO.create(&logicalDevice, 8 * 1024 * 1024);
 }
 
 /*
@@ -677,7 +719,7 @@ void Renderer::createUBOs()
 void Renderer::createDescriptorPool()
 {
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 9);
-	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1428);
+	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1430);
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 12);
 	descriptorPool.addSetCount(15);
 
@@ -827,9 +869,9 @@ void Renderer::updateCameraBuffer()
 	cameraUBOData.pos = Engine::camera.getPosition();
 	cameraUBOData.viewRays = Engine::camera.getViewRays();
 
-	void* data = cameraUBO.map();
+	void* data = cameraUBO.getMemory()->map();
 	memcpy(data, &cameraUBOData, sizeof(cameraUBOData));
-	cameraUBO.unmap();
+	cameraUBO.getMemory()->unmap();
 }
 
 /*
@@ -843,7 +885,7 @@ void Renderer::updateTransformBuffer()
 
 	auto tIndex = ModelInstance::toGPUTransformIndex;
 
-	glm::fmat4* transform = (glm::fmat4*)transformUBO.map();
+	glm::fmat4* transform = (glm::fmat4*)transformUBO.getMemory()->map();
 
 	int i = 0;
 	for (auto& m : Engine::world.instancesToDraw)
@@ -852,7 +894,7 @@ void Renderer::updateTransformBuffer()
 		++i;
 	}
 
-	transformUBO.unmap();
+	transformUBO.getMemory()->unmap();
 
 	//VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferCommands.fence));
 
@@ -958,10 +1000,10 @@ void Renderer::setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLa
 	imageBarrier.newLayout = newImageLayout;
 	imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	imageBarrier.image = tex.getImageHandle();
+	imageBarrier.image = tex.getHandle();
 
 	VkImageSubresourceRange subresourceRange = {};
-	subresourceRange.aspectMask = tex.getAspect();
+	subresourceRange.aspectMask = tex.getAspectFlags();
 	subresourceRange.baseMipLevel = 0;
 	subresourceRange.levelCount = tex.getMaxMipLevel() + 1;
 	subresourceRange.layerCount = 1;

@@ -11,8 +11,11 @@ Text::Text() : OverlayElement(OverlayElement::Text)
 	drawable = false;
 	
 	/// TODO: Were guessing upper bound. Implement a more sophistocated approach
-	vertsBuffer.create(2000 * 6 * sizeof(Vertex2D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
-	vertsBuffer.setMem(0, 2000 * 6 * sizeof(Vertex2D), 0);
+	vertsBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	vertsBuffer.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+	vertsBuffer.create(&Engine::renderer->logicalDevice, 2000 * 6 * sizeof(Vertex2D));
+	memset(vertsBuffer.getMemory()->map(), 0, 2000 * 6 * sizeof(Vertex2D));
+	vertsBuffer.getMemory()->unmap();
 }
 
 void Text::Style::setFont(Font * pFont)
@@ -147,9 +150,9 @@ void Text::update()
 
 	drawUpdate = true;
 
-	char* data = (char*)vertsBuffer.map();
+	char* data = (char*)vertsBuffer.getMemory()->map();
 	memcpy(data, verts.data(), verts.size() * sizeof(Vertex2D));
-	vertsBuffer.unmap();
+	vertsBuffer.getMemory()->unmap();
 }
 
 void Text::render(VkCommandBuffer cmd)
@@ -157,7 +160,7 @@ void Text::render(VkCommandBuffer cmd)
 	if (drawable)
 	{
 		VkDeviceSize offsets[] = { 0 };
-		VkBuffer buffer[] = { vertsBuffer.getBuffer() };
+		VkBuffer buffer[] = { vertsBuffer.getHandle() };
 		VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, buffer, offsets));
 		VK_VALIDATE(vkCmdDraw(cmd, verts.size(), 1, 0, 0));
 	}
@@ -262,7 +265,7 @@ void Text::updateDescriptorSet()
 {
 	VkDescriptorImageInfo fontInfo = {};
 	fontInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	fontInfo.imageView = glyphs->getTexture()->getImageViewHandle();
+	fontInfo.imageView = glyphs->getTexture()->getView();
 	fontInfo.sampler = Engine::renderer->textureSampler;
 
 	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};

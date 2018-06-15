@@ -4,6 +4,7 @@
 #include "Texture.hpp"
 #include "Buffer.hpp"
 #include "Model.hpp"
+#include "VDU.hpp"
 
 class OLayer
 {
@@ -55,7 +56,7 @@ private:
 
 	VkDescriptorSet imageDescriptor;
 
-	Buffer quadBuffer; // For the to-screen pass
+	vdu::Buffer quadBuffer; // For the to-screen pass
 	std::vector<VertexNoNormal> quadVerts;
 };
 
@@ -112,7 +113,7 @@ private:
 	Texture combinedLayersDepth;
 
 	// Projection matrix for combining layers
-	Buffer combineProjUBO;
+	vdu::Buffer combineProjUBO;
 
 	// Layout for rendering and combining elements (one texture sampler)
 	VkDescriptorSetLayout overlayDescriptorSetLayout;

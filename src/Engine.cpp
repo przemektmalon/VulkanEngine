@@ -426,6 +426,16 @@ void Engine::eventLoop()
 			{
 				console->toggle();
 			}
+			if (key == Key::KC_1)
+			{
+				auto resizeJob = std::bind(resizeJobFunc, glm::ivec2(1920, 1080));
+				threading->addGraphicsJob(new Job<decltype(resizeJob)>(resizeJob, defaultAsyncJobDoneFunc), 1);
+			}
+			if (key == Key::KC_2)
+			{
+				auto resizeJob = std::bind(resizeJobFunc, glm::ivec2(1280, 720));
+				threading->addGraphicsJob(new Job<decltype(resizeJob)>(resizeJob, defaultAsyncJobDoneFunc), 1);
+			}
 			break;
 		}
 		case Event::KeyUp: {
@@ -576,7 +586,8 @@ void Engine::updatePerformanceStatsDisplay()
 		"Queue submit   : " + std::to_string(submitTime) + "ms\n" +
 		"Queue idle     : " + std::to_string(qWaitTime) + "ms\n" +
 		"Physics        : " + std::to_string(physicsTime) + "ms\n" +
-		"Scripts        : " + std::to_string(scriptsTime) + "ms\n"
+		"Scripts        : " + std::to_string(scriptsTime) + "ms\n\n\n" +
+		"Position       : " + std::to_string(camera.pos.x) + " , " + std::to_string(camera.pos.y) + " , " + std::to_string(camera.pos.z)
 	);
 
 	auto mutexStats = (Text*)uiLayer->getElement("mutexstats");

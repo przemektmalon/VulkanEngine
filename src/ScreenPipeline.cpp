@@ -127,7 +127,18 @@ void Renderer::createScreenAttachments()
 
 	// Views describe how the GPU will write to or sample the image (ie. mip mapping)
 	for (uint32_t i = 0; i < swapChainImages.size(); i++) {
-		swapChainImageViews[i] = Texture::createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+		VkImageViewCreateInfo viewInfo = {};
+		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.image = swapChainImages[i];
+		viewInfo.format = swapChainImageFormat;
+		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		viewInfo.subresourceRange.baseMipLevel = 0;
+		viewInfo.subresourceRange.levelCount = 1;
+		viewInfo.subresourceRange.baseArrayLayer = 0;
+		viewInfo.subresourceRange.layerCount = 1;
+		
+		VK_CHECK_RESULT(vkCreateImageView(logicalDevice.getHandle(), &viewInfo, nullptr, &swapChainImageViews[i]));
 	}
 }
 
@@ -336,13 +347,13 @@ void Renderer::updateScreenDescriptorSets()
 
 	auto sceneUpdate = updater->addImageUpdate("scene");
 
-	sceneUpdate->imageView = pbrOutput.getImageViewHandle();
+	sceneUpdate->imageView = pbrOutput.getView();
 	sceneUpdate->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	sceneUpdate->sampler = textureSampler;
 
 	auto overlayUpdate = updater->addImageUpdate("overlay");
 
-	overlayUpdate->imageView = overlayRenderer.combinedLayers.getImageViewHandle();
+	overlayUpdate->imageView = overlayRenderer.combinedLayers.getView();
 	overlayUpdate->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	overlayUpdate->sampler = textureSampler;
 
@@ -394,7 +405,7 @@ void Renderer::updateScreenCommands()
 
 		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
 
-		VkBuffer vertexBuffers[] = { screenQuadBuffer.getBuffer() };
+		VkBuffer vertexBuffers[] = { screenQuadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
 		VK_VALIDATE(vkCmdBindVertexBuffers(screenCommandBuffers[i], 0, 1, vertexBuffers, offsets));
 

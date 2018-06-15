@@ -7,8 +7,6 @@ void Renderer::createGBufferAttachments()
 	TextureCreateInfo tci;
 	tci.width = renderResolution.width;
 	tci.height = renderResolution.height;
-	tci.bpp = 32;
-	tci.components = 4;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_R8G8B8A8_UNORM;
 	tci.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -18,15 +16,11 @@ void Renderer::createGBufferAttachments()
 	gBufferPBRAttachment.loadToGPU(&tci);
 
 	tci.format = VK_FORMAT_R32G32_SFLOAT;
-	tci.bpp = 32 * 2;
-	tci.components = 2;
 
 	gBufferNormalAttachment.loadToGPU(&tci);
 
 	tci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 	tci.format = Engine::physicalDevice->findOptimalDepthFormat();
-	tci.bpp = 32;
-	tci.components = 1;
 	tci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
@@ -263,10 +257,10 @@ void Renderer::createGBufferPipeline()
 void Renderer::createGBufferFramebuffers()
 {
 	std::array<VkImageView, 4> attachments = {
-		gBufferColourAttachment.getImageViewHandle(),
-		gBufferNormalAttachment.getImageViewHandle(),
-		gBufferPBRAttachment.getImageViewHandle(),
-		gBufferDepthAttachment.getImageViewHandle()
+		gBufferColourAttachment.getView(),
+		gBufferNormalAttachment.getView(),
+		gBufferPBRAttachment.getView(),
+		gBufferDepthAttachment.getView()
 	};
 
 	VkFramebufferCreateInfo framebufferInfo = {};
@@ -297,13 +291,13 @@ void Renderer::updateGBufferDescriptorSets()
 
 	auto cameraUpdate = updater->addBufferUpdate("camera");
 
-	cameraUpdate->buffer = cameraUBO.getBuffer();
+	cameraUpdate->buffer = cameraUBO.getHandle();
 	cameraUpdate->offset = 0;
 	cameraUpdate->range = VK_WHOLE_SIZE;
 
 	auto transformsUpdate = updater->addBufferUpdate("transforms");
 
-	transformsUpdate->buffer = transformUBO.getBuffer();
+	transformsUpdate->buffer = transformUBO.getHandle();
 	transformsUpdate->offset = 0;
 	transformsUpdate->range = VK_WHOLE_SIZE;
 
@@ -313,26 +307,26 @@ void Renderer::updateGBufferDescriptorSets()
 	{
 		texturesUpdate[i].sampler = textureSampler;
 		texturesUpdate[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		texturesUpdate[i].imageView = Engine::assets.materials.begin()->second.albedoSpec->getImageViewHandle();
+		texturesUpdate[i].imageView = Engine::assets.materials.begin()->second.albedoSpec->getView();
 	}
 
 	u32 i = 0;
 	for (auto& material : Engine::assets.materials)
 	{
-		if (material.second.albedoSpec->getImageHandle())
-			texturesUpdate[i].imageView = material.second.albedoSpec->getImageViewHandle();
+		if (material.second.albedoSpec->getHandle())
+			texturesUpdate[i].imageView = material.second.albedoSpec->getView();
 		else
-			texturesUpdate[i].imageView = Engine::assets.getTexture("blank")->getImageViewHandle();
+			texturesUpdate[i].imageView = Engine::assets.getTexture("blank")->getView();
 
 		if (material.second.normalRough)
 		{
-			if (material.second.normalRough->getImageViewHandle())
-				texturesUpdate[i + 1].imageView = material.second.normalRough->getImageViewHandle();
+			if (material.second.normalRough->getView())
+				texturesUpdate[i + 1].imageView = material.second.normalRough->getView();
 			else
-				texturesUpdate[i + 1].imageView = Engine::assets.getTexture("black")->getImageViewHandle();
+				texturesUpdate[i + 1].imageView = Engine::assets.getTexture("black")->getView();
 		}
 		else
-			texturesUpdate[i + 1].imageView = Engine::assets.getTexture("black")->getImageViewHandle();
+			texturesUpdate[i + 1].imageView = Engine::assets.getTexture("black")->getView();
 		i += 2;
 	}
 
@@ -361,9 +355,9 @@ void Renderer::updateGBufferCommands()
 
 	/// TODO: each thread will have a dynamic number of fences we will have to wait for all of them to signal (from the previous frame)
 
-	PROFILE_START("gbufferfence");
-	VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, true, std::numeric_limits<u64>::max()));
-	PROFILE_END("gbufferfence");
+	//PROFILE_START("gbufferfence");
+	//VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, true, std::numeric_limits<u64>::max()));
+	//PROFILE_END("gbufferfence");
 
 	freeCommandBuffer(&gBufferCommands.commands, gBufferPreviousPool);
 
@@ -409,12 +403,12 @@ void Renderer::updateGBufferCommands()
 
 	VK_VALIDATE(vkCmdBindDescriptorSets(gBufferCommands.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet.getHandle(), 0, nullptr));
 
-	VkBuffer vertexBuffers[] = { vertexIndexBuffer.getBuffer() };
+	VkBuffer vertexBuffers[] = { vertexIndexBuffer.getHandle() };
 	VkDeviceSize offsets[] = { 0 };
 	VK_VALIDATE(vkCmdBindVertexBuffers(gBufferCommands.commands, 0, 1, vertexBuffers, offsets));
-	VK_VALIDATE(vkCmdBindIndexBuffer(gBufferCommands.commands, vertexIndexBuffer.getBuffer(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
+	VK_VALIDATE(vkCmdBindIndexBuffer(gBufferCommands.commands, vertexIndexBuffer.getHandle(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
 
-	VK_VALIDATE(vkCmdDrawIndexedIndirect(gBufferCommands.commands, drawCmdBuffer.getBuffer(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
+	VK_VALIDATE(vkCmdDrawIndexedIndirect(gBufferCommands.commands, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
 	VK_VALIDATE(vkCmdEndRenderPass(gBufferCommands.commands));
 

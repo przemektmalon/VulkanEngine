@@ -3,6 +3,7 @@
 #include "OverlayElement.hpp"
 #include "Model.hpp"
 #include "Buffer.hpp"
+#include "VDU.hpp"
 
 class UIPolygon : public OverlayElement
 {
@@ -29,7 +30,7 @@ private:
 	void updateDescriptorSet();
 
 	std::vector<Vertex2D> verts;
-	Buffer vertsBuffer;
+	vdu::Buffer vertsBuffer;
 	Texture* texture;
 	glm::fvec4 colour;
 };

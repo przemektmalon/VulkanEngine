@@ -6,8 +6,6 @@ void Renderer::createPBRAttachments()
 	TextureCreateInfo tci;
 	tci.width = renderResolution.width;
 	tci.height = renderResolution.height;
-	tci.bpp = 32 * 4;
-	tci.components = 4;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
@@ -34,7 +32,7 @@ void Renderer::createPBRDescriptorSetLayouts()
 
 	dsl.addBinding("point_shadows", vdu::DescriptorType::CombinedImageSampler, 13, 150, vdu::ShaderStage::Compute);
 	dsl.addBinding("spot_shadows", vdu::DescriptorType::CombinedImageSampler, 14, 150, vdu::ShaderStage::Compute);
-	dsl.addBinding("sun_shadow", vdu::DescriptorType::CombinedImageSampler, 15, 1, vdu::ShaderStage::Compute);
+	dsl.addBinding("sun_shadow", vdu::DescriptorType::CombinedImageSampler, 15, 3, vdu::ShaderStage::Compute);
 
 	dsl.addBinding("sun_light", vdu::DescriptorType::UniformBuffer, 16, 1, vdu::ShaderStage::Compute);
 
@@ -76,39 +74,39 @@ void Renderer::updatePBRDescriptorSets()
 	auto updater = pbrDescriptorSet.makeUpdater();
 
 	auto outputUpdater = updater->addImageUpdate("output");
-	*outputUpdater = { textureSampler, pbrOutput.getImageViewHandle(), VK_IMAGE_LAYOUT_GENERAL };
+	*outputUpdater = { textureSampler, pbrOutput.getView(), VK_IMAGE_LAYOUT_GENERAL };
 
 	auto albedoUpdater = updater->addImageUpdate("albedo");
-	*albedoUpdater = { textureSampler, gBufferColourAttachment.getImageViewHandle(), VK_IMAGE_LAYOUT_GENERAL };
+	*albedoUpdater = { textureSampler, gBufferColourAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
 	
 	auto normalUpdater = updater->addImageUpdate("normal");
-	*normalUpdater = { textureSampler, gBufferNormalAttachment.getImageViewHandle(), VK_IMAGE_LAYOUT_GENERAL };
+	*normalUpdater = { textureSampler, gBufferNormalAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
 	
 	auto pbrUpdater = updater->addImageUpdate("pbr");
-	*pbrUpdater = { textureSampler, gBufferPBRAttachment.getImageViewHandle(), VK_IMAGE_LAYOUT_GENERAL };
+	*pbrUpdater = { textureSampler, gBufferPBRAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
 
 	auto depthUpdater = updater->addImageUpdate("depth");
-	*depthUpdater = { textureSampler, gBufferDepthAttachment.getImageViewHandle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
+	*depthUpdater = { textureSampler, gBufferDepthAttachment.getView(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
 
 	auto skyboxUpdater = updater->addImageUpdate("skybox");
-	*skyboxUpdater = { skySampler, Engine::assets.getTexture("skybox")->getImageViewHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+	*skyboxUpdater = { skySampler, Engine::assets.getTexture("skybox")->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 
 	auto lightCountsUpdater = updater->addBufferUpdate("light_counts");
-	*lightCountsUpdater = { lightManager.lightCountsBuffer.getBuffer(), 0, 2 * sizeof(u32) };
+	*lightCountsUpdater = { lightManager.lightCountsBuffer.getHandle(), 0, 2 * sizeof(u32) };
 
 	auto cameraUpdater = updater->addBufferUpdate("camera");
-	*cameraUpdater = { cameraUBO.getBuffer(), 0, sizeof(CameraUBOData) };
+	*cameraUpdater = { cameraUBO.getHandle(), 0, sizeof(CameraUBOData) };
 
 	if (lightManager.pointLights.size())
 	{
 		auto pointLightsUpdater = updater->addBufferUpdate("point_lights");
-		*pointLightsUpdater = { lightManager.pointLightsBuffer.getBuffer(), 0, lightManager.pointLights.size() * sizeof(PointLight::GPUData) };
+		*pointLightsUpdater = { lightManager.pointLightsBuffer.getHandle(), 0, lightManager.pointLights.size() * sizeof(PointLight::GPUData) };
 
-		auto pointShadowsUpdater = updater->addImageUpdate("point_shadows");
+		auto pointShadowsUpdater = updater->addImageUpdate("point_shadows", 0, lightManager.pointLights.size());
 		int i = 0;
 		for (auto& s : lightManager.pointLights)
 		{
-			pointShadowsUpdater[i] = { shadowSampler, s.getShadowTexture()->getImageViewHandle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
+			pointShadowsUpdater[i] = { shadowSampler, s.getShadowTexture()->getView(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
 			++i;
 		}
 	}
@@ -116,13 +114,13 @@ void Renderer::updatePBRDescriptorSets()
 	if (lightManager.spotLights.size())
 	{
 		auto spotLightsUpdater = updater->addBufferUpdate("spot_lights");
-		*spotLightsUpdater = { lightManager.spotLightsBuffer.getBuffer(), 0, lightManager.spotLights.size() * sizeof(SpotLight::GPUData) };
+		*spotLightsUpdater = { lightManager.spotLightsBuffer.getHandle(), 0, lightManager.spotLights.size() * sizeof(SpotLight::GPUData) };
 
-		auto spotShadowsUpdater = updater->addImageUpdate("spot_shadows");
+		auto spotShadowsUpdater = updater->addImageUpdate("spot_shadows", 0, lightManager.spotLights.size());
 		int i = 0;
 		for (auto& s : lightManager.spotLights)
 		{
-			spotShadowsUpdater[i] = { shadowSampler, s.getShadowTexture()->getImageViewHandle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
+			spotShadowsUpdater[i] = { shadowSampler, s.getShadowTexture()->getView(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
 			++i;
 		}
 	}
@@ -130,10 +128,13 @@ void Renderer::updatePBRDescriptorSets()
 	if (lightManager.sunLight.shadowTex)
 	{
 		auto sunLightUpdater = updater->addBufferUpdate("sun_light");
-		*sunLightUpdater = { lightManager.sunLightBuffer.getBuffer(), 0, sizeof(SunLight::GPUData) };
+		*sunLightUpdater = { lightManager.sunLightBuffer.getHandle(), 0, sizeof(SunLight::GPUData) };
 
-		auto sunShadowUpdater = updater->addImageUpdate("sun_shadow");
-		*sunShadowUpdater = { shadowSampler, lightManager.sunLight.getShadowTexture()->getImageViewHandle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
+		auto sunShadowUpdater = updater->addImageUpdate("sun_shadow", 0, 3);
+		for (int i = 0; i < 3; ++i)
+		{
+			sunShadowUpdater[i] = { shadowSampler, lightManager.sunLight.getShadowTexture()[i].getView(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
+		}
 	}
 	
 	pbrDescriptorSet.submitUpdater(updater);

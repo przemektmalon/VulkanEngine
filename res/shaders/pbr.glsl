@@ -79,7 +79,7 @@ layout(binding = 9) uniform CameraUBO {
 
 layout(binding = 13) uniform samplerCube pointShadows[150];
 layout(binding = 14) uniform sampler2D spotShadows[150];
-layout(binding = 15) uniform sampler2D sunShadow;
+layout(binding = 15) uniform sampler2D sunShadow[3];
 
 vec3 decodeNormal(vec2 enc)
 {
@@ -549,35 +549,52 @@ void main()
 
 		float NdotL  = max(dot(normal, lightDir), 0.0);
 
-		vec4 fragPosLightSpace = sunLight.data.pv[0] * vec4(worldPos,1.f);
-
-		vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;;
-		projCoords.x *= 0.5f; projCoords.x += 0.5f;
-		projCoords.y *= 0.5f; projCoords.y += 0.5f;
-
-		float currentDepth = projCoords.z;
-	    
-		float bias = max(0.01f * (1.0 - dot(normal, lightDir)), 0.01f);
-
-    	const int pres = 2;
-
 		float shadow = 0.f;
 
-		vec2 texelSize = vec2(1.0 / 1280.0, 1.0 / 720.0);
-		for(int x = -pres; x <= pres; ++x)
+		for (int casc = 0; casc < 3; ++casc)
 		{
-		    for(int y = -pres; y <= pres; ++y)
-		    {
-				float pcfDepth = texture(sunShadow, projCoords.xy + vec2(x, y) * texelSize).r;
-		        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-		    }
-		}
-		shadow /= ((2.f*pres) + 1) * ((2.f*pres) + 1);
-		
-		if(projCoords.z > 1.0)
-        	shadow = 0.0;
+			vec4 fragPosLightSpace = sunLight.data.pv[casc] * vec4(worldPos,1.f);
 
-		litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
+			vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;;
+			projCoords.x *= 0.5f; projCoords.x += 0.5f;
+			projCoords.y *= 0.5f; projCoords.y += 0.5f;
+
+			float currentDepth = projCoords.z;
+		    
+			float bias = max(0.01f * (1.0 - dot(normal, lightDir)), 0.01f);
+
+	    	const int pres = 2;
+
+			vec2 texelSize = vec2(1.0 / 1280.0, 1.0 / 720.0);
+
+			// FOR EACH SHADOW CASCACE
+
+			if (currentDepth < sunLight.data.cascadeEnds[casc])
+			{
+				for(int x = -pres; x <= pres; ++x)
+				{
+				    for(int y = -pres; y <= pres; ++y)
+				    {
+						float pcfDepth = texture(sunShadow[casc], projCoords.xy + vec2(x, y) * texelSize).r;
+				        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+				    }
+				}
+				shadow /= ((2.f*pres) + 1) * ((2.f*pres) + 1);
+				
+				//if(projCoords.z > 1.0)
+		        	//shadow = 0.0;
+
+		        //if(projCoords.y > 0.99 || projCoords.y < 0.01)
+		        	//shadow = 0.0;
+
+				//if(projCoords.x > 0.99 || projCoords.x < 0.01)
+		        	//shadow = 0.0;
+
+		        break;
+	        }
+		}
+
+		//litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 
 		//float shad = texture(sunShadow, projCoords.xy).r;
 		//litPixel = vec3(shad);

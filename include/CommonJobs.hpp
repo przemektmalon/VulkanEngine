@@ -13,9 +13,17 @@ static VoidJobType physicsToGPUJobFunc;
 static VoidJobType renderJobFunc;
 static VoidJobType scriptsJobFunc;
 static VoidJobType cleanupJobsJobFunc;
+static std::function<void(glm::ivec2)> resizeJobFunc;
+static std::function<void(glm::ivec2)> resizeJobSubmitFunc;
 
 static void initialiseCommonJobs()
 {
+	resizeJobFunc = [](glm::ivec2 res) -> void {
+		Engine::window->resize(res.x, res.y);
+		Engine::physicalDevice->querySurfaceCapabilities(Engine::window->vkSurface);
+		Engine::renderer->reInitialise();
+	};
+
 	physicsJobFunc = []() -> void {
 		PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock());
 		PROFILE_START("physics");

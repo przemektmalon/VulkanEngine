@@ -313,10 +313,10 @@ public:
 	// It should keep track of free memory which may be "holes" (after removing memory from middle of buffer) and allocate if new additions fit
 	// If we want to compact data (not sure if this will be worth the effort) we'd have to keep track of which memory regions are used by which models
 
-	//Buffer stagingBuffer;
-	Buffer screenQuadBuffer;
+	vdu::Buffer stagingBuffer;
+	vdu::Buffer screenQuadBuffer;
 	
-	Buffer vertexIndexBuffer;
+	vdu::Buffer vertexIndexBuffer;
 	u64 vertexInputByteOffset;
 	u64 indexInputByteOffset;
 	void createVertexIndexBuffers();
@@ -326,15 +326,15 @@ public:
 	// End GPU mem management
 	
 	// Draw buffers
-	Buffer drawCmdBuffer;
+	vdu::Buffer drawCmdBuffer;
 	void populateDrawCmdBuffer();
 
 	std::vector<OverlayElement*> overlayElems;
 
 	// Uniform buffers
 	CameraUBOData cameraUBOData;
-	Buffer cameraUBO;
-	Buffer transformUBO;
+	vdu::Buffer cameraUBO;
+	vdu::Buffer transformUBO;
 	LightManager lightManager;
 	
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);

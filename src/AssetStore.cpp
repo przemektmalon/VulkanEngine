@@ -65,11 +65,11 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		auto& tex = textures.try_emplace(name).first->second;
 		TextureCreateInfo ci;
 		ci.genMipMaps = mip;
-		ci.components = 4;
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		ci.numLayers = paths.size();
+		ci.layers = paths.size();
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
 
 		auto texLoadFunc = std::bind([](Texture* tex, TextureCreateInfo ci) -> void {
 			tex->loadToRAM(&ci);
@@ -189,14 +189,12 @@ void AssetStore::loadDefaultAssets()
 		auto& tex = textures.try_emplace("blank").first->second;
 		TextureCreateInfo ci;
 		ci.genMipMaps = false;
-		ci.components = 4;
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		ci.numLayers = 1;
+		ci.layers = 1;
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		ci.width = 2;
 		ci.height = 2;
-		ci.bpp = 32;
 		int blank[4]; memset(blank, 0xFFFFFFFF, 16);
 		ci.pData = blank;
 		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
@@ -208,14 +206,12 @@ void AssetStore::loadDefaultAssets()
 		auto& tex = textures.try_emplace("black").first->second;
 		TextureCreateInfo ci;
 		ci.genMipMaps = false;
-		ci.components = 4;
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		ci.numLayers = 1;
+		ci.layers = 1;
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		ci.width = 2;
 		ci.height = 2;
-		ci.bpp = 32;
 		int blank[4]; memset(blank, 0x00000000, 16);
 		ci.pData = blank;
 		ci.format = VK_FORMAT_R8G8B8A8_UNORM;

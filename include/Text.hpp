@@ -5,6 +5,7 @@
 #include "Model.hpp"
 #include "Buffer.hpp"
 #include "OverlayElement.hpp"
+#include "VDU.hpp"
 
 class Text : public OverlayElement
 {
@@ -76,5 +77,5 @@ private:
 	GlyphContainer* glyphs;
 
 	std::vector<Vertex2D> verts;
-	Buffer vertsBuffer;
+	vdu::Buffer vertsBuffer;
 };

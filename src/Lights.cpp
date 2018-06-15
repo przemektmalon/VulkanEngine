@@ -7,20 +7,18 @@ void PointLight::initTexture(int resolution)
 {
 	TextureCreateInfo ci = {};
 	ci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-	ci.bpp = 32;
 	ci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	ci.genMipMaps = false;
-	ci.components = 1;
 	ci.height = resolution;
 	ci.width = resolution;
 	ci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	ci.numLayers = 6;
+	ci.layers = 6;
 	ci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	shadowTex = new Texture();
 	shadowTex->loadToGPU(&ci);
 
 	std::array<VkImageView, 1> attachments = {
-		shadowTex->getImageViewHandle()
+		shadowTex->getView()
 	};
 
 	VkFramebufferCreateInfo framebufferInfo = {};
@@ -32,12 +30,15 @@ void PointLight::initTexture(int resolution)
 	framebufferInfo.height = resolution;
 	framebufferInfo.layers = 6;
 
-	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, &shadowFBO));
+	shadowFBO = new VkFramebuffer;
+
+	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, shadowFBO));
 }
 
 void PointLight::destroy()
 {
-	vkDestroyFramebuffer(Engine::renderer->device, shadowFBO, 0);
+	vkDestroyFramebuffer(Engine::renderer->device, *shadowFBO, 0);
+	delete shadowFBO;
 	shadowTex->destroy();
 }
 
@@ -55,7 +56,8 @@ inline float PointLight::calculateRadius(float linear, float quad)
 
 void SpotLight::destroy()
 {
-	vkDestroyFramebuffer(Engine::renderer->device, shadowFBO, 0);
+	vkDestroyFramebuffer(Engine::renderer->device, *shadowFBO, 0);
+	delete shadowFBO;
 	shadowTex->destroy();
 }
 
@@ -63,20 +65,18 @@ void SpotLight::initTexture(int resolution)
 {
 	TextureCreateInfo ci = {};
 	ci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-	ci.bpp = 32;
 	ci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	ci.genMipMaps = false;
-	ci.components = 1;
 	ci.height = resolution;
 	ci.width = resolution;
 	ci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	ci.numLayers = 1;
+	ci.layers = 1;
 	ci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	shadowTex = new Texture();
 	shadowTex->loadToGPU(&ci);
 
 	std::array<VkImageView, 1> attachments = {
-		shadowTex->getImageViewHandle()
+		shadowTex->getView()
 	};
 
 	VkFramebufferCreateInfo framebufferInfo = {};
@@ -88,7 +88,9 @@ void SpotLight::initTexture(int resolution)
 	framebufferInfo.height = resolution;
 	framebufferInfo.layers = 1;
 
-	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, &shadowFBO));
+	shadowFBO = new VkFramebuffer;
+
+	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, shadowFBO));
 }
 
 void SpotLight::updateRadius()
@@ -100,6 +102,34 @@ void SpotLight::updateRadius()
 inline float SpotLight::calculateRadius(float linear, float quad)
 {
 	return (0.5 * (std::sqrt(linear*linear + (2000 * quad) - linear))) / (quad * 2.f);
+}
+
+void LightManager::init()
+{
+	/// TODO: Memory flags, change to device local for performance, then we can't map and have to use staging buffer
+
+	auto memProperty = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	auto usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+	lightCountsBuffer.setMemoryProperty(memProperty);
+	lightCountsBuffer.setUsage(usage);
+
+	spotLightsBuffer.setMemoryProperty(memProperty);
+	spotLightsBuffer.setUsage(usage);
+
+	pointLightsBuffer.setMemoryProperty(memProperty);
+	pointLightsBuffer.setUsage(usage);
+
+	sunLightBuffer.setMemoryProperty(memProperty);
+	sunLightBuffer.setUsage(usage);
+
+	lightCountsBuffer.create(&Engine::renderer->logicalDevice, sizeof(u32) * 2);
+	spotLightsBuffer.create(&Engine::renderer->logicalDevice, sizeof(SpotLight::GPUData) * 150);
+	pointLightsBuffer.create(&Engine::renderer->logicalDevice, sizeof(PointLight::GPUData) * 150);
+	sunLightBuffer.create(&Engine::renderer->logicalDevice, sizeof(SunLight::GPUData) * 1);
+
+	spotLightsGPUData.reserve(150);
+	pointLightsGPUData.reserve(150);
 }
 
 PointLight & LightManager::addPointLight(PointLight::GPUData& data)
@@ -126,32 +156,36 @@ void SunLight::initTexture(glm::ivec2 resolution)
 {
 	TextureCreateInfo ci = {};
 	ci.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-	ci.bpp = 32;
 	ci.format = Engine::physicalDevice->findOptimalDepthFormat();
 	ci.genMipMaps = false;
-	ci.components = 1;
 	ci.height = resolution.y;
 	ci.width = resolution.x;
 	ci.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	ci.numLayers = 1;
+	ci.layers = 1;
 	ci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	shadowTex = new Texture();
-	shadowTex->loadToGPU(&ci);
+	shadowTex = new Texture[3];
 
-	std::array<VkImageView, 1> attachments = {
-		shadowTex->getImageViewHandle()
-	};
+	shadowFBO = new VkFramebuffer[3];
 
-	VkFramebufferCreateInfo framebufferInfo = {};
-	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebufferInfo.renderPass = Engine::renderer->sunShadowRenderPass;
-	framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	framebufferInfo.pAttachments = attachments.data();
-	framebufferInfo.width = resolution.x;
-	framebufferInfo.height = resolution.y;
-	framebufferInfo.layers = 1;
+	for (int i = 0; i < 3; ++i)
+	{
+		shadowTex[i].loadToGPU(&ci);
 
-	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, &shadowFBO));
+		std::array<VkImageView, 1> attachments = {
+			shadowTex[i].getView()
+		};
+
+		VkFramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = Engine::renderer->sunShadowRenderPass;
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		framebufferInfo.pAttachments = attachments.data();
+		framebufferInfo.width = resolution.x;
+		framebufferInfo.height = resolution.y;
+		framebufferInfo.layers = 1;
+
+		VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, &shadowFBO[i]));
+	}
 }
 
 void SunLight::calcProjs()
@@ -171,7 +205,7 @@ void SunLight::calcProjs()
 	float tanHalfVFOV = tanf(Engine::camera.getFOV() / 2.f);
 	float tanHalfHFOV = tanf((Engine::camera.getFOV() * ar) / 2.f);
 
-	const int NUM_CASCADES = 1;
+	const int NUM_CASCADES = 3;
 
 	for (u32 i = 0; i < NUM_CASCADES; i++) {
 		float xn = -gpuData->cascadeEnds[i] * tanHalfHFOV;
@@ -234,6 +268,6 @@ void SunLight::calcProjs()
 
 
 
-		gpuData->projView[i] = clip * glm::ortho<float>(left, right, bot, top, nearp, farp) * lightView;
+		gpuData->projView[i] = clip * glm::ortho<float>(left, right, bot, top, -farp, -nearp) * lightView;
 	}
 }
