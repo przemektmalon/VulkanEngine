@@ -4,7 +4,6 @@
 #include "Texture.hpp"
 #include "Buffer.hpp"
 #include "Model.hpp"
-#include "VDU.hpp"
 
 class OLayer
 {

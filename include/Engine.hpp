@@ -10,8 +10,6 @@
 #include "Console.hpp"
 #include "Scripting.hpp"
 
-#include "VDU.hpp"
-
 class Threading;
 class OLayer;
 class Window;
@@ -42,6 +40,7 @@ public:
 	static VkDebugReportCallbackEXT debugCallbackInfo;
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallbackFunc(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
 #endif
+	static VkResult lastVulkanResult;
 
 #ifdef _WIN32
 	static HINSTANCE win32InstanceHandle;
@@ -65,7 +64,6 @@ public:
 	static VkInstance vkInstance;
 	static std::vector<vdu::PhysicalDevice> allPhysicalDevices;
 	static vdu::PhysicalDevice* physicalDevice;
-	static VkResult lastVulkanResult;
 	
 	static Time frameTime;
 	static bool engineRunning;

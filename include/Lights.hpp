@@ -2,7 +2,6 @@
 #include "PCH.hpp"
 #include "Texture.hpp"
 #include "Buffer.hpp"
-#include "VDU.hpp"
 
 class Light
 {

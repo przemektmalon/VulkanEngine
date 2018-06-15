@@ -3,7 +3,6 @@
 #include "OverlayElement.hpp"
 #include "Model.hpp"
 #include "Buffer.hpp"
-#include "VDU.hpp"
 
 class UIPolygon : public OverlayElement
 {

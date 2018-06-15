@@ -19,6 +19,11 @@
 #include "vulkan/vulkan.h"
 #include "Types.hpp"
 
+#include "VDU.hpp"
+
+#define VK_VALIDATE(f) VDU_VK_VALIDATE(f)
+#define VK_CHECK_RESULT(f) VDU_VK_CHECK_RESULT(f)
+
 #define GLM_FORCE_RADIANS
 //#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "glm/glm.hpp"
@@ -41,68 +46,8 @@
 #include "chaiscript/chaiscript.hpp"
 #include <typeinfo>
 
-//#define ENABLE_VULKAN_VALIDATION
-
-#define VK_VALIDATE(f) { \
-	f; \
-	if (Engine::validationWarning) { \
-		DBG_WARNING(Engine::validationMessage); \
-		Engine::validationWarning = false; \
-		Engine::validationMessage.clear(); \
-	} \
-}
-
-#define VK_VALIDATE_W_RESULT(f) \
-	Engine::lastVulkanResult = f; \
-	if (Engine::validationWarning) { \
-			DBG_WARNING(Engine::validationMessage); \
-			Engine::validationWarning = false; \
-			Engine::validationMessage.clear(); \
-	}
-
-#define VK_CHECK_RESULT(f) { \
-	VK_VALIDATE_W_RESULT(f); \
-	if (Engine::lastVulkanResult != VK_SUCCESS) { \
-		switch(Engine::lastVulkanResult){ \
-			case(VK_ERROR_OUT_OF_HOST_MEMORY): \
-				DBG_SEVERE("VK_ERROR_OUT_OF_HOST_MEMORY"); break; \
-			case(VK_ERROR_OUT_OF_DEVICE_MEMORY): \
-				DBG_SEVERE("VK_ERROR_OUT_OF_DEVICE_MEMORY"); break; \
-			case(VK_ERROR_INITIALIZATION_FAILED): \
-				DBG_SEVERE("VK_ERROR_INITIALIZATION_FAILED"); break; \
-			case(VK_ERROR_DEVICE_LOST): \
-				DBG_SEVERE("VK_ERROR_DEVICE_LOST"); break; \
-			case(VK_ERROR_MEMORY_MAP_FAILED): \
-				DBG_SEVERE("VK_ERROR_MEMORY_MAP_FAILED"); break; \
-			case(VK_ERROR_LAYER_NOT_PRESENT): \
-				DBG_SEVERE("VK_ERROR_LAYER_NOT_PRESENT"); break; \
-			case(VK_ERROR_EXTENSION_NOT_PRESENT): \
-				DBG_SEVERE("VK_ERROR_EXTENSION_NOT_PRESENT"); break; \
-			case(VK_ERROR_FEATURE_NOT_PRESENT): \
-				DBG_SEVERE("VK_ERROR_FEATURE_NOT_PRESENT"); break; \
-			case(VK_ERROR_INCOMPATIBLE_DRIVER): \
-				DBG_SEVERE("VK_ERROR_INCOMPATIBLE_DRIVER"); break; \
-			case(VK_ERROR_TOO_MANY_OBJECTS): \
-				DBG_SEVERE("VK_ERROR_TOO_MANY_OBJECTS"); break; \
-			case(VK_ERROR_FORMAT_NOT_SUPPORTED): \
-				DBG_SEVERE("VK_ERROR_FORMAT_NOT_SUPPORTED"); break; \
-			case(VK_ERROR_FRAGMENTED_POOL): \
-				DBG_SEVERE("VK_ERROR_FRAGMENTED_POOL"); break; \
-			case(VK_NOT_READY): \
-				DBG_WARNING("VK_NOT_READY"); break; \
-			case(VK_TIMEOUT): \
-				DBG_WARNING("VK_TIMEOUT"); break; \
-			case(VK_EVENT_SET): \
-				DBG_WARNING("VK_EVENT_SET"); break; \
-			case(VK_EVENT_RESET): \
-				DBG_WARNING("VK_EVENT_RESET"); break; \
-			case(VK_INCOMPLETE): \
-				DBG_WARNING("VK_INCOMPLETE"); break; \
-			default: \
-				DBG_SEVERE("VK_ERROR"); break; \
-		} \
-	} \
-}
+#define ENABLE_VULKAN_VALIDATION
+//#define VDU_NO_VALIDATION
 
 // Debugging output macros
 #ifdef _WIN32

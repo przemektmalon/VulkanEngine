@@ -5,7 +5,6 @@
 #include "Model.hpp"
 #include "Buffer.hpp"
 #include "OverlayElement.hpp"
-#include "VDU.hpp"
 
 class Text : public OverlayElement
 {
