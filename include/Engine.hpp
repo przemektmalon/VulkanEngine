@@ -36,12 +36,6 @@ public:
 
 	static void updatePerformanceStatsDisplay();
 
-#ifdef ENABLE_VULKAN_VALIDATION
-	static VkDebugReportCallbackEXT debugCallbackInfo;
-	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallbackFunc(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
-#endif
-	static VkResult lastVulkanResult;
-
 #ifdef _WIN32
 	static HINSTANCE win32InstanceHandle;
 #endif
@@ -70,8 +64,6 @@ public:
 	static Time engineStartTime;
 	static std::mt19937_64 rand;
 	static float maxDepth;
-	static bool validationWarning;
-	static std::string validationMessage;
 	static OLayer* uiLayer;
 	static u64 gpuTimeStamps[12];
 	static std::atomic_char initialised;

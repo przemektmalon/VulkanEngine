@@ -137,6 +137,7 @@ void Renderer::createScreenAttachments()
 		viewInfo.subresourceRange.levelCount = 1;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		
 		VK_CHECK_RESULT(vkCreateImageView(logicalDevice.getHandle(), &viewInfo, nullptr, &swapChainImageViews[i]));
 	}
@@ -414,6 +415,50 @@ void Renderer::updateScreenCommands()
 		VK_VALIDATE(vkCmdEndRenderPass(screenCommandBuffers[i]));
 
 		setImageLayout(screenCommandBuffers[i], pbrOutput, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, queryPool, END_SCREEN));
+
+		VK_CHECK_RESULT(vkEndCommandBuffer(screenCommandBuffers[i]));
+	}
+}
+
+void Renderer::updateScreenCommandsForConsole()
+{
+	for (size_t i = 0; i < screenCommandBuffers.size(); i++)
+	{
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+		VK_CHECK_RESULT(vkBeginCommandBuffer(screenCommandBuffers[i], &beginInfo));
+
+		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, BEGIN_SCREEN));
+
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = screenRenderPass;
+		renderPassInfo.framebuffer = screenFramebuffers[i];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = renderResolution;
+
+		std::array<VkClearValue, 1> clearValues = {};
+		clearValues[0].color = { 1.f, 0.1f, 0.1f, 1.0f };
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
+
+		VK_VALIDATE(vkCmdBeginRenderPass(screenCommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+
+		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline));
+
+		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
+
+		VkBuffer vertexBuffers[] = { screenQuadBuffer.getHandle() };
+		VkDeviceSize offsets[] = { 0 };
+		VK_VALIDATE(vkCmdBindVertexBuffers(screenCommandBuffers[i], 0, 1, vertexBuffers, offsets));
+
+		VK_VALIDATE(vkCmdDraw(screenCommandBuffers[i], 6, 1, 0, 0));
+
+		VK_VALIDATE(vkCmdEndRenderPass(screenCommandBuffers[i]));
 
 		VK_VALIDATE(vkCmdWriteTimestamp(screenCommandBuffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, queryPool, END_SCREEN));
 

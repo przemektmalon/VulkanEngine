@@ -103,15 +103,27 @@ void Texture::loadToGPU(void * pCreateStruct)
 		create(&r->logicalDevice);
 		r->transitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_numMipLevels, m_layers, m_aspectFlags);
 
+		auto cmd = r->beginSingleTimeCommands();
+
+		vdu::Buffer* stagingBuffers = new vdu::Buffer[m_layers];
+
 		for (int i = 0; i < m_layers; ++i)
 		{
 			VkDeviceSize layerSize = size / m_layers;
-			Buffer stagingBuffer;
-			r->createStagingBuffer(stagingBuffer, layerSize);
-			r->copyToStagingBuffer(stagingBuffer, img[i].data.data(), (size_t)layerSize);
-			stagingBuffer.copyTo(this, 0, 0, i, 1);
-			r->destroyStagingBuffer(stagingBuffer);
+			stagingBuffers[i].createStaging(&r->logicalDevice, layerSize);
+			memcpy(stagingBuffers[i].getMemory()->map(), img[i].data.data(), (size_t)layerSize);
+			stagingBuffers[i].getMemory()->unmap();
+			stagingBuffers[i].cmdCopyTo(cmd, this, 0, 0, i, 1);
 		}
+
+		r->endSingleTimeCommands(cmd);
+
+		for (int i = 0; i < m_layers; ++i)
+		{
+			stagingBuffers[i].destroy();
+		}
+
+		delete[] stagingBuffers;
 
 		if (isMipped)
 		{
@@ -151,13 +163,18 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 		if (ci->pData)
 		{
-			Buffer stagingBuffer;
-			r->createStagingBuffer(stagingBuffer, size);
-			r->copyToStagingBuffer(stagingBuffer, ci->pData, (size_t)size);
+			vdu::Buffer stagingBuffer;
+			
+			auto cmd = r->beginSingleTimeCommands();
+
+			stagingBuffer.createStaging(&r->logicalDevice, size);
+			memcpy(stagingBuffer.getMemory()->map(), ci->pData, (size_t)size);
+			stagingBuffer.getMemory()->unmap();
 			m_usageFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			r->transitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_numMipLevels, m_layers, m_aspectFlags);
-			stagingBuffer.copyTo(this, 0, 0, 0, 1);
-			r->destroyStagingBuffer(stagingBuffer);
+			stagingBuffer.cmdCopyTo(cmd, this);
+
+			r->endSingleTimeCommands(cmd);
 
 			if (isMipped)
 			{

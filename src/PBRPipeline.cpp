@@ -9,6 +9,7 @@ void Renderer::createPBRAttachments()
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
+	//tci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	pbrOutput.loadToGPU(&tci);
@@ -71,6 +72,40 @@ void Renderer::createPBRDescriptorSets()
 
 void Renderer::updatePBRDescriptorSets()
 {
+	auto defaultUpdater = pbrDescriptorSet.makeUpdater();
+
+	auto pointLightsUpdater = defaultUpdater->addBufferUpdate("point_lights");
+	*pointLightsUpdater = { lightManager.pointLightsBuffer.getHandle(), 0, 150 * sizeof(PointLight::GPUData) };
+
+	auto pointShadowsUpdater = defaultUpdater->addImageUpdate("point_shadows", 0, 150);
+	for (int i = 0; i < 150; ++i)
+	{
+		pointShadowsUpdater[i] = { shadowSampler, Engine::assets.getTexture("blankCube")->getView(), VK_IMAGE_LAYOUT_GENERAL };
+	}
+
+	auto spotLightsUpdater = defaultUpdater->addBufferUpdate("spot_lights");
+	*spotLightsUpdater = { lightManager.spotLightsBuffer.getHandle(), 0, 150 * sizeof(SpotLight::GPUData) };
+
+	auto spotShadowsUpdater = defaultUpdater->addImageUpdate("spot_shadows", 0, 150);
+	for (int i = 0; i < 150; ++i)
+	{
+		spotShadowsUpdater[i] = { shadowSampler, Engine::assets.getTexture("blank")->getView(), VK_IMAGE_LAYOUT_GENERAL };
+	}
+
+	auto sunLightUpdater = defaultUpdater->addBufferUpdate("sun_light");
+	*sunLightUpdater = { lightManager.sunLightBuffer.getHandle(), 0, sizeof(SunLight::GPUData) };
+
+	auto sunShadowUpdater = defaultUpdater->addImageUpdate("sun_shadow", 0, 3);
+	for (int i = 0; i < 3; ++i)
+	{
+		sunShadowUpdater[i] = { shadowSampler, Engine::assets.getTexture("blank")->getView(), VK_IMAGE_LAYOUT_GENERAL };
+	}
+
+	pbrDescriptorSet.submitUpdater(defaultUpdater);
+	pbrDescriptorSet.destroyUpdater(defaultUpdater);
+
+
+
 	auto updater = pbrDescriptorSet.makeUpdater();
 
 	auto outputUpdater = updater->addImageUpdate("output");

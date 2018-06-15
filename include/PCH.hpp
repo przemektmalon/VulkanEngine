@@ -19,7 +19,13 @@
 #include "vulkan/vulkan.h"
 #include "Types.hpp"
 
-#include "VDU.hpp"
+#define ENABLE_VULKAN_VALIDATION
+
+#ifndef ENABLE_VULKAN_VALIDATION
+#define VDU_NO_VALIDATION
+#endif
+
+#include "vdu/PCH.hpp"
 
 #define VK_VALIDATE(f) VDU_VK_VALIDATE(f)
 #define VK_CHECK_RESULT(f) VDU_VK_CHECK_RESULT(f)
@@ -45,9 +51,6 @@
 #define CHAISCRIPT_NO_THREADS
 #include "chaiscript/chaiscript.hpp"
 #include <typeinfo>
-
-#define ENABLE_VULKAN_VALIDATION
-//#define VDU_NO_VALIDATION
 
 // Debugging output macros
 #ifdef _WIN32
@@ -122,9 +125,6 @@
 			std::cout << " " << ss.str() << std::endl; }
 	#endif
 #endif
-
-
-
 
 /// Utilities includes
 

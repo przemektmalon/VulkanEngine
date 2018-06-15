@@ -1,7 +1,7 @@
 #pragma once
 #include "PCH.hpp"
 #include "Texture.hpp"
-#include "Buffer.hpp"
+#include "vdu/DeviceMemory.hpp"
 
 class Light
 {

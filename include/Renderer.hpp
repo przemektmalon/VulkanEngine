@@ -9,6 +9,7 @@
 #include "Text.hpp"
 #include "OverlayElement.hpp"
 #include "OverlayRenderer.hpp"
+#include "vdu\VDU.hpp"
 
 struct CameraUBOData {
 	glm::fmat4 view;
@@ -278,6 +279,7 @@ public:
 
 	void updateScreenDescriptorSets();
 	void updateScreenCommands();
+	void updateScreenCommandsForConsole();
 
 	void destroyScreenSwapChain();
 	void destroyScreenAttachments();
@@ -340,9 +342,9 @@ public:
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 
-	void createStagingBuffer(Buffer& stagingBuffer, VkDeviceSize size);
-	void copyToStagingBuffer(Buffer& stagingBuffer, void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
-	void destroyStagingBuffer(Buffer& stagingBuffer);
+	//void createStagingBuffer(Buffer& stagingBuffer, VkDeviceSize size);
+	//void copyToStagingBuffer(Buffer& stagingBuffer, void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
+	//void destroyStagingBuffer(Buffer& stagingBuffer);
 	
 	VkCommandBuffer beginTransferCommands();
 	VkSubmitInfo endTransferCommands(VkCommandBuffer commandBuffer);

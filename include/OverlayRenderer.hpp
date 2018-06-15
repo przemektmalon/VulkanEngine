@@ -2,7 +2,7 @@
 #include "PCH.hpp"
 #include "OverlayElement.hpp"
 #include "Texture.hpp"
-#include "Buffer.hpp"
+#include "vdu/DeviceMemory.hpp"
 #include "Model.hpp"
 
 class OLayer

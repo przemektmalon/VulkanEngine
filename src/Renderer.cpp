@@ -85,7 +85,7 @@ void Renderer::initialise()
 	overlayRenderer.createOverlayAttachmentsFramebuffers();
 	overlayRenderer.createOverlayCommands();
 
-	for (int i = 0; i < 4; ++i)
+	for (int i = 0; i < 10; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
@@ -341,7 +341,7 @@ void Renderer::render()
 	submitInfo.pCommandBuffers = &shadowCommandBuffer;
 	submitInfo.pSignalSemaphores = &shadowFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, shadowFence));
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
 
 	submitInfo.pWaitSemaphores = &shadowFinishedSemaphore;
@@ -750,32 +750,6 @@ void Renderer::createSemaphores()
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayCombineFinishedSemaphore));
 }
 
-/*
-@brief	Copies data to staging buffer
-*/
-void Renderer::copyToStagingBuffer(Buffer& stagingBuffer, void * srcData, VkDeviceSize size, VkDeviceSize dstOffset)
-{
-	void* data = stagingBuffer.map(dstOffset, size);
-	memcpy(data, srcData, (size_t)size);
-	stagingBuffer.unmap();
-}
-
-/*
-@brief	Creates staging buffer with requested size
-*/
-void Renderer::createStagingBuffer(Buffer& stagingBuffer, VkDeviceSize size)
-{
-	stagingBuffer.create(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-}
-
-/*
-@brief	Destroys staging buffer
-*/
-void Renderer::destroyStagingBuffer(Buffer& stagingBuffer)
-{
-	stagingBuffer.destroy();
-}
-
 VkCommandBuffer Renderer::beginTransferCommands()
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
@@ -959,7 +933,7 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
 	}
-	else if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
+	else if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL || newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 

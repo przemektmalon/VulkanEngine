@@ -15,7 +15,6 @@
 */
 void Engine::start()
 {
-	validationWarning = false;
 	DBG_INFO("Launching engine");
 	engineStartTime = clock.time();
 #ifdef _WIN32
@@ -127,7 +126,7 @@ void Engine::start()
 	auto renderConsoleFunc = []() -> void {
 		Engine::renderer->overlayRenderer.updateOverlayCommands();
 		renderer->updateScreenDescriptorSets();
-		renderer->updateScreenCommands();
+		renderer->updateScreenCommandsForConsole();
 		Engine::console->renderAtStartup();
 	};
 
@@ -282,6 +281,8 @@ void Engine::start()
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 
+	renderer->updateScreenCommands();
+
 	/*
 		These jobs are found in "CommonJobs.hpp"
 		They will be re-added at the end of each frame
@@ -349,6 +350,8 @@ void Engine::engineLoop()
 		t->join();
 	}
 	threading->cleanupJobs(); // Cleanup memory of finished jobs
+	vkQueueWaitIdle(renderer->lGraphicsQueue.getHandle());
+	vkQueueWaitIdle(renderer->lTransferQueue.getHandle());
 	quit();
 }
 
@@ -703,7 +706,6 @@ void Engine::createVulkanInstance()
 	instance.addExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 	instance.addExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 #ifdef ENABLE_VULKAN_VALIDATION
-	instance.setDebugCallbackFunction(debugCallbackFunc);
 	instance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Warning);
 	instance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Error);
 	instance.addLayer("VK_LAYER_LUNARG_standard_validation");
@@ -738,26 +740,6 @@ void Engine::quit()
 }
 
 
-#ifdef ENABLE_VULKAN_VALIDATION
-/*
-	@brief	Vulkan validation. Debugging output.
-*/
-VKAPI_ATTR VkBool32 VKAPI_CALL Engine::debugCallbackFunc(VkDebugReportFlagsEXT flags,
-													VkDebugReportObjectTypeEXT objType,
-													uint64_t obj,
-													size_t location,
-													int32_t code,
-													const char* layerPrefix,
-													const char* msg,
-													void* userData)
-{
-	validationWarning = true;
-	validationMessage = msg;
-	return VK_FALSE;
-}
-VkDebugReportCallbackEXT Engine::debugCallbackInfo;
-#endif
-
 #ifdef _WIN32
 HINSTANCE Engine::win32InstanceHandle;
 #endif
@@ -777,8 +759,6 @@ AssetStore Engine::assets;
 float Engine::maxDepth;
 std::mt19937_64 Engine::rand;
 u64 Engine::gpuTimeStamps[Renderer::NUM_GPU_TIMESTAMPS];
-bool Engine::validationWarning;
-std::string Engine::validationMessage;
 OLayer* Engine::uiLayer;
 Console* Engine::console;
 Time Engine::frameTime(0);
@@ -786,7 +766,6 @@ ScriptEnv Engine::scriptEnv;
 Threading* Engine::threading;
 std::atomic_char Engine::initialised = 0;
 std::mutex Engine::waitForProfilerInitMutex;
-VkResult Engine::lastVulkanResult;
 double Engine::timeSinceLastStatsUpdate = 0.f;
 int Engine::frames = 0;
 vdu::Instance Engine::instance;

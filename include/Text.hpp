@@ -3,8 +3,8 @@
 #include "Font.hpp"
 #include "Rect.hpp"
 #include "Model.hpp"
-#include "Buffer.hpp"
 #include "OverlayElement.hpp"
+#include "vdu\DeviceMemory.hpp"
 
 class Text : public OverlayElement
 {
