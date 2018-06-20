@@ -200,7 +200,7 @@ void Renderer::cleanup()
 		destroyGBufferPipeline();
 		destroyGBufferFramebuffers();
 		//destroyGBufferDescriptorSets();
-		destroyGBufferCommands();
+		//destroyGBufferCommands();
 	}
 
 	// Shadow pipelins
@@ -208,7 +208,7 @@ void Renderer::cleanup()
 		destroyShadowRenderPass();
 		destroyShadowDescriptorSetLayouts();
 		destroyShadowPipeline();
-		destroyShadowCommands();
+		//destroyShadowCommands();
 	}
 
 	// PBR pipeline
@@ -217,7 +217,7 @@ void Renderer::cleanup()
 		destroyPBRDescriptorSetLayouts();
 		destroyPBRPipeline();
 		//destroyPBRDescriptorSets();
-		destroyPBRCommands();
+		//destroyPBRCommands();
 	}
 
 	// Screen pipeline
@@ -228,7 +228,7 @@ void Renderer::cleanup()
 		destroyScreenPipeline();
 		destroyScreenFramebuffers();
 		//destroyScreenDescriptorSets();
-		destroyScreenCommands();
+		//destroyScreenCommands();
 		destroyScreenSwapChain();
 	}
 
@@ -262,7 +262,7 @@ void Renderer::cleanup()
 	combineOverlaysShader.destroy();
 	overlayShader.destroy();
 
-	VK_VALIDATE(vkDestroyDevice(device, 0));
+	logicalDevice.destroy();
 }
 
 void Renderer::cleanupForReInit()
@@ -324,12 +324,12 @@ void Renderer::render()
 	submitInfo.pWaitDstStageMask = 0;
 
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &gBufferCommands.commands;
+	submitInfo.pCommandBuffers = &gBufferCommands.getHandle();
 
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, gBufferCommands.fence));
+	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 	// From now on we cant update the gBuffer command buffer until the fence is signalled at some point in the future
 	// GBuffer command update will block
 	// Later we want to implement a double(or triple) buffering for command buffers and fences, so we can start updating next frames command buffer without blocking
@@ -338,7 +338,7 @@ void Renderer::render()
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = &renderFinishedSemaphore;
 	submitInfo.pWaitDstStageMask = waitStages1;
-	submitInfo.pCommandBuffers = &shadowCommandBuffer;
+	submitInfo.pCommandBuffers = &shadowCommandBuffer.getHandle();
 	submitInfo.pSignalSemaphores = &shadowFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
@@ -346,7 +346,7 @@ void Renderer::render()
 
 	submitInfo.pWaitSemaphores = &shadowFinishedSemaphore;
 	submitInfo.pWaitDstStageMask = waitStages1;
-	submitInfo.pCommandBuffers = &pbrCommandBuffer;
+	submitInfo.pCommandBuffers = &pbrCommandBuffer.getHandle();;
 	submitInfo.pSignalSemaphores = &pbrFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
@@ -355,7 +355,7 @@ void Renderer::render()
 	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 0;
 	submitInfo.pWaitDstStageMask = waitStages2;
-	submitInfo.pCommandBuffers = &overlayRenderer.elementCommandBuffer;
+	submitInfo.pCommandBuffers = &overlayRenderer.elementCommandBuffer.getHandle();
 	submitInfo.pSignalSemaphores = &overlayFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
@@ -364,7 +364,7 @@ void Renderer::render()
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = &overlayFinishedSemaphore;
 	submitInfo.pWaitDstStageMask = waitStages2;
-	submitInfo.pCommandBuffers = &overlayRenderer.combineCommandBuffer;
+	submitInfo.pCommandBuffers = &overlayRenderer.combineCommandBuffer.getHandle();
 	submitInfo.pSignalSemaphores = &overlayCombineFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
@@ -387,7 +387,7 @@ void Renderer::render()
 	submitInfo.pWaitSemaphores = waitSems;
 	submitInfo.waitSemaphoreCount = 3;
 	submitInfo.pWaitDstStageMask = waitStages3;
-	submitInfo.pCommandBuffers = &screenCommandBuffers[imageIndex];
+	submitInfo.pCommandBuffers = &screenCommandBuffers.getHandle(imageIndex);
 	submitInfo.pSignalSemaphores = &screenFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
@@ -439,13 +439,6 @@ void Renderer::reloadShaders()
 	updateGBufferCommands();
 	updatePBRCommands();
 	updateScreenCommands();
-}
-
-void Renderer::freeCommandBuffer(VkCommandBuffer* buffer, VkCommandPool pool)
-{
-	bufferFreeMutex.lock();
-	vkFreeCommandBuffers(device, pool, 1, buffer);
-	bufferFreeMutex.unlock();
 }
 
 void Renderer::populateDrawCmdBuffer()
@@ -616,13 +609,13 @@ void Renderer::createCommandPool()
 	commandPool.setQueueFamily(&Engine::physicalDevice->getQueueFamilies().front());
 	commandPool.create(&logicalDevice);
 
-	VkFenceCreateInfo fci = {};
-	fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	fci.pNext = 0;
+	//VkFenceCreateInfo fci = {};
+	//fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	//fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	//fci.pNext = 0;
 
-	VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &gBufferCommands.fence));
-	VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &shadowFence));
+	//VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &gBufferCommands.fence));
+	//VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &shadowFence));
 }
 
 void Renderer::createPerThreadCommandPools()

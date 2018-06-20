@@ -45,14 +45,16 @@ void Text::Style::setColour(glm::fvec4 pColour)
 
 void Text::update()
 {
+	drawingMutex.lock();
+
 	glyphs = style.font->requestGlyphs(style.charSize, this); /// TODO: We get device lost sometimes, most likely a threading issue !!
 	bounds.zero();
 
 	drawable = false;
 
-	if (style.charSize == 0) { return; }
-	if (string.length() == 0) { return; }
-	if (style.font == nullptr) { return; }
+	if (style.charSize == 0) { drawingMutex.unlock(); return; }
+	if (string.length() == 0) { drawingMutex.unlock(); return; }
+	if (style.font == nullptr) { drawingMutex.unlock(); return; }
 
 	drawable = true;
 
@@ -153,10 +155,13 @@ void Text::update()
 	char* data = (char*)vertsBuffer.getMemory()->map();
 	memcpy(data, verts.data(), verts.size() * sizeof(Vertex2D));
 	vertsBuffer.getMemory()->unmap();
+
+	drawingMutex.unlock();
 }
 
 void Text::render(VkCommandBuffer cmd)
 {
+	drawingMutex.lock();
 	if (drawable)
 	{
 		VkDeviceSize offsets[] = { 0 };
@@ -164,6 +169,7 @@ void Text::render(VkCommandBuffer cmd)
 		VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, buffer, offsets));
 		VK_VALIDATE(vkCmdDraw(cmd, verts.size(), 1, 0, 0));
 	}
+	drawingMutex.unlock();
 }
 
 void Text::cleanup()
@@ -271,7 +277,7 @@ void Text::updateDescriptorSet()
 	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
 
 	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[0].dstSet = descSet;
+	descriptorWrites[0].dstSet = descSet.getHandle();
 	descriptorWrites[0].dstBinding = 0;
 	descriptorWrites[0].dstArrayElement = 0;
 	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

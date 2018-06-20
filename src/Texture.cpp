@@ -176,6 +176,8 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 			r->endSingleTimeCommands(cmd);
 
+			stagingBuffer.destroy();
+
 			if (isMipped)
 			{
 				auto cmd = r->beginSingleTimeCommands();

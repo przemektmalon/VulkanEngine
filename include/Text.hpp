@@ -77,4 +77,6 @@ private:
 
 	std::vector<Vertex2D> verts;
 	vdu::Buffer vertsBuffer;
+
+	std::mutex drawingMutex;
 };

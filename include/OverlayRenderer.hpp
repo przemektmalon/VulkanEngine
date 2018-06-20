@@ -4,6 +4,7 @@
 #include "Texture.hpp"
 #include "vdu/DeviceMemory.hpp"
 #include "Model.hpp"
+#include "vdu/CommandBuffer.hpp"
 
 class OLayer
 {
@@ -53,7 +54,7 @@ private:
 	bool render;
 	bool needsUpdate;
 
-	VkDescriptorSet imageDescriptor;
+	vdu::DescriptorSet imageDescriptor;
 
 	vdu::Buffer quadBuffer; // For the to-screen pass
 	std::vector<VertexNoNormal> quadVerts;
@@ -87,7 +88,7 @@ public:
 	void removeLayer(OLayer* layer);
 
 	VkRenderPass getRenderPass() { return overlayRenderPass; }
-	VkDescriptorSetLayout getDescriptorSetLayout() { return overlayDescriptorSetLayout; }
+	vdu::DescriptorSetLayout& getDescriptorSetLayout() { return overlayDescriptorSetLayout; }
 
 private:
 
@@ -99,12 +100,12 @@ private:
 	// Pipeline and command buffer for rendering elements
 	VkPipeline elementPipeline;
 	VkPipelineLayout elementPipelineLayout;
-	VkCommandBuffer elementCommandBuffer;
+	vdu::CommandBuffer elementCommandBuffer;
 
 	// Pipeline and command buffer for rendering layers
 	VkPipeline combinePipeline;
 	VkPipelineLayout combinePipelineLayout;
-	VkCommandBuffer combineCommandBuffer;
+	vdu::CommandBuffer combineCommandBuffer;
 
 	// Framebuffer for combined layers
 	VkFramebuffer framebuffer;
@@ -115,5 +116,5 @@ private:
 	vdu::Buffer combineProjUBO;
 
 	// Layout for rendering and combining elements (one texture sampler)
-	VkDescriptorSetLayout overlayDescriptorSetLayout;
+	vdu::DescriptorSetLayout overlayDescriptorSetLayout;
 };

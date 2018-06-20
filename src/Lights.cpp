@@ -40,6 +40,7 @@ void PointLight::destroy()
 	vkDestroyFramebuffer(Engine::renderer->device, *shadowFBO, 0);
 	delete shadowFBO;
 	shadowTex->destroy();
+	delete shadowTex;
 }
 
 void PointLight::updateRadius()
@@ -59,6 +60,7 @@ void SpotLight::destroy()
 	vkDestroyFramebuffer(Engine::renderer->device, *shadowFBO, 0);
 	delete shadowFBO;
 	shadowTex->destroy();
+	delete shadowTex;
 }
 
 void SpotLight::initTexture(int resolution)
@@ -150,6 +152,17 @@ SpotLight & LightManager::addSpotLight(SpotLight::GPUData& data)
 	light.gpuData = &spotLightsGPUData.back();
 
 	return light;
+}
+
+void SunLight::destroy()
+{
+	for (int i = 0; i < 3; ++i)
+	{
+		vkDestroyFramebuffer(Engine::renderer->device, shadowFBO[i], 0);
+		shadowTex[i].destroy();
+	}
+	delete[] shadowFBO;
+	delete[] shadowTex;
 }
 
 void SunLight::initTexture(glm::ivec2 resolution)

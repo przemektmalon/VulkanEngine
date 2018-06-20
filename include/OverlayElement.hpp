@@ -1,6 +1,7 @@
 #pragma once
 #include "PCH.hpp"
 #include "vdu/Shaders.hpp"
+#include "vdu/Descriptors.hpp"
 
 class OverlayElement
 {
@@ -15,7 +16,7 @@ public:
 	virtual void cleanup() {}
 	void* getPushConstData() { return pushConstData; }
 	int getPushConstSize() { return pushConstSize; }
-	VkDescriptorSet getDescriptorSet() { return descSet; }
+	VkDescriptorSet getDescriptorSet() { return descSet.getHandle(); }
 	vdu::ShaderProgram* getShader() { return shader; }
 	void setDepth(float pDepth) { depth = pDepth; depthUpdate = true; }
 	float getDepth() { return depth; }
@@ -36,7 +37,7 @@ protected:
 	std::string name;
 	Type type;
 
-	VkDescriptorSet descSet;
+	vdu::DescriptorSet descSet;
 
 	vdu::ShaderProgram* shader;
 

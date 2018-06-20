@@ -166,6 +166,14 @@ void Threading::update()
 		}
 		PROFILE_END("thread_" + getThisThreadIDString());
 	}
+
+	while (!allGraphicsJobsDone())
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
+	vkQueueWaitIdle(Engine::renderer->lGraphicsQueue.getHandle());
+	vkQueueWaitIdle(Engine::renderer->lTransferQueue.getHandle());
+	Engine::renderer->commandPool.destroy();
 }
 
 void Threading::updateGraphics()
@@ -204,6 +212,14 @@ void Threading::updateGraphics()
 		}
 		PROFILE_END("thread_" + getThisThreadIDString());
 	}
+
+	while (!allGraphicsJobsDone())
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
+	vkQueueWaitIdle(Engine::renderer->lGraphicsQueue.getHandle());
+	vkQueueWaitIdle(Engine::renderer->lTransferQueue.getHandle());
+	Engine::renderer->commandPool.destroy();
 }
 
 bool Threading::allRegularJobsDone()

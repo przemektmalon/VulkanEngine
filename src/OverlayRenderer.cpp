@@ -11,6 +11,8 @@ void OLayer::create(glm::ivec2 pResolution)
 	position = glm::ivec2(0);
 	depth = 0.5;
 
+	auto r = Engine::renderer;
+
 	TextureCreateInfo tci;
 	tci.width = resolution.x;
 	tci.height = resolution.y;
@@ -31,41 +33,28 @@ void OLayer::create(glm::ivec2 pResolution)
 	VkImageView atts[] = { colAttachment.getView(), depAttachment.getView() };
 	VkFramebufferCreateInfo framebufferInfo = {};
 	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebufferInfo.renderPass = Engine::renderer->overlayRenderer.getRenderPass();
+	framebufferInfo.renderPass = r->overlayRenderer.getRenderPass();
 	framebufferInfo.attachmentCount = 2;
 	framebufferInfo.pAttachments = atts;
 	framebufferInfo.width = resolution.x;
 	framebufferInfo.height = resolution.y;
 	framebufferInfo.layers = 1;
 
-	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, &framebuffer));
+	VK_CHECK_RESULT(vkCreateFramebuffer(r->device, &framebufferInfo, nullptr, &framebuffer));
 
 	quadBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	quadBuffer.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-	quadBuffer.create(&Engine::renderer->logicalDevice, sizeof(VertexNoNormal) * 6);
+	quadBuffer.create(&r->logicalDevice, sizeof(VertexNoNormal) * 6);
 
-	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = Engine::renderer->descriptorPool.getHandle();
-	allocInfo.descriptorSetCount = 1;
-	auto layout = Engine::renderer->overlayRenderer.getDescriptorSetLayout();
-	allocInfo.pSetLayouts = &layout;
-	
-	vkAllocateDescriptorSets(Engine::renderer->device, &allocInfo, &imageDescriptor);
+	imageDescriptor.create(&r->logicalDevice, &r->overlayRenderer.getDescriptorSetLayout(), &r->descriptorPool);
 
-	VkDescriptorImageInfo ii = {};
-	ii.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-	ii.imageView = colAttachment.getView();
-	ii.sampler = Engine::renderer->textureSampler;
+	auto updater = imageDescriptor.makeUpdater();
 
-	VkWriteDescriptorSet wds = {};
-	wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	wds.descriptorCount = 1;
-	wds.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	wds.pImageInfo = &ii;
-	wds.dstSet = imageDescriptor;
+	auto texUpdate = updater->addImageUpdate("texture");
 
-	vkUpdateDescriptorSets(Engine::renderer->device, 1, &wds, 0, 0);
+	*texUpdate = { r->textureSampler, colAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
+
+	imageDescriptor.submitUpdater(updater);
 
 	setPosition(glm::ivec2(0, 0));
 }
@@ -413,7 +402,7 @@ void OverlayRenderer::createOverlayPipeline()
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 1;
 		auto descSetLayout = Engine::renderer->overlayRenderer.getDescriptorSetLayout();
-		pipelineLayoutInfo.pSetLayouts = &descSetLayout;
+		pipelineLayoutInfo.pSetLayouts = &descSetLayout.getHandle();
 		pipelineLayoutInfo.pushConstantRangeCount = 2;
 		pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges;
 
@@ -548,7 +537,7 @@ void OverlayRenderer::createOverlayPipeline()
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 1;
-		VkDescriptorSetLayout descSetLayouts[] = { overlayDescriptorSetLayout };
+		VkDescriptorSetLayout descSetLayouts[] = { overlayDescriptorSetLayout.getHandle() };
 		pipelineLayoutInfo.pSetLayouts = descSetLayouts;
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
@@ -578,19 +567,8 @@ void OverlayRenderer::createOverlayPipeline()
 
 void OverlayRenderer::createOverlayDescriptorSetLayouts()
 {
-	VkDescriptorSetLayoutBinding textDescLayoutBinding = {};
-	textDescLayoutBinding.binding = 0;
-	textDescLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	textDescLayoutBinding.descriptorCount = 1;
-	textDescLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	std::array<VkDescriptorSetLayoutBinding, 1> bindings = { textDescLayoutBinding };
-	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-	layoutInfo.pBindings = bindings.data();
-
-	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(Engine::renderer->device, &layoutInfo, nullptr, &overlayDescriptorSetLayout));
+	overlayDescriptorSetLayout.addBinding("texture", vdu::DescriptorType::CombinedImageSampler, 0, 1, vdu::ShaderStage::Fragment);
+	overlayDescriptorSetLayout.create(&Engine::renderer->logicalDevice);
 }
 
 void OverlayRenderer::createOverlayDescriptorSets()
@@ -611,14 +589,8 @@ void OverlayRenderer::createOverlayDescriptorSets()
 
 void OverlayRenderer::createOverlayCommands()
 {
-	VkCommandBufferAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = Engine::renderer->commandPool.getHandle();
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
-
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(Engine::renderer->device, &allocInfo, &elementCommandBuffer));
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(Engine::renderer->device, &allocInfo, &combineCommandBuffer));
+	elementCommandBuffer.allocate(&Engine::renderer->logicalDevice, &Engine::renderer->commandPool);
+	combineCommandBuffer.allocate(&Engine::renderer->logicalDevice, &Engine::renderer->commandPool);
 }
 
 void OverlayRenderer::updateOverlayCommands()
@@ -645,9 +617,11 @@ void OverlayRenderer::updateOverlayCommands()
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-	VK_CHECK_RESULT(vkBeginCommandBuffer(elementCommandBuffer, &beginInfo));
+	auto cmd = elementCommandBuffer.getHandle();
 
-	VK_VALIDATE(vkCmdWriteTimestamp(elementCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::BEGIN_OVERLAY));
+	VK_CHECK_RESULT(vkBeginCommandBuffer(cmd, &beginInfo));
+
+	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::BEGIN_OVERLAY));
 
 	for (auto layer : layers)
 	{
@@ -669,14 +643,14 @@ void OverlayRenderer::updateOverlayCommands()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		VK_VALIDATE(vkCmdBeginRenderPass(elementCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+		VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		VK_VALIDATE(vkCmdBindPipeline(elementCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipeline));
+		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipeline));
 
 		auto& elements = layer->elements;
 
 		VkRect2D scissor = { 0, 0, layer->resolution.x, layer->resolution.y };
-		VK_VALIDATE(vkCmdSetScissor(elementCommandBuffer, 0, 1, &scissor));
+		VK_VALIDATE(vkCmdSetScissor(cmd, 0, 1, &scissor));
 
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
@@ -685,7 +659,7 @@ void OverlayRenderer::updateOverlayCommands()
 		viewport.height = (float)layer->resolution.y;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
-		VK_VALIDATE(vkCmdSetViewport(elementCommandBuffer, 0, 1, &viewport));
+		VK_VALIDATE(vkCmdSetViewport(cmd, 0, 1, &viewport));
 
 		for (auto element : elements)
 		{
@@ -697,32 +671,33 @@ void OverlayRenderer::updateOverlayCommands()
 			memcpy(push, &proj[0][0], sizeof(glm::fmat4));
 			float depth = element->getDepth();
 			memcpy(push + 16, &depth, sizeof(float));
-			VK_VALIDATE(vkCmdPushConstants(elementCommandBuffer, elementPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4), push));
+			VK_VALIDATE(vkCmdPushConstants(cmd, elementPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4), push));
 
 			float push2[5];
 			glm::fvec4 c = *(glm::fvec4*)element->getPushConstData();
 			memcpy(push2, &c[0], sizeof(glm::fvec4));
 			int t = element->getType();
 			memcpy(push2 + 4, &t, sizeof(int));
-			VK_VALIDATE(vkCmdPushConstants(elementCommandBuffer, elementPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::fmat4) + sizeof(glm::fvec4), sizeof(glm::fvec4) + sizeof(int), push2));
+			VK_VALIDATE(vkCmdPushConstants(cmd, elementPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::fmat4) + sizeof(glm::fvec4), sizeof(glm::fvec4) + sizeof(int), push2));
 
 			VkDescriptorSet descSet = element->getDescriptorSet();
-			VK_VALIDATE(vkCmdBindDescriptorSets(elementCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipelineLayout, 0, 1, &descSet, 0, nullptr));
+			VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipelineLayout, 0, 1, &descSet, 0, nullptr));
 
-			element->render(elementCommandBuffer);
+			element->render(cmd);
 		}
 
-		VK_VALIDATE(vkCmdEndRenderPass(elementCommandBuffer));
+		VK_VALIDATE(vkCmdEndRenderPass(cmd));
 	}
 
-	VK_VALIDATE(vkCmdWriteTimestamp(elementCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::END_OVERLAY));
+	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::END_OVERLAY));
 
-	VK_CHECK_RESULT(vkEndCommandBuffer(elementCommandBuffer));
+	VK_CHECK_RESULT(vkEndCommandBuffer(cmd));
 
+	cmd = combineCommandBuffer.getHandle();
 
-	VK_CHECK_RESULT(vkBeginCommandBuffer(combineCommandBuffer, &beginInfo));
+	VK_CHECK_RESULT(vkBeginCommandBuffer(cmd, &beginInfo));
 
-	VK_VALIDATE(vkCmdWriteTimestamp(combineCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::BEGIN_OVERLAY_COMBINE));
+	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::BEGIN_OVERLAY_COMBINE));
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -739,9 +714,9 @@ void OverlayRenderer::updateOverlayCommands()
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
-	VK_VALIDATE(vkCmdBeginRenderPass(combineCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+	VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-	VK_VALIDATE(vkCmdBindPipeline(combineCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipeline));
+	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipeline));
 
 	glm::fmat4 proj = glm::ortho<float>(0, Engine::window->resX, Engine::window->resY, 0, -10, 10);
 	glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f,
@@ -749,40 +724,40 @@ void OverlayRenderer::updateOverlayCommands()
 		+0.0f, 0.0f, 0.5f, 0.0f,
 		+0.0f, 0.0f, 0.5f, 1.0f);
 	proj = clip * proj;
-	VK_VALIDATE(vkCmdPushConstants(combineCommandBuffer, combinePipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4), &proj));
+	VK_VALIDATE(vkCmdPushConstants(cmd, combinePipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4), &proj));
 
 	for (auto layer : layers)
 	{
 		if (!layer->doDraw())
 			continue;
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(combineCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipelineLayout, 0, 1, &layer->imageDescriptor, 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipelineLayout, 0, 1, &layer->imageDescriptor.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { layer->quadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
-		VK_VALIDATE(vkCmdBindVertexBuffers(combineCommandBuffer, 0, 1, vertexBuffers, offsets));
+		VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets));
 
-		VK_VALIDATE(vkCmdDraw(combineCommandBuffer, 6, 1, 0, 0));
+		VK_VALIDATE(vkCmdDraw(cmd, 6, 1, 0, 0));
 	}
 
-	VK_VALIDATE(vkCmdEndRenderPass(combineCommandBuffer));
+	VK_VALIDATE(vkCmdEndRenderPass(cmd));
 
-	VK_VALIDATE(vkCmdWriteTimestamp(combineCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::END_OVERLAY_COMBINE));
+	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Engine::renderer->queryPool, Renderer::END_OVERLAY_COMBINE));
 
-	VK_CHECK_RESULT(vkEndCommandBuffer(combineCommandBuffer));
+	VK_CHECK_RESULT(vkEndCommandBuffer(cmd));
 
 	Engine::threading->layersMutex.unlock();
 }
 
 void OverlayRenderer::destroyOverlayCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->commandPool.getHandle(), 1, &elementCommandBuffer));
-	VK_VALIDATE(vkFreeCommandBuffers(Engine::renderer->device, Engine::renderer->commandPool.getHandle(), 1, &combineCommandBuffer));
+	elementCommandBuffer.free();
+	combineCommandBuffer.free();
 }
 
 void OverlayRenderer::destroyOverlayDescriptorSetLayouts()
 {
-	VK_VALIDATE(vkDestroyDescriptorSetLayout(Engine::renderer->device, overlayDescriptorSetLayout, 0));
+	overlayDescriptorSetLayout.destroy();
 }
 
 void OverlayRenderer::destroyOverlayRenderPass()

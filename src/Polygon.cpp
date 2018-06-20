@@ -55,7 +55,7 @@ void UIPolygon::updateDescriptorSet()
 	std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
 
 	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[0].dstSet = descSet;
+	descriptorWrites[0].dstSet = descSet.getHandle();
 	descriptorWrites[0].dstBinding = 0;
 	descriptorWrites[0].dstArrayElement = 0;
 	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

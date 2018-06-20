@@ -71,7 +71,6 @@ public:
 	// For now just make sure each thread has its own command pool
 	static thread_local vdu::CommandPool commandPool; // [3]
 	std::mutex bufferFreeMutex;
-	void freeCommandBuffer(VkCommandBuffer* buffer, VkCommandPool pool);
 
 	// The current pool will be toggled when all submissions are done ( after all buffers are created )
 	/*int currentPool;
@@ -179,8 +178,7 @@ public:
 	VkRenderPass gBufferRenderPass;
 
 	// Command buffer
-	CommandsAndFence gBufferCommands;
-	VkCommandPool gBufferPreviousPool;
+	vdu::CommandBuffer gBufferCommands;
 	bool gBufferCmdsNeedUpdate;
 
 	/// --------------------
@@ -223,8 +221,7 @@ public:
 	VkRenderPass sunShadowRenderPass;
 
 	// Command buffer
-	VkCommandBuffer shadowCommandBuffer;
-	VkCommandPool shadowPreviousPool;
+	vdu::CommandBuffer shadowCommandBuffer;
 	VkFence shadowFence;
 
 	/// --------------------
@@ -259,8 +256,7 @@ public:
 	Texture pbrOutput;
 
 	// Command buffer
-	VkCommandBuffer pbrCommandBuffer;
-	VkCommandPool pbrPreviousPool;
+	vdu::CommandBuffer pbrCommandBuffer;
 	VkFence pbrFence;
 
 	/// --------------------
@@ -307,7 +303,8 @@ public:
 	VkRenderPass screenRenderPass;
 
 	// Command buffers
-	std::vector<VkCommandBuffer> screenCommandBuffers;
+	//std::vector<vdu::CommandBuffer> screenCommandBuffers;
+	vdu::CommandBufferArray screenCommandBuffers;
 
 	// GPU Memory management
 	// Joint vertex/index buffer
@@ -342,10 +339,6 @@ public:
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 
-	//void createStagingBuffer(Buffer& stagingBuffer, VkDeviceSize size);
-	//void copyToStagingBuffer(Buffer& stagingBuffer, void* srcData, VkDeviceSize size, VkDeviceSize dstOffset = 0);
-	//void destroyStagingBuffer(Buffer& stagingBuffer);
-	
 	VkCommandBuffer beginTransferCommands();
 	VkSubmitInfo endTransferCommands(VkCommandBuffer commandBuffer);
 	void submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence = VK_NULL_HANDLE);

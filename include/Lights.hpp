@@ -144,6 +144,8 @@ public:
 		gpuData->cascadeEnds[3] = 1000;
 	}
 
+	void destroy();
+
 	void initTexture(glm::ivec2 resolution);
 	void calcProjs();
 
@@ -448,6 +450,7 @@ public: ///TODO: Max light count is 150, add setters etc
 			l.destroy();
 		for (auto& l : spotLights)
 			l.destroy();
+		sunLight.destroy();
 	}
 
 	PointLight& addPointLight()

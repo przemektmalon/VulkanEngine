@@ -336,14 +336,7 @@ void Renderer::updateGBufferDescriptorSets()
 
 void Renderer::createGBufferCommands()
 {
-	VkCommandBufferAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool.getHandle();
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
-
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommands.commands));
-	gBufferPreviousPool = commandPool.getHandle();
+	gBufferCommands.allocate(&logicalDevice, &commandPool);
 }
 
 void Renderer::updateGBufferCommands()
@@ -359,17 +352,13 @@ void Renderer::updateGBufferCommands()
 	//VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, true, std::numeric_limits<u64>::max()));
 	//PROFILE_END("gbufferfence");
 
-	freeCommandBuffer(&gBufferCommands.commands, gBufferPreviousPool);
+	bufferFreeMutex.lock();
+	gBufferCommands.free();
+	bufferFreeMutex.unlock();
 
 	createGBufferCommands();
 
-	VkCommandBufferAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool.getHandle();
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
-
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &gBufferCommands.commands));
+	auto cmd = gBufferCommands.getHandle();
 
 	// From now on until we reset the gbuffer fence at the end of this function we cant submit a gBuffer command buffer
 
@@ -377,10 +366,10 @@ void Renderer::updateGBufferCommands()
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-	VK_CHECK_RESULT(vkBeginCommandBuffer(gBufferCommands.commands, &beginInfo));
+	VK_CHECK_RESULT(vkBeginCommandBuffer(cmd, &beginInfo));
 
-	VK_VALIDATE(vkCmdResetQueryPool(gBufferCommands.commands, queryPool, 0, NUM_GPU_TIMESTAMPS));
-	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommands.commands, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, BEGIN_GBUFFER));
+	VK_VALIDATE(vkCmdResetQueryPool(cmd, queryPool, 0, NUM_GPU_TIMESTAMPS));
+	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, BEGIN_GBUFFER));
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -397,26 +386,26 @@ void Renderer::updateGBufferCommands()
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
-	VK_VALIDATE(vkCmdBeginRenderPass(gBufferCommands.commands, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+	VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-	VK_VALIDATE(vkCmdBindPipeline(gBufferCommands.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline));
+	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline));
 
-	VK_VALIDATE(vkCmdBindDescriptorSets(gBufferCommands.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet.getHandle(), 0, nullptr));
+	VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet.getHandle(), 0, nullptr));
 
 	VkBuffer vertexBuffers[] = { vertexIndexBuffer.getHandle() };
 	VkDeviceSize offsets[] = { 0 };
-	VK_VALIDATE(vkCmdBindVertexBuffers(gBufferCommands.commands, 0, 1, vertexBuffers, offsets));
-	VK_VALIDATE(vkCmdBindIndexBuffer(gBufferCommands.commands, vertexIndexBuffer.getHandle(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
+	VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets));
+	VK_VALIDATE(vkCmdBindIndexBuffer(cmd, vertexIndexBuffer.getHandle(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
 
-	VK_VALIDATE(vkCmdDrawIndexedIndirect(gBufferCommands.commands, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
+	VK_VALIDATE(vkCmdDrawIndexedIndirect(cmd, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
-	VK_VALIDATE(vkCmdEndRenderPass(gBufferCommands.commands));
+	VK_VALIDATE(vkCmdEndRenderPass(cmd));
 
-	VK_VALIDATE(vkCmdWriteTimestamp(gBufferCommands.commands, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, END_GBUFFER));
+	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, END_GBUFFER));
 
-	VK_CHECK_RESULT(vkEndCommandBuffer(gBufferCommands.commands));
+	VK_CHECK_RESULT(vkEndCommandBuffer(cmd));
 
-	VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferCommands.fence));
+	//VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferCommands.fence));
 }
 
 void Renderer::destroyGBufferAttachments()
@@ -456,5 +445,5 @@ void Renderer::destroyGBufferDescriptorSets()
 
 void Renderer::destroyGBufferCommands()
 {
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, &gBufferCommands.commands));
+	gBufferCommands.free();
 }

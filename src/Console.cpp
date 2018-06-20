@@ -309,7 +309,7 @@ void Console::renderAtStartup()
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 0;
 	submitInfo.pWaitDstStageMask = 0;
-	submitInfo.pCommandBuffers = &Engine::renderer->overlayRenderer.elementCommandBuffer;
+	submitInfo.pCommandBuffers = &Engine::renderer->overlayRenderer.elementCommandBuffer.getHandle();
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pSignalSemaphores = &Engine::renderer->overlayFinishedSemaphore;
 	submitInfo.signalSemaphoreCount = 1;
@@ -320,7 +320,7 @@ void Console::renderAtStartup()
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = &Engine::renderer->overlayFinishedSemaphore;
 	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.pCommandBuffers = &Engine::renderer->overlayRenderer.combineCommandBuffer;
+	submitInfo.pCommandBuffers = &Engine::renderer->overlayRenderer.combineCommandBuffer.getHandle();
 	submitInfo.pSignalSemaphores = &Engine::renderer->overlayCombineFinishedSemaphore;
 	submitInfo.signalSemaphoreCount = 1;
 
@@ -340,7 +340,7 @@ void Console::renderAtStartup()
 	submitInfo.pWaitSemaphores = waitSems;
 	submitInfo.waitSemaphoreCount = 2;
 	submitInfo.pWaitDstStageMask = waitStages2;
-	submitInfo.pCommandBuffers = &Engine::renderer->screenCommandBuffers[imageIndex];
+	submitInfo.pCommandBuffers = &Engine::renderer->screenCommandBuffers.getHandle(imageIndex);
 	submitInfo.pSignalSemaphores = &Engine::renderer->screenFinishedSemaphore;
 
 	VK_CHECK_RESULT(vkQueueSubmit(Engine::renderer->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));

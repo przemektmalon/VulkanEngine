@@ -52,6 +52,10 @@
 #include "chaiscript/chaiscript.hpp"
 #include <typeinfo>
 
+#undef DBG_SEVERE
+#undef DBG_WARNING
+#undef DBG_INFO
+
 // Debugging output macros
 #ifdef _WIN32
 
