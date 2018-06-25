@@ -99,7 +99,7 @@ public:
 	// Memory pools
 	vdu::DescriptorPool descriptorPool;
 	vdu::DescriptorPool freeableDescriptorPool;
-	VkQueryPool queryPool;
+	vdu::QueryPool queryPool;
 
 	// Semaphores
 	VkSemaphore imageAvailableSemaphore;

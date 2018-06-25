@@ -368,8 +368,8 @@ void Renderer::updateGBufferCommands()
 
 	VK_CHECK_RESULT(vkBeginCommandBuffer(cmd, &beginInfo));
 
-	VK_VALIDATE(vkCmdResetQueryPool(cmd, queryPool, 0, NUM_GPU_TIMESTAMPS));
-	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, BEGIN_GBUFFER));
+	queryPool.cmdReset(cmd);
+	queryPool.cmdTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, BEGIN_GBUFFER);
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -401,7 +401,7 @@ void Renderer::updateGBufferCommands()
 
 	VK_VALIDATE(vkCmdEndRenderPass(cmd));
 
-	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, END_GBUFFER));
+	queryPool.cmdTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, END_GBUFFER);
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(cmd));
 

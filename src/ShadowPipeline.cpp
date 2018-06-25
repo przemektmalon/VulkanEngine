@@ -297,7 +297,7 @@ void Renderer::updateShadowCommands()
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
 	VK_CHECK_RESULT(vkBeginCommandBuffer(cmd, &beginInfo));
-	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, queryPool, BEGIN_SHADOW));
+	queryPool.cmdTimestamp(shadowCommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, BEGIN_SHADOW);
 
 	for (auto& l : lightManager.pointLights)
 	{
@@ -416,7 +416,7 @@ void Renderer::updateShadowCommands()
 		}
 	}
 
-	VK_VALIDATE(vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, END_SHADOW));
+	queryPool.cmdTimestamp(shadowCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, END_SHADOW);
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(cmd));
 }

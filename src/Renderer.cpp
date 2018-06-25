@@ -237,7 +237,7 @@ void Renderer::cleanup()
 	descriptorPool.destroy();
 	freeableDescriptorPool.destroy();
 	commandPool.destroy();
-	VK_VALIDATE(vkDestroyQueryPool(device, queryPool, 0));
+	queryPool.destroy();
 
 	VK_VALIDATE(vkDestroySampler(device, textureSampler, nullptr));
 	VK_VALIDATE(vkDestroySampler(device, skySampler, nullptr));
@@ -296,7 +296,8 @@ void Renderer::render()
 
 	VK_CHECK_RESULT(vkQueueWaitIdle(presentQueue));
 
-	VK_CHECK_RESULT(vkGetQueryPoolResults(device, queryPool, 0, NUM_GPU_TIMESTAMPS, sizeof(u64) * NUM_GPU_TIMESTAMPS, Engine::gpuTimeStamps, sizeof(u64), VK_QUERY_RESULT_64_BIT));
+	auto timestamps = queryPool.query();
+	memcpy(Engine::gpuTimeStamps, timestamps, sizeof(u64) * NUM_GPU_TIMESTAMPS);
 
 	PROFILE_RESET("gbuffer");
 	PROFILE_RESET("shadow");
@@ -627,12 +628,9 @@ void Renderer::createPerThreadCommandPools()
 
 void Renderer::createQueryPool()
 {
-	VkQueryPoolCreateInfo ci = {};
-	ci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-	ci.queryType = VK_QUERY_TYPE_TIMESTAMP;
-	ci.queryCount = NUM_GPU_TIMESTAMPS;
-
-	VK_CHECK_RESULT(vkCreateQueryPool(device, &ci, 0, &queryPool));
+	queryPool.setQueryCount(NUM_GPU_TIMESTAMPS);
+	queryPool.setQueryType(VK_QUERY_TYPE_TIMESTAMP);
+	queryPool.create(&logicalDevice);
 }
 
 void Renderer::createTextureSampler()
