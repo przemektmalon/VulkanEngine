@@ -85,7 +85,7 @@ void Renderer::initialise()
 	overlayRenderer.createOverlayAttachmentsFramebuffers();
 	overlayRenderer.createOverlayCommands();
 
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 3; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;

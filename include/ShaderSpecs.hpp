@@ -83,4 +83,13 @@ public:
 	}
 };
 
+class CombineSceneShader : public vdu::ShaderProgram
+{
+public:
+	CombineSceneShader()
+	{
+		addModule(vdu::ShaderStage::Vertex, Engine::workingDirectory + "/res/shaders/combineScene.glsl");
+		addModule(vdu::ShaderStage::Fragment, Engine::workingDirectory + "/res/shaders/combineScene.glsl");
+	}
+};
 

@@ -202,7 +202,7 @@ void Engine::start()
 
 			world.modelNames["hollowbox" + std::to_string(i)]->setTransform(t);
 			world.modelNames["hollowbox" + std::to_string(i)]->setMaterial(assets.getMaterial(materialList[i % 6]));
-			world.modelNames["hollowbox" + std::to_string(i)]->makePhysicsObject();
+			//world.modelNames["hollowbox" + std::to_string(i)]->makePhysicsObject();
 		}
 
 		world.addModelInstance("pbrsphere", "pbrsphere");
@@ -213,7 +213,7 @@ void Engine::start()
 
 		world.modelNames["pbrsphere"]->setTransform(t);
 		world.modelNames["pbrsphere"]->setMaterial(assets.getMaterial("marble"));
-		world.modelNames["pbrsphere"]->makePhysicsObject();
+		//world.modelNames["pbrsphere"]->makePhysicsObject();
 
 		world.addModelInstance("ground", "ground");
 		t.setTranslation(glm::fvec3(0, 0, 0));
@@ -221,7 +221,7 @@ void Engine::start()
 
 		world.modelNames["ground"]->setTransform(t);
 		world.modelNames["ground"]->setMaterial(assets.getMaterial("marble"));
-		world.modelNames["ground"]->makePhysicsObject();
+		//world.modelNames["ground"]->makePhysicsObject();
 
 		//world.addModelInstance("monkey");
 		//world.modelNames["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));

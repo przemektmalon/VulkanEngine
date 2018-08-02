@@ -133,6 +133,7 @@ public:
 	OverlayShader overlayShader;
 	CombineOverlaysShader combineOverlaysShader;
 	SunShadowShader sunShadowShader;
+	CombineSceneShader combineSceneShader;
 
 	/// --------------------
 	/// GBuffer pipeline
@@ -305,6 +306,14 @@ public:
 	// Command buffers
 	//std::vector<vdu::CommandBuffer> screenCommandBuffers;
 	vdu::CommandBufferArray screenCommandBuffers;
+
+	/// ------------------------
+	/// Scene combine pipeline
+	/// ------------------------
+
+
+
+
 
 	// GPU Memory management
 	// Joint vertex/index buffer
