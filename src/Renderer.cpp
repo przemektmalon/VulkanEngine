@@ -40,12 +40,10 @@ void Renderer::initialise()
 	// Pipeline attachments
 	createGBufferAttachments();
 	createPBRAttachments();
-	createScreenAttachments();
 
 	// Pipeline render passes
 	createGBufferRenderPass();
 	createShadowRenderPass();
-	createScreenRenderPass();
 
 	// Pipeline descriptor set layouts
 	createGBufferDescriptorSetLayouts();
@@ -61,7 +59,6 @@ void Renderer::initialise()
 
 	// Pipeline framebuffers
 	createGBufferFramebuffers();
-	createScreenFramebuffers();
 
 	// Buffers for models, screen quad, uniforms
 	createDataBuffers();
@@ -148,11 +145,11 @@ void Renderer::reInitialise()
 	// Pipeline attachments
 	createGBufferAttachments();
 	createPBRAttachments();
-	createScreenAttachments();
+	//createScreenAttachments();
 
 	// Pipeline render passes
 	createGBufferRenderPass();
-	createScreenRenderPass();
+	//createScreenRenderPass();
 	overlayRenderer.createOverlayRenderPass();
 	overlayRenderer.createOverlayAttachmentsFramebuffers();
 
@@ -164,7 +161,7 @@ void Renderer::reInitialise()
 
 	// Pipeline framebuffers
 	createGBufferFramebuffers();
-	createScreenFramebuffers();
+	//createScreenFramebuffers();
 
 	// Pipeline commands
 	createGBufferCommands();
@@ -222,11 +219,8 @@ void Renderer::cleanup()
 
 	// Screen pipeline
 	{
-		destroyScreenAttachments();
-		destroyScreenRenderPass();
 		destroyScreenDescriptorSetLayouts();
 		destroyScreenPipeline();
-		destroyScreenFramebuffers();
 		//destroyScreenDescriptorSets();
 		//destroyScreenCommands();
 		destroyScreenSwapChain();
@@ -277,10 +271,7 @@ void Renderer::cleanupForReInit()
 	destroyPBRPipeline();
 	destroyPBRCommands();
 
-	destroyScreenAttachments();
-	destroyScreenRenderPass();
 	destroyScreenPipeline();
-	destroyScreenFramebuffers();
 	destroyScreenCommands();
 	destroyScreenSwapChain();
 
@@ -373,7 +364,7 @@ void Renderer::render()
 
 
 	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(device, screenSwapchain.getHandle(), std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
 	if (result != VK_SUCCESS)
 	{
@@ -400,7 +391,7 @@ void Renderer::render()
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = &screenFinishedSemaphore;
 
-	VkSwapchainKHR swapChains[] = { swapChain };
+	VkSwapchainKHR swapChains[] = { screenSwapchain.getHandle() };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
 

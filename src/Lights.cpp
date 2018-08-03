@@ -23,7 +23,7 @@ void PointLight::initTexture(int resolution)
 
 	VkFramebufferCreateInfo framebufferInfo = {};
 	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebufferInfo.renderPass = Engine::renderer->pointShadowRenderPass;
+	framebufferInfo.renderPass = Engine::renderer->shadowRenderPass.getHandle();
 	framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 	framebufferInfo.pAttachments = attachments.data();
 	framebufferInfo.width = resolution;
@@ -83,7 +83,7 @@ void SpotLight::initTexture(int resolution)
 
 	VkFramebufferCreateInfo framebufferInfo = {};
 	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebufferInfo.renderPass = Engine::renderer->spotShadowRenderPass;
+	framebufferInfo.renderPass = Engine::renderer->shadowRenderPass.getHandle();
 	framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 	framebufferInfo.pAttachments = attachments.data();
 	framebufferInfo.width = resolution;
@@ -190,7 +190,7 @@ void SunLight::initTexture(glm::ivec2 resolution)
 
 		VkFramebufferCreateInfo framebufferInfo = {};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = Engine::renderer->sunShadowRenderPass;
+		framebufferInfo.renderPass = Engine::renderer->shadowRenderPass.getHandle();
 		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		framebufferInfo.pAttachments = attachments.data();
 		framebufferInfo.width = resolution.x;

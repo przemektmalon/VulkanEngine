@@ -1,56 +1,50 @@
 #include "PCH.hpp"
 #include "Pipeline.hpp"
 
-void Pipeline::setDescriptorSet(vdu::DescriptorSet * descriptor)
+void vdu::Pipeline::setDescriptorSetLayout(vdu::DescriptorSetLayout * descriptorLayout)
+{
+}
+
+void vdu::Pipeline::setDescriptorSet(vdu::DescriptorSet * descriptor)
 {
 	m_descriptorSet = descriptor;
 }
 
-void Pipeline::addTextureAttachment(vdu::Texture * texture)
-{
-	m_attachments.push_back(texture);
-}
-
-void Pipeline::setShaderProgram(vdu::ShaderProgram * shader)
+void vdu::Pipeline::setShaderProgram(vdu::ShaderProgram * shader)
 {
 	m_shaderProgram = shader;
 }
 
-void GraphicsPipeline::create(vdu::LogicalDevice * device)
+void vdu::Pipeline::setFramebuffer(vdu::Framebuffer * framebuffer)
+{
+	m_framebuffer = framebuffer;
+}
+
+void vdu::GraphicsPipeline::create(vdu::LogicalDevice * device)
 {
 	m_logicalDevice = device;
 	createRenderPass();
-	createFramebuffer();
 }
 
-void GraphicsPipeline::createFramebuffer()
+void vdu::GraphicsPipeline::createRenderPass()
 {
 }
 
-void GraphicsPipeline::createRenderPass()
-{
-}
-
-void ComputePipeline::create(vdu::LogicalDevice * device)
+void vdu::ComputePipeline::create(vdu::LogicalDevice * device)
 {
 	m_logicalDevice = device;
 }
 
-void PresentPipeline::createSwapChain()
+void vdu::PresentPipeline::createSwapChain()
 {
 }
 
-void PresentPipeline::createFramebuffer()
+void vdu::PresentPipeline::createRenderPass()
 {
 }
 
-void PresentPipeline::createRenderPass()
-{
-}
-
-void PresentPipeline::create(vdu::LogicalDevice * device)
+void vdu::PresentPipeline::create(vdu::LogicalDevice * device)
 {
 	m_logicalDevice = device;
 	createRenderPass();
-	createFramebuffer();
 }

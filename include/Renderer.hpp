@@ -62,8 +62,6 @@ public:
 	VkQueue graphicsQueue;
 	VkQueue computeQueue;
 	VkQueue presentQueue;
-	VkSwapchainKHR swapChain;
-	VkFormat swapChainImageFormat;
 	VkExtent2D renderResolution;
 
 	// Thread safe command pools and fencing
@@ -169,14 +167,14 @@ public:
 	bool gBufferDescriptorSetNeedsUpdate;
 
 	// Framebuffer and attachments
-	VkFramebuffer gBufferFramebuffer;
+	vdu::Framebuffer gBufferFramebuffer;
 	Texture gBufferColourAttachment;
 	Texture gBufferNormalAttachment;
 	Texture gBufferPBRAttachment;
 	Texture gBufferDepthAttachment;
 
 	// Render pass
-	VkRenderPass gBufferRenderPass;
+	vdu::RenderPass gBufferRenderPass;
 
 	// Command buffer
 	vdu::CommandBuffer gBufferCommands;
@@ -217,9 +215,7 @@ public:
 	vdu::DescriptorSet shadowDescriptorSet;
 
 	// Render pass
-	VkRenderPass pointShadowRenderPass;
-	VkRenderPass spotShadowRenderPass;
-	VkRenderPass sunShadowRenderPass;
+	vdu::RenderPass shadowRenderPass;
 
 	// Command buffer
 	vdu::CommandBuffer shadowCommandBuffer;
@@ -266,11 +262,8 @@ public:
 
 	// Functions
 	void createScreenSwapChain();
-	void createScreenAttachments();
-	void createScreenRenderPass();
 	void createScreenDescriptorSetLayouts();
 	void createScreenPipeline();
-	void createScreenFramebuffers();
 	void createScreenDescriptorSets();
 	void createScreenCommands();
 
@@ -279,11 +272,8 @@ public:
 	void updateScreenCommandsForConsole();
 
 	void destroyScreenSwapChain();
-	void destroyScreenAttachments();
-	void destroyScreenRenderPass();
 	void destroyScreenDescriptorSetLayouts();
 	void destroyScreenPipeline();
-	void destroyScreenFramebuffers();
 	void destroyScreenDescriptorSets();
 	void destroyScreenCommands();
 	
@@ -296,12 +286,7 @@ public:
 	vdu::DescriptorSet screenDescriptorSet;
 
 	// Framebuffer and attachments
-	std::vector<VkFramebuffer> screenFramebuffers;
-	std::vector<VkImage> swapChainImages;
-	std::vector<VkImageView> swapChainImageViews;
-
-	// Render pass
-	VkRenderPass screenRenderPass;
+	vdu::Swapchain screenSwapchain;
 
 	// Command buffers
 	//std::vector<vdu::CommandBuffer> screenCommandBuffers;

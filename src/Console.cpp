@@ -327,7 +327,7 @@ void Console::renderAtStartup()
 	VK_CHECK_RESULT(vkQueueSubmit(Engine::renderer->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
 	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(Engine::renderer->device, Engine::renderer->swapChain, std::numeric_limits<uint64_t>::max(), Engine::renderer->imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(Engine::renderer->device, Engine::renderer->screenSwapchain.getHandle(), std::numeric_limits<uint64_t>::max(), Engine::renderer->imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
 	if (result != VK_SUCCESS)
 	{
@@ -352,7 +352,7 @@ void Console::renderAtStartup()
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = &Engine::renderer->screenFinishedSemaphore;
 
-	VkSwapchainKHR swapChains[] = { Engine::renderer->swapChain };
+	VkSwapchainKHR swapChains[] = { Engine::renderer->screenSwapchain.getHandle() };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
 

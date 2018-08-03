@@ -2,73 +2,71 @@
 #include "PCH.hpp"
 #include "vdu/VDU.hpp"
 
-class Pipeline
+namespace vdu
 {
-public:
+	class Pipeline
+	{
+	public:
 
-	void setDescriptorSet(vdu::DescriptorSet* descriptor);
-	void addTextureAttachment(vdu::Texture* texture);
-	void setShaderProgram(vdu::ShaderProgram* shader);
+		void setDescriptorSetLayout(vdu::DescriptorSetLayout* descriptorLayout);
+		void setDescriptorSet(vdu::DescriptorSet* descriptor);
+		void setShaderProgram(vdu::ShaderProgram* shader);
+		void setFramebuffer(vdu::Framebuffer* framebuffer);
 
-	virtual void create(vdu::LogicalDevice* device) = 0;
+		virtual void create(vdu::LogicalDevice* device) = 0;
 
-protected:
+	protected:
 
-	VkPipeline m_pipeline;
-	VkPipelineLayout m_layout;
+		VkPipeline m_pipeline;
+		VkPipelineLayout m_layout;
 
-	std::vector<vdu::Texture*> m_attachments;
+		vdu::DescriptorSet* m_descriptorSet;
 
-	vdu::DescriptorSet* m_descriptorSet;
+		vdu::ShaderProgram* m_shaderProgram;
 
-	vdu::ShaderProgram* m_shaderProgram;
+		vdu::Framebuffer* m_framebuffer;
 
-	vdu::LogicalDevice* m_logicalDevice;
-};
+		vdu::LogicalDevice* m_logicalDevice;
+	};
 
-class GraphicsPipeline : public Pipeline
-{
-public:
+	class GraphicsPipeline : public Pipeline
+	{
+	public:
 
-	void create(vdu::LogicalDevice* device);
+		void create(vdu::LogicalDevice* device);
 
-private:
+	private:
 
-	void createFramebuffer();
-	void createRenderPass();
+		void createRenderPass();
 
-	VkFramebuffer m_framebuffer;
-	VkRenderPass m_renderPass;
-};
+		VkRenderPass m_renderPass;
+	};
 
-class ComputePipeline : public Pipeline
-{
-public:
+	class ComputePipeline : public Pipeline
+	{
+	public:
 
-	void create(vdu::LogicalDevice* device);
+		void create(vdu::LogicalDevice* device);
 
-private:
+	private:
 
-};
+	};
 
-class PresentPipeline : public Pipeline
-{
-public:
+	class PresentPipeline : public Pipeline
+	{
+	public:
 
-	
+		void create(vdu::LogicalDevice* device);
 
-	void create(vdu::LogicalDevice* device);
+	private:
 
-private:
+		void createSwapChain();
+		void createRenderPass();
 
-	void createSwapChain();
-	void createFramebuffer();
-	void createRenderPass();
+		VkRenderPass m_renderPass;
 
-	VkFramebuffer m_framebuffer;
-	VkRenderPass m_renderPass;
-
-	std::vector<VkFramebuffer> screenFramebuffers;
-	std::vector<VkImage> swapChainImages;
-	std::vector<VkImageView> swapChainImageViews;
-};
+		std::vector<VkFramebuffer> screenFramebuffers;
+		std::vector<VkImage> swapChainImages;
+		std::vector<VkImageView> swapChainImageViews;
+	};
+}

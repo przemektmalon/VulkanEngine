@@ -121,20 +121,20 @@ void Engine::start()
 	renderer->overlayRenderer.addLayer(console->getLayer()); // The console is a UI overlay
 
 	/*
-		This graphics job will 'recurse' (see Console::renderAtStartup) until initialisation is complete
+		This graphics job will 'loop' (see Console::renderAtStartup) until initialisation is complete
 	*/
 	auto renderConsoleFunc = []() -> void {
-		Engine::renderer->overlayRenderer.updateOverlayCommands();
+		renderer->overlayRenderer.updateOverlayCommands();
 		renderer->updateScreenDescriptorSets();
 		renderer->updateScreenCommandsForConsole();
-		Engine::console->renderAtStartup();
+		console->renderAtStartup();
 	};
 
 	/*
 		Submit graphics job (console rendering)
 	*/
 	auto renderConsoleJob = new Job<>(renderConsoleFunc, defaultAsyncJobDoneFunc);
-	Engine::threading->addGraphicsJob(renderConsoleJob, 1);
+	threading->addGraphicsJob(renderConsoleJob, 1);
 
 	/*
 		Create bullet physics dynamic world

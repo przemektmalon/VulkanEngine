@@ -4,49 +4,12 @@
 
 void Renderer::createShadowRenderPass()
 {
-	VkAttachmentDescription depthAttachment = {};
-	depthAttachment.format = Engine::physicalDevice->findOptimalDepthFormat();
-	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	auto shadowInfo = shadowRenderPass.setDepthAttachment(Engine::physicalDevice->findOptimalDepthFormat());
+	shadowInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+	shadowInfo->setFinalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+	shadowInfo->setUsageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	VkAttachmentReference depthAttachmentRef = {};
-	depthAttachmentRef.attachment = 0;
-	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	VkSubpassDescription subpass = {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 0;
-	subpass.pColorAttachments = 0;
-	subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-	VkSubpassDependency dependency = {};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = 0;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-	dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-	VkRenderPassCreateInfo renderPassInfo = {};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	std::array<VkAttachmentDescription, 1> attachments = { depthAttachment };
-	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	renderPassInfo.pAttachments = attachments.data();
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
-	renderPassInfo.dependencyCount = 1;
-	renderPassInfo.pDependencies = &dependency;
-
-	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &pointShadowRenderPass));
-
-	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &spotShadowRenderPass));
-
-	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &sunShadowRenderPass));
+	shadowRenderPass.create(&logicalDevice);
 }
 
 void Renderer::createShadowDescriptorSetLayouts()
@@ -176,7 +139,7 @@ void Renderer::createShadowPipeline()
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.layout = pointShadowPipelineLayout;
-	pipelineInfo.renderPass = pointShadowRenderPass;
+	pipelineInfo.renderPass = shadowRenderPass.getHandle();
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -213,7 +176,7 @@ void Renderer::createShadowPipeline()
 	pipelineInfo.stageCount = 2;
 	pipelineInfo.pStages = spotShadowShader.getShaderStageCreateInfos();
 	pipelineInfo.layout = spotShadowPipelineLayout;
-	pipelineInfo.renderPass = spotShadowRenderPass;
+	pipelineInfo.renderPass = shadowRenderPass.getHandle();
 
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &spotShadowPipeline));
 
@@ -249,7 +212,7 @@ void Renderer::createShadowPipeline()
 	pipelineInfo.stageCount = 2;
 	pipelineInfo.pStages = sunShadowShader.getShaderStageCreateInfos();
 	pipelineInfo.layout = sunShadowPipelineLayout;
-	pipelineInfo.renderPass = sunShadowRenderPass;
+	pipelineInfo.renderPass = shadowRenderPass.getHandle();
 
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &sunShadowPipeline));
 }
@@ -303,7 +266,7 @@ void Renderer::updateShadowCommands()
 	{
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = pointShadowRenderPass;
+		renderPassInfo.renderPass = shadowRenderPass.getHandle();
 		renderPassInfo.framebuffer = *l.shadowFBO;
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent.width = 1024;
@@ -338,7 +301,7 @@ void Renderer::updateShadowCommands()
 	{
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = spotShadowRenderPass;
+		renderPassInfo.renderPass = shadowRenderPass.getHandle();
 		renderPassInfo.framebuffer = *l.shadowFBO;
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent.width = 512;
@@ -383,7 +346,7 @@ void Renderer::updateShadowCommands()
 		{
 			VkRenderPassBeginInfo renderPassInfo = {};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = sunShadowRenderPass;
+			renderPassInfo.renderPass = shadowRenderPass.getHandle();
 			renderPassInfo.framebuffer = l.shadowFBO[cascadeIndex];
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent.width = 1280;
@@ -423,9 +386,7 @@ void Renderer::updateShadowCommands()
 
 void Renderer::destroyShadowRenderPass()
 {
-	VK_VALIDATE(vkDestroyRenderPass(device, pointShadowRenderPass, 0));
-	VK_VALIDATE(vkDestroyRenderPass(device, spotShadowRenderPass, 0));
-	VK_VALIDATE(vkDestroyRenderPass(device, sunShadowRenderPass, 0));
+	shadowRenderPass.destroy();
 }
 
 void Renderer::destroyShadowDescriptorSetLayouts()

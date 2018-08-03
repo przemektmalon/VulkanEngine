@@ -29,88 +29,27 @@ void Renderer::createGBufferAttachments()
 
 void Renderer::createGBufferRenderPass()
 {
-	VkAttachmentDescription colorAttachment = {};
-	colorAttachment.format = VK_FORMAT_R8G8B8A8_UNORM;
-	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	auto colourInfo = gBufferRenderPass.addColourAttachment(&gBufferColourAttachment, "colour");
+	colourInfo->setInitialLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	colourInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	colourInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-	VkAttachmentReference colorAttachmentRef = {};
-	colorAttachmentRef.attachment = 0;
-	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	auto normalInfo = gBufferRenderPass.addColourAttachment(&gBufferNormalAttachment, "normal");
+	normalInfo->setInitialLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	normalInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	normalInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-	VkAttachmentDescription depthAttachment = {};
-	depthAttachment.format = gBufferDepthAttachment.getFormat();
-	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	auto pbrInfo = gBufferRenderPass.addColourAttachment(&gBufferPBRAttachment, "pbr");
+	pbrInfo->setInitialLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	pbrInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	pbrInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-	VkAttachmentReference depthAttachmentRef = {};
-	depthAttachmentRef.attachment = 3;
-	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	auto depthInfo = gBufferRenderPass.setDepthAttachment(&gBufferDepthAttachment);
+	depthInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+	depthInfo->setFinalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+	depthInfo->setUsageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	VkAttachmentDescription normalAttachment = {};
-	normalAttachment.format = VK_FORMAT_R32G32_SFLOAT;
-	normalAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	normalAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	normalAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	normalAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	normalAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	normalAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	normalAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	VkAttachmentReference normalAttachmentRef = {};
-	normalAttachmentRef.attachment = 1;
-	normalAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	VkAttachmentDescription pbrAttachment = {};
-	pbrAttachment.format = VK_FORMAT_R8G8B8A8_UNORM;
-	pbrAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	pbrAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	pbrAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	pbrAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	pbrAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	pbrAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	pbrAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	VkAttachmentReference pbrAttachmentRef = {};
-	pbrAttachmentRef.attachment = 2;
-	pbrAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	VkAttachmentReference refs[] = { colorAttachmentRef, normalAttachmentRef, pbrAttachmentRef};
-	VkSubpassDescription subpass = {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 3;
-	subpass.pColorAttachments = refs;
-	subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-	VkSubpassDependency dependency = {};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = 0;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-	VkRenderPassCreateInfo renderPassInfo = {};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	std::array<VkAttachmentDescription, 4> attachments = { colorAttachment, normalAttachment, pbrAttachment, depthAttachment };
-	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	renderPassInfo.pAttachments = attachments.data();
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
-	renderPassInfo.dependencyCount = 1;
-	renderPassInfo.pDependencies = &dependency;
-
-	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &gBufferRenderPass));
+	gBufferRenderPass.create(&logicalDevice);
 }
 
 void Renderer::createGBufferDescriptorSetLayouts()
@@ -247,7 +186,7 @@ void Renderer::createGBufferPipeline()
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.layout = gBufferPipelineLayout;
-	pipelineInfo.renderPass = gBufferRenderPass;
+	pipelineInfo.renderPass = gBufferRenderPass.getHandle();
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -256,23 +195,12 @@ void Renderer::createGBufferPipeline()
 
 void Renderer::createGBufferFramebuffers()
 {
-	std::array<VkImageView, 4> attachments = {
-		gBufferColourAttachment.getView(),
-		gBufferNormalAttachment.getView(),
-		gBufferPBRAttachment.getView(),
-		gBufferDepthAttachment.getView()
-	};
+	gBufferFramebuffer.addAttachment(&gBufferColourAttachment, "gBuffer");
+	gBufferFramebuffer.addAttachment(&gBufferNormalAttachment, "normal");
+	gBufferFramebuffer.addAttachment(&gBufferPBRAttachment, "pbr");
+	gBufferFramebuffer.addAttachment(&gBufferDepthAttachment, "depth");
 
-	VkFramebufferCreateInfo framebufferInfo = {};
-	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebufferInfo.renderPass = gBufferRenderPass;
-	framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	framebufferInfo.pAttachments = attachments.data();
-	framebufferInfo.width = renderResolution.width;
-	framebufferInfo.height = renderResolution.height;
-	framebufferInfo.layers = 1;
-
-	VK_CHECK_RESULT(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &gBufferFramebuffer));
+	gBufferFramebuffer.create(&logicalDevice, &gBufferRenderPass);
 }
 
 void Renderer::createGBufferDescriptorSets()
@@ -373,8 +301,8 @@ void Renderer::updateGBufferCommands()
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = gBufferRenderPass;
-	renderPassInfo.framebuffer = gBufferFramebuffer;
+	renderPassInfo.renderPass = gBufferRenderPass.getHandle();
+	renderPassInfo.framebuffer = gBufferFramebuffer.getHandle();
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = renderResolution;
 
@@ -418,7 +346,7 @@ void Renderer::destroyGBufferAttachments()
 
 void Renderer::destroyGBufferRenderPass()
 {
-	VK_VALIDATE(vkDestroyRenderPass(device, gBufferRenderPass, 0));
+	gBufferRenderPass.destroy();
 }
 
 void Renderer::destroyGBufferDescriptorSetLayouts()
@@ -435,7 +363,7 @@ void Renderer::destroyGBufferPipeline()
 
 void Renderer::destroyGBufferFramebuffers()
 {
-	VK_VALIDATE(vkDestroyFramebuffer(device, gBufferFramebuffer, 0));
+	gBufferFramebuffer.destroy();
 }
 
 void Renderer::destroyGBufferDescriptorSets()
