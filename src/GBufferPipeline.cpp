@@ -205,7 +205,7 @@ void Renderer::createGBufferFramebuffers()
 
 void Renderer::createGBufferDescriptorSets()
 {
-	gBufferDescriptorSet.create(&logicalDevice, &gBufferDescriptorSetLayout, &descriptorPool);
+	gBufferDescriptorSet.allocate(&logicalDevice, &gBufferDescriptorSetLayout, &descriptorPool);
 }
 
 void Renderer::updateGBufferDescriptorSets()

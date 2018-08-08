@@ -25,6 +25,16 @@ void Renderer::createScreenDescriptorSetLayouts()
 
 void Renderer::createScreenPipeline()
 {
+	/*// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources indirectly)
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &screenDescriptorSetLayout.getHandle();
+	pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &screenPipelineLayout));
+
+
 	// Compile GLSL code to SPIR-V
 
 	screenShader.create(&logicalDevice);
@@ -38,8 +48,9 @@ void Renderer::createScreenPipeline()
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	// Assembly info (triangles quads lines strips etc)
@@ -113,16 +124,6 @@ void Renderer::createScreenPipeline()
 	depthStencil.minDepthBounds = 0.0f;
 	depthStencil.maxDepthBounds = 1.0f;
 
-
-	// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources indirectly)
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &screenDescriptorSetLayout.getHandle();
-	pipelineLayoutInfo.pushConstantRangeCount = 0;
-
-	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &screenPipelineLayout));
-
 	// Collate all the data necessary to create pipeline
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -141,12 +142,12 @@ void Renderer::createScreenPipeline()
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.flags = 0;
 
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &screenPipeline));
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &screenPipeline));*/
 }
 
 void Renderer::createScreenDescriptorSets()
 {
-	screenDescriptorSet.create(&logicalDevice, &screenDescriptorSetLayout, &descriptorPool);
+	screenDescriptorSet.allocate(&logicalDevice, &screenDescriptorSetLayout, &descriptorPool);
 }
 
 void Renderer::updateScreenDescriptorSets()
@@ -201,9 +202,9 @@ void Renderer::updateScreenCommands()
 
 		VK_VALIDATE(vkCmdBeginRenderPass(screenCommandBuffers.getHandle(i), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline));
+		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline.getHandle()));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout.getHandle(), 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { screenQuadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
@@ -247,9 +248,9 @@ void Renderer::updateScreenCommandsForConsole()
 
 		VK_VALIDATE(vkCmdBeginRenderPass(screenCommandBuffers.getHandle(i), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline));
+		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline.getHandle()));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout, 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout.getHandle(), 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { screenQuadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
@@ -277,15 +278,14 @@ void Renderer::destroyScreenDescriptorSetLayouts()
 
 void Renderer::destroyScreenPipeline()
 {
-	VK_VALIDATE(vkDestroyPipelineLayout(device, screenPipelineLayout, 0));
-	VK_VALIDATE(vkDestroyPipeline(device, screenPipeline, 0));
+	screenPipelineLayout.destroy();
+	screenPipeline.destroy();
 	screenShader.destroy();
 }
 
 void Renderer::destroyScreenDescriptorSets()
 {
-	//VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &screenDescriptorSet));
-	screenDescriptorSet.destroy();
+	screenDescriptorSet.free();
 }
 
 void Renderer::destroyScreenCommands()

@@ -67,7 +67,7 @@ void Renderer::createPBRPipeline()
 
 void Renderer::createPBRDescriptorSets()
 {
-	pbrDescriptorSet.create(&logicalDevice, &pbrDescriptorSetLayout, &descriptorPool);
+	pbrDescriptorSet.allocate(&logicalDevice, &pbrDescriptorSetLayout, &descriptorPool);
 }
 
 void Renderer::updatePBRDescriptorSets()
@@ -230,7 +230,7 @@ void Renderer::destroyPBRPipeline()
 
 void Renderer::destroyPBRDescriptorSets()
 {
-	pbrDescriptorSet.destroy();
+	pbrDescriptorSet.free();
 }
 
 void Renderer::destroyPBRCommands()

@@ -11,10 +11,10 @@ OverlayElement::OverlayElement(Type pType) : type(pType), draw(true)
 
 	auto r = Engine::renderer;
 
-	descSet.create(&r->logicalDevice, &r->overlayRenderer.getDescriptorSetLayout(), &r->freeableDescriptorPool);
+	descSet.allocate(&r->logicalDevice, &r->overlayRenderer.getDescriptorSetLayout(), &r->freeableDescriptorPool);
 }
 
 OverlayElement::~OverlayElement()
 {
-	descSet.destroy();
+	descSet.free();
 }

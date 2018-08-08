@@ -278,8 +278,9 @@ public:
 	void destroyScreenCommands();
 	
 	// Pipeline objects
-	VkPipeline screenPipeline;
-	VkPipelineLayout screenPipelineLayout;
+	vdu::PipelineLayout screenPipelineLayout;
+	vdu::GraphicsPipeline screenPipeline;
+	vdu::VertexInputState screenVertexInputState;
 	
 	// Descriptors
 	vdu::DescriptorSetLayout screenDescriptorSetLayout;

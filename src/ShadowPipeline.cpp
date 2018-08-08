@@ -219,7 +219,7 @@ void Renderer::createShadowPipeline()
 
 void Renderer::createShadowDescriptorSets()
 {
-	shadowDescriptorSet.create(&logicalDevice, &shadowDescriptorSetLayout, &descriptorPool);
+	shadowDescriptorSet.allocate(&logicalDevice, &shadowDescriptorSetLayout, &descriptorPool);
 }
 
 void Renderer::updateShadowDescriptorSets()
@@ -409,7 +409,7 @@ void Renderer::destroyShadowPipeline()
 
 void Renderer::destroyShadowDescriptorSets()
 {
-	shadowDescriptorSet.destroy();
+	shadowDescriptorSet.free();
 }
 
 void Renderer::destroyShadowCommands()

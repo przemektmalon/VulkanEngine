@@ -46,7 +46,7 @@ void OLayer::create(glm::ivec2 pResolution)
 	quadBuffer.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 	quadBuffer.create(&r->logicalDevice, sizeof(VertexNoNormal) * 6);
 
-	imageDescriptor.create(&r->logicalDevice, &r->overlayRenderer.getDescriptorSetLayout(), &r->descriptorPool);
+	imageDescriptor.allocate(&r->logicalDevice, &r->overlayRenderer.getDescriptorSetLayout(), &r->descriptorPool);
 
 	auto updater = imageDescriptor.makeUpdater();
 

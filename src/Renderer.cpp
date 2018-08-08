@@ -35,7 +35,34 @@ void Renderer::initialise()
 	combineOverlaysShader.compile();
 
 	// Swap chain
-	createScreenSwapChain();
+	///createScreenSwapChain();
+
+	// Screen
+	{
+		createScreenDescriptorSetLayouts();
+
+		screenSwapchain.create(&logicalDevice, Engine::window->vkSurface);
+		renderResolution = screenSwapchain.getExtent();
+
+		screenPipelineLayout.addDescriptorSetLayout(&screenDescriptorSetLayout);
+		screenPipelineLayout.create(&logicalDevice);
+
+		screenVertexInputState.addBinding(Vertex2D::getBindingDescription());
+		screenVertexInputState.addAttributes(Vertex2D::getAttributeDescriptions());
+
+		screenShader.create(&logicalDevice);
+		screenShader.compile();
+
+		screenPipeline.setShaderProgram(&screenShader);
+		screenPipeline.setVertexInputState(&screenVertexInputState);
+		screenPipeline.addViewport({ 0.f, 0.f, (float)renderResolution.width, (float)renderResolution.height, 0.f, 1.f }, { 0, 0, renderResolution.width, renderResolution.height });
+		screenPipeline.setPipelineLayout(&screenPipelineLayout);
+		screenPipeline.setSwapchain(&screenSwapchain);
+		screenPipeline.create(&logicalDevice);
+	}
+
+	
+
 
 	// Pipeline attachments
 	createGBufferAttachments();
@@ -49,13 +76,12 @@ void Renderer::initialise()
 	createGBufferDescriptorSetLayouts();
 	createShadowDescriptorSetLayouts();
 	createPBRDescriptorSetLayouts();
-	createScreenDescriptorSetLayouts();
 
 	// Pipeline objects
 	createGBufferPipeline();
 	createShadowPipeline();
 	createPBRPipeline();
-	createScreenPipeline();
+	//createScreenPipeline();
 
 	// Pipeline framebuffers
 	createGBufferFramebuffers();
