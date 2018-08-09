@@ -30,17 +30,9 @@ void OLayer::create(glm::ivec2 pResolution)
 
 	depAttachment.loadToGPU(&tci);
 
-	VkImageView atts[] = { colAttachment.getView(), depAttachment.getView() };
-	VkFramebufferCreateInfo framebufferInfo = {};
-	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebufferInfo.renderPass = r->overlayRenderer.getRenderPass();
-	framebufferInfo.attachmentCount = 2;
-	framebufferInfo.pAttachments = atts;
-	framebufferInfo.width = resolution.x;
-	framebufferInfo.height = resolution.y;
-	framebufferInfo.layers = 1;
-
-	VK_CHECK_RESULT(vkCreateFramebuffer(r->device, &framebufferInfo, nullptr, &framebuffer));
+	framebuffer.addAttachment(&colAttachment, "colour");
+	framebuffer.addAttachment(&depAttachment, "depth");
+	framebuffer.create(&Engine::renderer->logicalDevice, const_cast<vdu::RenderPass*>(&r->overlayRenderer.getRenderPass()));
 
 	quadBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	quadBuffer.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -64,7 +56,7 @@ void OLayer::cleanup()
 	colAttachment.destroy();
 	depAttachment.destroy();
 	//VK_VALIDATE(vkFreeDescriptorSets(Engine::renderer->device, Engine::renderer->descriptorPool, 1, &imageDescriptor));
-	VK_VALIDATE(vkDestroyFramebuffer(Engine::renderer->device, framebuffer, 0));
+	framebuffer.destroy();
 	quadBuffer.destroy();
 	for (auto element : elements)
 	{
@@ -207,7 +199,7 @@ void OverlayRenderer::removeLayer(OLayer * layer)
 	Engine::threading->layersMutex.unlock();
 }
 
-void OverlayRenderer::createOverlayAttachmentsFramebuffers()
+void OverlayRenderer::createOverlayAttachments()
 {
 	TextureCreateInfo tci;
 	tci.width = Engine::renderer->renderResolution.width;
@@ -225,343 +217,90 @@ void OverlayRenderer::createOverlayAttachmentsFramebuffers()
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
 	combinedLayersDepth.loadToGPU(&tci);
+}
 
-	VkImageView atts[] = { combinedLayers.getView(), combinedLayersDepth.getView() };
-	VkFramebufferCreateInfo framebufferInfo = {};
-	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebufferInfo.renderPass = Engine::renderer->overlayRenderer.getRenderPass();
-	framebufferInfo.attachmentCount = 2;
-	framebufferInfo.pAttachments = atts;
-	framebufferInfo.width = Engine::renderer->renderResolution.width;
-	framebufferInfo.height = Engine::renderer->renderResolution.height;
-	framebufferInfo.layers = 1;
-
-	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, &framebuffer));
+void OverlayRenderer::createOverlayFramebuffer()
+{
+	framebuffer.addAttachment(&combinedLayers, "combined");
+	framebuffer.addAttachment(&combinedLayersDepth, "combinedDepth");
+	framebuffer.create(&Engine::renderer->logicalDevice, &overlayRenderPass);
 }
 
 void OverlayRenderer::createOverlayRenderPass()
 {
-	VkAttachmentDescription colAttachment = {};
-	colAttachment.format = VK_FORMAT_R8G8B8A8_UNORM;
-	colAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	colAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	colAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	colAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	auto combinedInfo = overlayRenderPass.addColourAttachment(&combinedLayers, "combined");
+	combinedInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+	combinedInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	combinedInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-	VkAttachmentReference colAttachmentRef = {};
-	colAttachmentRef.attachment = 0;
-	colAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	auto depthInfo = overlayRenderPass.setDepthAttachment(&combinedLayersDepth);
+	depthInfo->setInitialLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	depthInfo->setFinalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	depthInfo->setUsageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	VkAttachmentDescription depAttachment = {};
-	depAttachment.format = Engine::physicalDevice->findOptimalDepthFormat();
-	depAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	depAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	depAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	depAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	VkAttachmentReference depAttachmentRef = {};
-	depAttachmentRef.attachment = 1;
-	depAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	VkSubpassDescription subpass = {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &colAttachmentRef;
-	subpass.pDepthStencilAttachment = &depAttachmentRef;
-
-	VkSubpassDependency dependency = {};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = 0;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-	VkRenderPassCreateInfo renderPassInfo = {};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	std::array<VkAttachmentDescription, 2> attachments = { colAttachment, depAttachment };
-	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	renderPassInfo.pAttachments = attachments.data();
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
-	renderPassInfo.dependencyCount = 1;
-	renderPassInfo.pDependencies = &dependency;
-
-	VK_CHECK_RESULT(vkCreateRenderPass(Engine::renderer->device, &renderPassInfo, nullptr, &overlayRenderPass));
+	overlayRenderPass.create(&Engine::renderer->logicalDevice);
 }
 
 void OverlayRenderer::createOverlayPipeline()
 {
 	{
-		// Get the vertex layout format
-		auto bindingDescription = Vertex2D::getBindingDescription();
-		auto attributeDescriptions = Vertex2D::getAttributeDescriptions();
+		elementPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4) });
+		elementPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::fmat4) + sizeof(glm::fvec4), sizeof(glm::fvec4) + sizeof(int) });
+		elementPipelineLayout.addDescriptorSetLayout(&overlayDescriptorSetLayout);
+		elementPipelineLayout.create(&Engine::renderer->logicalDevice);
 
-		// For submitting vertex layout info
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount = 1;
-		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-		vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+		VkPipelineColorBlendAttachmentState colourBlendAttachment = {};
+		colourBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		colourBlendAttachment.blendEnable = VK_TRUE;
+		colourBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		colourBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		colourBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		colourBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colourBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colourBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
-		// Assembly info (triangles quads lines strips etc)
-		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		inputAssembly.primitiveRestartEnable = VK_FALSE;
+		elementPipeline.setAttachmentColorBlendState("colour", colourBlendAttachment);
 
-		// Viewport
-		VkViewport viewport = {};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = (float)1280;
-		viewport.height = (float)720;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		// Scissor
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };
-		scissor.extent.width = 1280;
-		scissor.extent.height = 720;
-
-		// Submit info for viewport(s)
-		VkPipelineViewportStateCreateInfo viewportState = {};
-		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportState.viewportCount = 1;
-		viewportState.pViewports = &viewport;
-		viewportState.scissorCount = 1;
-		viewportState.pScissors = &scissor;
-
-		// Rasterizer info (culling, polygon fill mode, etc)
-		VkPipelineRasterizationStateCreateInfo rasterizer = {};
-		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable = VK_FALSE;
-		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rasterizer.depthBiasEnable = VK_FALSE;
-
-		// Multisampling (doesnt work well with deffered renderer without convoluted methods)
-		VkPipelineMultisampleStateCreateInfo multisampling = {};
-		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.sampleShadingEnable = VK_FALSE;
-		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable = VK_TRUE;
-		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-
-		VkPipelineColorBlendStateCreateInfo colorBlending = {};
-		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlending.logicOpEnable = VK_FALSE;
-		colorBlending.logicOp = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &colorBlendAttachment;
-		colorBlending.blendConstants[0] = 0.0f;
-		colorBlending.blendConstants[1] = 0.0f;
-		colorBlending.blendConstants[2] = 0.0f;
-		colorBlending.blendConstants[3] = 0.0f;
-
-		//Depth
-		VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable = VK_FALSE;
-		depthStencil.depthWriteEnable = VK_TRUE;
-		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-		depthStencil.depthBoundsTestEnable = VK_FALSE;
-		depthStencil.minDepthBounds = 0.0f;
-		depthStencil.maxDepthBounds = 1000.0f; /// WATCH: whether we need to alter this
-
-		VkPushConstantRange pushConstantRanges[2];
-		pushConstantRanges[0].offset = 0;
-		pushConstantRanges[0].size = sizeof(glm::fmat4) + sizeof(glm::fvec4);
-		pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		pushConstantRanges[1].offset = sizeof(glm::fmat4) + sizeof(glm::fvec4);
-		pushConstantRanges[1].size = sizeof(glm::fvec4) + sizeof(int);
-		pushConstantRanges[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-
-		// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources)
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1;
-		auto descSetLayout = Engine::renderer->overlayRenderer.getDescriptorSetLayout();
-		pipelineLayoutInfo.pSetLayouts = &descSetLayout.getHandle();
-		pipelineLayoutInfo.pushConstantRangeCount = 2;
-		pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges;
-
-		std::vector<VkDynamicState> dynamicState;
-		dynamicState.push_back(VK_DYNAMIC_STATE_VIEWPORT);
-		dynamicState.push_back(VK_DYNAMIC_STATE_SCISSOR);
-
-		VkPipelineDynamicStateCreateInfo dsci = {};
-		dsci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dsci.dynamicStateCount = dynamicState.size();
-		dsci.pDynamicStates = dynamicState.data();
-
-		VK_CHECK_RESULT(vkCreatePipelineLayout(Engine::renderer->device, &pipelineLayoutInfo, nullptr, &elementPipelineLayout));
-
-		// Collate all the data necessary to create pipeline
-		VkGraphicsPipelineCreateInfo pipelineInfo = {};
-		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
-		pipelineInfo.pStages = Engine::renderer->overlayShader.getShaderStageCreateInfos();
-		pipelineInfo.pVertexInputState = &vertexInputInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssembly;
-		pipelineInfo.pViewportState = &viewportState;
-		pipelineInfo.pRasterizationState = &rasterizer;
-		pipelineInfo.pMultisampleState = &multisampling;
-		pipelineInfo.pColorBlendState = &colorBlending;
-		pipelineInfo.pDepthStencilState = &depthStencil;
-		pipelineInfo.layout = elementPipelineLayout;
-		pipelineInfo.renderPass = Engine::renderer->overlayRenderer.getRenderPass();
-		pipelineInfo.subpass = 0;
-		pipelineInfo.pDynamicState = &dsci;
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-		VK_CHECK_RESULT(vkCreateGraphicsPipelines(Engine::renderer->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &elementPipeline));
+		elementPipeline.addViewport({ 0.f, 0.f, (float)1280, (float)720, 0.f, 1.f }, { 0, 0, 1280, 720 });
+		elementPipeline.setVertexInputState(&Engine::renderer->screenVertexInputState);
+		elementPipeline.setShaderProgram(&Engine::renderer->overlayShader);
+		elementPipeline.setPipelineLayout(&elementPipelineLayout);
+		elementPipeline.setRenderPass(&overlayRenderPass);
+		elementPipeline.addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
+		elementPipeline.addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
+		elementPipeline.setDepthTest(VK_FALSE);
+		elementPipeline.create(&Engine::renderer->logicalDevice);
 	}
 
 	{
-		// Get the vertex layout format
-		auto bindingDescription = VertexNoNormal::getBindingDescription();
-		auto attributeDescriptions = VertexNoNormal::getAttributeDescriptions();
+		combinePipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) });
+		combinePipelineLayout.addDescriptorSetLayout(&overlayDescriptorSetLayout);
+		combinePipelineLayout.create(&Engine::renderer->logicalDevice);
 
-		// For submitting vertex layout info
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount = 1;
-		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-		vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+		vertexInputState.addBinding(VertexNoNormal::getBindingDescription());
+		vertexInputState.addAttributes(VertexNoNormal::getAttributeDescriptions());
 
-		// Assembly info (triangles quads lines strips etc)
-		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		inputAssembly.primitiveRestartEnable = VK_FALSE;
+		VkPipelineColorBlendAttachmentState colourBlendAttachment = {};
+		colourBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		colourBlendAttachment.blendEnable = VK_TRUE;
+		colourBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		colourBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		colourBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		colourBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colourBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colourBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
-		// Viewport
-		VkViewport viewport = {};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = (float)Engine::renderer->renderResolution.width;
-		viewport.height = (float)Engine::renderer->renderResolution.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
+		combinePipeline.setAttachmentColorBlendState("combined", colourBlendAttachment);
 
-		// Scissor
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };
-		scissor.extent.width = Engine::renderer->renderResolution.width;
-		scissor.extent.height = Engine::renderer->renderResolution.height;
-
-		// Submit info for viewport(s)
-		VkPipelineViewportStateCreateInfo viewportState = {};
-		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportState.viewportCount = 1;
-		viewportState.pViewports = &viewport;
-		viewportState.scissorCount = 1;
-		viewportState.pScissors = &scissor;
-
-		// Rasterizer info (culling, polygon fill mode, etc)
-		VkPipelineRasterizationStateCreateInfo rasterizer = {};
-		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable = VK_FALSE;
-		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_NONE;//VK_CULL_MODE_BACK_BIT;
-		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rasterizer.depthBiasEnable = VK_FALSE;
-
-		// Multisampling (doesnt work well with deffered renderer without convoluted methods)
-		VkPipelineMultisampleStateCreateInfo multisampling = {};
-		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.sampleShadingEnable = VK_FALSE;
-		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable = VK_TRUE;
-		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-
-		VkPipelineColorBlendStateCreateInfo colorBlending = {};
-		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlending.logicOpEnable = VK_FALSE;
-		colorBlending.logicOp = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &colorBlendAttachment;
-		colorBlending.blendConstants[0] = 0.0f;
-		colorBlending.blendConstants[1] = 0.0f;
-		colorBlending.blendConstants[2] = 0.0f;
-		colorBlending.blendConstants[3] = 0.0f;
-
-		//Depth
-		VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable = VK_FALSE;
-		depthStencil.depthWriteEnable = VK_TRUE;
-		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-		depthStencil.depthBoundsTestEnable = VK_FALSE;
-		depthStencil.minDepthBounds = 0.0f;
-		depthStencil.maxDepthBounds = 10.0f;  /// WATCH: whether we need to alter this
-
-		VkPushConstantRange pushConstantRange = {};
-		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(glm::fmat4);
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-		// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources)
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1;
-		VkDescriptorSetLayout descSetLayouts[] = { overlayDescriptorSetLayout.getHandle() };
-		pipelineLayoutInfo.pSetLayouts = descSetLayouts;
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-
-		VK_CHECK_RESULT(vkCreatePipelineLayout(Engine::renderer->device, &pipelineLayoutInfo, nullptr, &combinePipelineLayout));
-
-		// Collate all the data necessary to create pipeline
-		VkGraphicsPipelineCreateInfo pipelineInfo = {};
-		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
-		pipelineInfo.pStages = Engine::renderer->combineOverlaysShader.getShaderStageCreateInfos();
-		pipelineInfo.pVertexInputState = &vertexInputInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssembly;
-		pipelineInfo.pViewportState = &viewportState;
-		pipelineInfo.pRasterizationState = &rasterizer;
-		pipelineInfo.pMultisampleState = &multisampling;
-		pipelineInfo.pColorBlendState = &colorBlending;
-		pipelineInfo.pDepthStencilState = &depthStencil;
-		pipelineInfo.layout = combinePipelineLayout;
-		pipelineInfo.renderPass = Engine::renderer->overlayRenderer.getRenderPass();
-		pipelineInfo.subpass = 0;
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-		VK_CHECK_RESULT(vkCreateGraphicsPipelines(Engine::renderer->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &combinePipeline));
+		combinePipeline.addViewport({ 0.f, 0.f, (float)Engine::renderer->renderResolution.width, (float)Engine::renderer->renderResolution.height, 0.f, 1.f }, { 0, 0, Engine::renderer->renderResolution.width, Engine::renderer->renderResolution.height });
+		combinePipeline.setVertexInputState(&vertexInputState);
+		combinePipeline.setShaderProgram(&Engine::renderer->combineOverlaysShader);
+		combinePipeline.setPipelineLayout(&combinePipelineLayout);
+		combinePipeline.setRenderPass(&overlayRenderPass);
+		combinePipeline.setDepthTest(VK_FALSE);
+		combinePipeline.setCullMode(VK_CULL_MODE_NONE);
+		combinePipeline.setMaxDepthBounds(10.f);
+		combinePipeline.create(&Engine::renderer->logicalDevice);
 	}
 }
 
@@ -630,8 +369,8 @@ void OverlayRenderer::updateOverlayCommands()
 
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = overlayRenderPass;
-		renderPassInfo.framebuffer = layer->framebuffer;
+		renderPassInfo.renderPass = overlayRenderPass.getHandle();
+		renderPassInfo.framebuffer = layer->framebuffer.getHandle();
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent.width = layer->resolution.x;
 		renderPassInfo.renderArea.extent.height = layer->resolution.y;
@@ -645,7 +384,7 @@ void OverlayRenderer::updateOverlayCommands()
 
 		VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipeline));
+		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipeline.getHandle()));
 
 		auto& elements = layer->elements;
 
@@ -671,17 +410,17 @@ void OverlayRenderer::updateOverlayCommands()
 			memcpy(push, &proj[0][0], sizeof(glm::fmat4));
 			float depth = element->getDepth();
 			memcpy(push + 16, &depth, sizeof(float));
-			VK_VALIDATE(vkCmdPushConstants(cmd, elementPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4), push));
+			VK_VALIDATE(vkCmdPushConstants(cmd, elementPipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4), push));
 
 			float push2[5];
 			glm::fvec4 c = *(glm::fvec4*)element->getPushConstData();
 			memcpy(push2, &c[0], sizeof(glm::fvec4));
 			int t = element->getType();
 			memcpy(push2 + 4, &t, sizeof(int));
-			VK_VALIDATE(vkCmdPushConstants(cmd, elementPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::fmat4) + sizeof(glm::fvec4), sizeof(glm::fvec4) + sizeof(int), push2));
+			VK_VALIDATE(vkCmdPushConstants(cmd, elementPipelineLayout.getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::fmat4) + sizeof(glm::fvec4), sizeof(glm::fvec4) + sizeof(int), push2));
 
 			VkDescriptorSet descSet = element->getDescriptorSet();
-			VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipelineLayout, 0, 1, &descSet, 0, nullptr));
+			VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipelineLayout.getHandle(), 0, 1, &descSet, 0, nullptr));
 
 			element->render(cmd);
 		}
@@ -701,8 +440,8 @@ void OverlayRenderer::updateOverlayCommands()
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = overlayRenderPass;
-	renderPassInfo.framebuffer = framebuffer;
+	renderPassInfo.renderPass = overlayRenderPass.getHandle();
+	renderPassInfo.framebuffer = framebuffer.getHandle();
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent.width = Engine::renderer->renderResolution.width;
 	renderPassInfo.renderArea.extent.height = Engine::renderer->renderResolution.height;
@@ -716,7 +455,7 @@ void OverlayRenderer::updateOverlayCommands()
 
 	VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipeline));
+	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipeline.getHandle()));
 
 	glm::fmat4 proj = glm::ortho<float>(0, Engine::window->resX, Engine::window->resY, 0, -10, 10);
 	glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f,
@@ -724,14 +463,14 @@ void OverlayRenderer::updateOverlayCommands()
 		+0.0f, 0.0f, 0.5f, 0.0f,
 		+0.0f, 0.0f, 0.5f, 1.0f);
 	proj = clip * proj;
-	VK_VALIDATE(vkCmdPushConstants(cmd, combinePipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4), &proj));
+	VK_VALIDATE(vkCmdPushConstants(cmd, combinePipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4), &proj));
 
 	for (auto layer : layers)
 	{
 		if (!layer->doDraw())
 			continue;
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipelineLayout, 0, 1, &layer->imageDescriptor.getHandle(), 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipelineLayout.getHandle(), 0, 1, &layer->imageDescriptor.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { layer->quadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
@@ -762,21 +501,21 @@ void OverlayRenderer::destroyOverlayDescriptorSetLayouts()
 
 void OverlayRenderer::destroyOverlayRenderPass()
 {
-	VK_VALIDATE(vkDestroyRenderPass(Engine::renderer->device, overlayRenderPass, 0));
+	overlayRenderPass.destroy();
 }
 
 void OverlayRenderer::destroyOverlayPipeline()
 {
-	VK_VALIDATE(vkDestroyPipelineLayout(Engine::renderer->device, combinePipelineLayout, 0));
-	VK_VALIDATE(vkDestroyPipeline(Engine::renderer->device, combinePipeline, 0));
-
-	VK_VALIDATE(vkDestroyPipelineLayout(Engine::renderer->device, elementPipelineLayout, 0));
-	VK_VALIDATE(vkDestroyPipeline(Engine::renderer->device, elementPipeline, 0));
+	combinePipelineLayout.destroy();
+	combinePipeline.destroy();
+	
+	elementPipelineLayout.destroy();
+	elementPipeline.destroy();
 }
 
 void OverlayRenderer::destroyOverlayAttachmentsFramebuffers()
 {
 	combinedLayers.destroy();
 	combinedLayersDepth.destroy();
-	VK_VALIDATE(vkDestroyFramebuffer(Engine::renderer->device, framebuffer, 0));
+	framebuffer.destroy();
 }

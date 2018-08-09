@@ -65,132 +65,16 @@ void Renderer::createGBufferDescriptorSetLayouts()
 
 void Renderer::createGBufferPipeline()
 {
-	// Compile GLSL code to SPIR-V
+	gBufferPipelineLayout.addDescriptorSetLayout(&gBufferDescriptorSetLayout);
+	gBufferPipelineLayout.create(&logicalDevice);
 
-	gBufferShader.create(&logicalDevice);
-	gBufferShader.compile();
-
-	// Get the vertex layout format
-	auto bindingDescription = Vertex::getBindingDescription();
-	auto attributeDescriptions = Vertex::getAttributeDescriptions();
-
-	// For submitting vertex layout info
-	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
-	// Assembly info (triangles quads lines strips etc)
-	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-	// Viewport
-	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = (float)renderResolution.width;
-	viewport.height = (float)renderResolution.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	// Scissor
-	VkRect2D scissor = {};
-	scissor.offset = { 0, 0 };
-	scissor.extent = renderResolution;
-
-	// Submit info for viewport(s)
-	VkPipelineViewportStateCreateInfo viewportState = {};
-	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewportState.viewportCount = 1;
-	viewportState.pViewports = &viewport;
-	viewportState.scissorCount = 1;
-	viewportState.pScissors = &scissor;
-
-	// Rasterizer info (culling, polygon fill mode, etc)
-	VkPipelineRasterizationStateCreateInfo rasterizer = {};
-	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	rasterizer.depthClampEnable = VK_FALSE;
-	rasterizer.rasterizerDiscardEnable = VK_FALSE;
-	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	rasterizer.depthBiasEnable = VK_FALSE;
-
-	// Multisampling (doesnt work well with deffered renderer without convoluted methods)
-	VkPipelineMultisampleStateCreateInfo multisampling = {};
-	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	multisampling.sampleShadingEnable = VK_FALSE;
-	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-	// Color blending info (for transparency)
-	VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorBlendAttachment.blendEnable = VK_FALSE;
-
-	VkPipelineColorBlendAttachmentState normalBlendAttachment = {};
-	normalBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	normalBlendAttachment.blendEnable = VK_FALSE;
-
-	VkPipelineColorBlendAttachmentState pbrBlendAttachment = {};
-	pbrBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	pbrBlendAttachment.blendEnable = VK_FALSE;
-
-	VkPipelineColorBlendAttachmentState blendAtts[] = { colorBlendAttachment, normalBlendAttachment, pbrBlendAttachment};
-
-	VkPipelineColorBlendStateCreateInfo colorBlending = {};
-	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlending.logicOpEnable = VK_FALSE;
-	colorBlending.logicOp = VK_LOGIC_OP_COPY;
-	colorBlending.attachmentCount = 3;
-	colorBlending.pAttachments = blendAtts;
-	colorBlending.blendConstants[0] = 0.0f;
-	colorBlending.blendConstants[1] = 0.0f;
-	colorBlending.blendConstants[2] = 0.0f;
-	colorBlending.blendConstants[3] = 0.0f;
-
-	//Depth
-	VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable = VK_TRUE;
-	depthStencil.depthWriteEnable = VK_TRUE;
-	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-	depthStencil.depthBoundsTestEnable = VK_FALSE;
-	depthStencil.minDepthBounds = 0.0f;
-	depthStencil.maxDepthBounds = Engine::maxDepth; /// TODO: make variable
-
-
-	// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources indirectly)
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &gBufferDescriptorSetLayout.getHandle();
-	pipelineLayoutInfo.pushConstantRangeCount = 0;
-
-	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &gBufferPipelineLayout));
-
-	// Collate all the data necessary to create pipeline
-	VkGraphicsPipelineCreateInfo pipelineInfo = {};
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipelineInfo.stageCount = 2;
-	pipelineInfo.pStages = gBufferShader.getShaderStageCreateInfos();
-	pipelineInfo.pVertexInputState = &vertexInputInfo;
-	pipelineInfo.pInputAssemblyState = &inputAssembly;
-	pipelineInfo.pViewportState = &viewportState;
-	pipelineInfo.pRasterizationState = &rasterizer;
-	pipelineInfo.pMultisampleState = &multisampling;
-	pipelineInfo.pColorBlendState = &colorBlending;
-	pipelineInfo.pDepthStencilState = &depthStencil;
-	pipelineInfo.layout = gBufferPipelineLayout;
-	pipelineInfo.renderPass = gBufferRenderPass.getHandle();
-	pipelineInfo.subpass = 0;
-	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gBufferPipeline));
+	gBufferPipeline.addViewport({ 0.f, 0.f, (float)renderResolution.width, (float)renderResolution.height, 0.f, 1.f }, { 0, 0, renderResolution.width, renderResolution.height });
+	gBufferPipeline.setVertexInputState(&defaultVertexInputState);
+	gBufferPipeline.setShaderProgram(&gBufferShader);
+	gBufferPipeline.setPipelineLayout(&gBufferPipelineLayout);
+	gBufferPipeline.setRenderPass(&gBufferRenderPass);
+	gBufferPipeline.setMaxDepthBounds(Engine::maxDepth);
+	gBufferPipeline.create(&logicalDevice);
 }
 
 void Renderer::createGBufferFramebuffers()
@@ -316,9 +200,9 @@ void Renderer::updateGBufferCommands()
 
 	VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline));
+	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline.getHandle()));
 
-	VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout, 0, 1, &gBufferDescriptorSet.getHandle(), 0, nullptr));
+	VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipelineLayout.getHandle(), 0, 1, &gBufferDescriptorSet.getHandle(), 0, nullptr));
 
 	VkBuffer vertexBuffers[] = { vertexIndexBuffer.getHandle() };
 	VkDeviceSize offsets[] = { 0 };
@@ -356,8 +240,8 @@ void Renderer::destroyGBufferDescriptorSetLayouts()
 
 void Renderer::destroyGBufferPipeline()
 {
-	VK_VALIDATE(vkDestroyPipelineLayout(device, gBufferPipelineLayout, 0));
-	VK_VALIDATE(vkDestroyPipeline(device, gBufferPipeline, 0));
+	gBufferPipelineLayout.destroy();
+	gBufferPipeline.destroy();
 	gBufferShader.destroy();
 }
 
@@ -368,7 +252,7 @@ void Renderer::destroyGBufferFramebuffers()
 
 void Renderer::destroyGBufferDescriptorSets()
 {
-	VK_CHECK_RESULT(vkFreeDescriptorSets(device, descriptorPool.getHandle(), 1, &gBufferDescriptorSet.getHandle()));
+	gBufferDescriptorSet.free();
 }
 
 void Renderer::destroyGBufferCommands()

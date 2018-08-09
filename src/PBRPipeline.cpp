@@ -42,27 +42,12 @@ void Renderer::createPBRDescriptorSetLayouts()
 
 void Renderer::createPBRPipeline()
 {
-	// Compile GLSL code to SPIR-V
+	pbrPipelineLayout.addDescriptorSetLayout(&pbrDescriptorSetLayout);
+	pbrPipelineLayout.create(&logicalDevice);
 
-	pbrShader.create(&logicalDevice);
-	pbrShader.compile();
-
-	// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources indirectly)
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &pbrDescriptorSetLayout.getHandle();
-	pipelineLayoutInfo.pushConstantRangeCount = 0;
-
-	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pbrPipelineLayout));
-
-	// Collate all the data necessary to create pipeline
-	VkComputePipelineCreateInfo pipelineInfo = {};
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	pipelineInfo.stage = *pbrShader.getShaderStageCreateInfos();
-	pipelineInfo.layout = pbrPipelineLayout;
-
-	VK_CHECK_RESULT(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pbrPipeline));
+	pbrPipeline.setShaderProgram(&pbrShader);
+	pbrPipeline.setPipelineLayout(&pbrPipelineLayout);
+	pbrPipeline.create(&logicalDevice);
 }
 
 void Renderer::createPBRDescriptorSets()
@@ -103,8 +88,6 @@ void Renderer::updatePBRDescriptorSets()
 
 	pbrDescriptorSet.submitUpdater(defaultUpdater);
 	pbrDescriptorSet.destroyUpdater(defaultUpdater);
-
-
 
 	auto updater = pbrDescriptorSet.makeUpdater();
 
@@ -194,8 +177,8 @@ void Renderer::updatePBRCommands()
 
 	queryPool.cmdTimestamp(pbrCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, BEGIN_PBR);
 
-	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipeline));
-	VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipelineLayout, 0, 1, &pbrDescriptorSet.getHandle(), 0, 0));
+	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipeline.getHandle()));
+	VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipelineLayout.getHandle(), 0, 1, &pbrDescriptorSet.getHandle(), 0, 0));
 
 	VK_VALIDATE(vkCmdDispatch(cmd, renderResolution.width / 16, renderResolution.height / 16, 1));
 
@@ -223,8 +206,8 @@ void Renderer::destroyPBRDescriptorSetLayouts()
 
 void Renderer::destroyPBRPipeline()
 {
-	VK_VALIDATE(vkDestroyPipelineLayout(device, pbrPipelineLayout, 0));
-	VK_VALIDATE(vkDestroyPipeline(device, pbrPipeline, 0));
+	pbrPipelineLayout.destroy();
+	pbrPipeline.destroy();
 	pbrShader.destroy();
 }
 

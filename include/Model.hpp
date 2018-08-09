@@ -20,9 +20,11 @@ struct Vertex
 		return bd;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
+	static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions()
 	{
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions = {};
+		attributeDescriptions.resize(3);
+
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
 		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -67,9 +69,11 @@ struct VertexNoNormal
 		return bd;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions()
+	static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions()
 	{
-		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions = {};
+		attributeDescriptions.resize(2);
+
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
 		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;

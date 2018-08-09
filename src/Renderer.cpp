@@ -28,85 +28,80 @@ void Renderer::initialise()
 
 	lightManager.init();
 
-	overlayShader.create(&logicalDevice);
-	overlayShader.compile();
+	defaultVertexInputState.addBinding(Vertex::getBindingDescription());
+	defaultVertexInputState.addAttributes(Vertex::getAttributeDescriptions());
 
-	combineOverlaysShader.create(&logicalDevice);
-	combineOverlaysShader.compile();
-
-	// Swap chain
-	///createScreenSwapChain();
-
-	// Screen
+	// Shaders
 	{
-		createScreenDescriptorSetLayouts();
-
-		screenSwapchain.create(&logicalDevice, Engine::window->vkSurface);
-		renderResolution = screenSwapchain.getExtent();
-
-		screenPipelineLayout.addDescriptorSetLayout(&screenDescriptorSetLayout);
-		screenPipelineLayout.create(&logicalDevice);
-
-		screenVertexInputState.addBinding(Vertex2D::getBindingDescription());
-		screenVertexInputState.addAttributes(Vertex2D::getAttributeDescriptions());
+		gBufferShader.create(&logicalDevice);
+		gBufferShader.compile();
 
 		screenShader.create(&logicalDevice);
 		screenShader.compile();
 
-		screenPipeline.setShaderProgram(&screenShader);
-		screenPipeline.setVertexInputState(&screenVertexInputState);
-		screenPipeline.addViewport({ 0.f, 0.f, (float)renderResolution.width, (float)renderResolution.height, 0.f, 1.f }, { 0, 0, renderResolution.width, renderResolution.height });
-		screenPipeline.setPipelineLayout(&screenPipelineLayout);
-		screenPipeline.setSwapchain(&screenSwapchain);
-		screenPipeline.create(&logicalDevice);
+		pbrShader.create(&logicalDevice);
+		pbrShader.compile();
+
+		overlayShader.create(&logicalDevice);
+		overlayShader.compile();
 	}
 
-	
+	// Screen
+	{
+		createScreenDescriptorSetLayouts();
+		createScreenSwapchain();
+		createScreenPipeline();
+		createScreenDescriptorSets();
+		createScreenCommands();
+	}
+
+	// PBR
+	{
+		createPBRAttachments();
+		createPBRDescriptorSetLayouts();
+		createPBRPipeline();
+		createPBRDescriptorSets();
+		createPBRCommands();
+	}
+
+	// Shadows
+	/// TODO: Variable resolution shadows
+	{
+		createShadowDescriptorSetLayouts();
+		createShadowRenderPass();
+		createShadowPipeline();
+		createShadowDescriptorSets();
+		createShadowCommands();
+	}
+
+	// GBuffer
+	{
+		createGBufferAttachments();
+		createGBufferRenderPass();
+		createGBufferDescriptorSetLayouts();
+		createGBufferPipeline();
+		createGBufferFramebuffers();
+		createGBufferDescriptorSets();
+		createGBufferCommands();
+	}
+
+	// Overlays
+	{
 
 
-	// Pipeline attachments
-	createGBufferAttachments();
-	createPBRAttachments();
+		combineOverlaysShader.create(&logicalDevice);
+		combineOverlaysShader.compile();
 
-	// Pipeline render passes
-	createGBufferRenderPass();
-	createShadowRenderPass();
+		overlayRenderer.createOverlayAttachments();
+		overlayRenderer.createOverlayRenderPass();
+		overlayRenderer.createOverlayDescriptorSetLayouts();
+		overlayRenderer.createOverlayDescriptorSets();
+		overlayRenderer.createOverlayPipeline();
+		overlayRenderer.createOverlayFramebuffer();
+		overlayRenderer.createOverlayCommands();
+	}
 
-	// Pipeline descriptor set layouts
-	createGBufferDescriptorSetLayouts();
-	createShadowDescriptorSetLayouts();
-	createPBRDescriptorSetLayouts();
-
-	// Pipeline objects
-	createGBufferPipeline();
-	createShadowPipeline();
-	createPBRPipeline();
-	//createScreenPipeline();
-
-	// Pipeline framebuffers
-	createGBufferFramebuffers();
-
-	// Buffers for models, screen quad, uniforms
 	createDataBuffers();
-
-	// Pipeline descriptor sets
-	createGBufferDescriptorSets();
-	createShadowDescriptorSets();
-	createPBRDescriptorSets();
-	createScreenDescriptorSets();
-
-	// Pipeline commands
-	createGBufferCommands();
-	createShadowCommands();
-	createPBRCommands();
-	createScreenCommands();
-
-	overlayRenderer.createOverlayRenderPass();
-	overlayRenderer.createOverlayDescriptorSetLayouts();
-	overlayRenderer.createOverlayDescriptorSets();
-	overlayRenderer.createOverlayPipeline();
-	overlayRenderer.createOverlayAttachmentsFramebuffers();
-	overlayRenderer.createOverlayCommands();
 
 	for (int i = 0; i < 3; ++i)
 	{
@@ -116,30 +111,6 @@ void Renderer::initialise()
 		int sh = s / 2;
 		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 50, s64(r() % s) - sh));
 		glm::fvec3 col(1.0, 0.8, 1.0);
-		switch (i % 7)
-		{
-		case 0: {
-			col = glm::fvec3(1, 0.5, 0.5);
-			break; }
-		case 1: {
-			col = glm::fvec3(0.5, 1, 0.5);
-			break; }
-		case 2: {
-			col = glm::fvec3(0.5, 0.5, 1);
-			break; }
-		case 3: {
-			col = glm::fvec3(1, 1, 0.5);
-			break; }
-		case 4: {
-			col = glm::fvec3(0.5, 1, 1);
-			break; }
-		case 5: {
-			col = glm::fvec3(1, 0.5, 1);
-			break; }
-		case 6: {
-			col = glm::fvec3(1, 1, 1);
-			break; }
-		}
 		pl.setColour(col * glm::fvec3(2.3));
 		pl.setLinear(0.0001);
 		pl.setQuadratic(0.0001);
@@ -166,7 +137,7 @@ void Renderer::reInitialise()
 	cleanupForReInit();
 
 	// Swap chain
-	createScreenSwapChain();
+	createScreenSwapchain();
 
 	// Pipeline attachments
 	createGBufferAttachments();
@@ -177,7 +148,8 @@ void Renderer::reInitialise()
 	createGBufferRenderPass();
 	//createScreenRenderPass();
 	overlayRenderer.createOverlayRenderPass();
-	overlayRenderer.createOverlayAttachmentsFramebuffers();
+	overlayRenderer.createOverlayAttachments();
+	overlayRenderer.createOverlayFramebuffer();
 
 	// Pipeline objects
 	createGBufferPipeline();

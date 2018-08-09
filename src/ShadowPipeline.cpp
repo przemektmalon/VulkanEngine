@@ -8,7 +8,6 @@ void Renderer::createShadowRenderPass()
 	shadowInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
 	shadowInfo->setFinalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 	shadowInfo->setUsageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
 	shadowRenderPass.create(&logicalDevice);
 }
 
@@ -22,199 +21,44 @@ void Renderer::createShadowDescriptorSetLayouts()
 
 void Renderer::createShadowPipeline()
 {
-	// Compile GLSL code to SPIR-V
-
+	pointShadowPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fvec4) });
+	pointShadowPipelineLayout.addDescriptorSetLayout(&shadowDescriptorSetLayout);
+	pointShadowPipelineLayout.create(&logicalDevice);
 	pointShadowShader.create(&logicalDevice);
-	spotShadowShader.create(&logicalDevice);
-	sunShadowShader.create(&logicalDevice);
-
 	pointShadowShader.compile();
+	pointShadowPipeline.setShaderProgram(&pointShadowShader);
+	pointShadowPipeline.setPipelineLayout(&pointShadowPipelineLayout);
+	pointShadowPipeline.setVertexInputState(&defaultVertexInputState);
+	pointShadowPipeline.addViewport({ 0.f, 0.f, 1024.f, 1024.f, 0.f, 1.f }, { 0, 0, 1024, 1024 });
+	pointShadowPipeline.setMaxDepthBounds(Engine::maxDepth);
+	pointShadowPipeline.setRenderPass(&shadowRenderPass);
+	pointShadowPipeline.create(&logicalDevice);
+
+	spotShadowPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4) * 2 });
+	spotShadowPipelineLayout.addDescriptorSetLayout(&shadowDescriptorSetLayout);
+	spotShadowPipelineLayout.create(&logicalDevice);
+	spotShadowShader.create(&logicalDevice);
 	spotShadowShader.compile();
+	spotShadowPipeline.setShaderProgram(&spotShadowShader);
+	spotShadowPipeline.setPipelineLayout(&spotShadowPipelineLayout);
+	spotShadowPipeline.setVertexInputState(&defaultVertexInputState);
+	spotShadowPipeline.addViewport({ 0.f, 0.f, 512.f, 512.f, 0.f, 1.f }, { 0, 0, 512, 512 });
+	spotShadowPipeline.setMaxDepthBounds(Engine::maxDepth);
+	spotShadowPipeline.setRenderPass(&shadowRenderPass);
+	spotShadowPipeline.create(&logicalDevice);
+
+	sunShadowPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) });
+	sunShadowPipelineLayout.addDescriptorSetLayout(&shadowDescriptorSetLayout);
+	sunShadowPipelineLayout.create(&logicalDevice);
+	sunShadowShader.create(&logicalDevice);
 	sunShadowShader.compile();
-
-	// Get the vertex layout format
-	auto bindingDescription = Vertex::getBindingDescription();
-	auto attributeDescriptions = Vertex::getShadowAttributeDescriptions();
-
-	// For submitting vertex layout info
-	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
-	// Assembly info (triangles quads lines strips etc)
-	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-	// Viewport
-	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = (float)1024; /// TODO: variable resolutions require multiple pipelines or maybe dynamic state ?
-	viewport.height = (float)1024;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	// Scissor
-	VkRect2D scissor = {};
-	scissor.offset = { 0, 0 };
-	scissor.extent.width = 1024;
-	scissor.extent.height = 1024;
-
-	// Submit info for viewport(s)
-	VkPipelineViewportStateCreateInfo viewportState = {};
-	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewportState.viewportCount = 1;
-	viewportState.pViewports = &viewport;
-	viewportState.scissorCount = 1;
-	viewportState.pScissors = &scissor;
-
-	// Rasterizer info (culling, polygon fill mode, etc)
-	VkPipelineRasterizationStateCreateInfo rasterizer = {};
-	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	rasterizer.depthClampEnable = VK_FALSE;
-	rasterizer.rasterizerDiscardEnable = VK_FALSE;
-	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	rasterizer.depthBiasEnable = VK_FALSE;
-
-	// Multisampling (doesnt work well with deffered renderer without convoluted methods)
-	VkPipelineMultisampleStateCreateInfo multisampling = {};
-	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	multisampling.sampleShadingEnable = VK_FALSE;
-	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-	VkPipelineColorBlendStateCreateInfo colorBlending = {};
-	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlending.logicOpEnable = VK_FALSE;
-	colorBlending.logicOp = VK_LOGIC_OP_COPY;
-	colorBlending.attachmentCount = 0;
-	colorBlending.pAttachments = 0;
-	colorBlending.blendConstants[0] = 0.0f;
-	colorBlending.blendConstants[1] = 0.0f;
-	colorBlending.blendConstants[2] = 0.0f;
-	colorBlending.blendConstants[3] = 0.0f;
-
-	//Depth
-	VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable = VK_TRUE;
-	depthStencil.depthWriteEnable = VK_TRUE;
-	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-	depthStencil.depthBoundsTestEnable = VK_FALSE;
-	depthStencil.minDepthBounds = 0.0f;
-	depthStencil.maxDepthBounds = Engine::maxDepth; /// TODO: make variable
-
-	VkPushConstantRange pushConstantRange = {};
-	pushConstantRange.offset = 0;
-	pushConstantRange.size = sizeof(glm::fvec4);
-	pushConstantRange.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	// Pipeline layout for specifying descriptor sets (shaders use to access buffer and image resources)
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout.getHandle();
-	pipelineLayoutInfo.pushConstantRangeCount = 1;
-	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-
-	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pointShadowPipelineLayout));
-
-	// Collate all the data necessary to create pipeline
-	VkGraphicsPipelineCreateInfo pipelineInfo = {};
-	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipelineInfo.stageCount = 3;
-	pipelineInfo.pStages = pointShadowShader.getShaderStageCreateInfos();
-	pipelineInfo.pVertexInputState = &vertexInputInfo;
-	pipelineInfo.pInputAssemblyState = &inputAssembly;
-	pipelineInfo.pViewportState = &viewportState;
-	pipelineInfo.pRasterizationState = &rasterizer;
-	pipelineInfo.pMultisampleState = &multisampling;
-	pipelineInfo.pColorBlendState = &colorBlending;
-	pipelineInfo.pDepthStencilState = &depthStencil;
-	pipelineInfo.layout = pointShadowPipelineLayout;
-	pipelineInfo.renderPass = shadowRenderPass.getHandle();
-	pipelineInfo.subpass = 0;
-	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pointShadowPipeline));
-
-
-	viewport.width = (float)512; /// TODO: variable resolutions require multiple pipelines or maybe dynamic state ?
-	viewport.height = (float)512;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	scissor.extent.width = 512;
-	scissor.extent.height = 512;
-
-	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable = VK_TRUE;
-	depthStencil.depthWriteEnable = VK_TRUE;
-	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-	depthStencil.depthBoundsTestEnable = VK_FALSE;
-	depthStencil.minDepthBounds = 0.0f;
-	depthStencil.maxDepthBounds = Engine::maxDepth; /// TODO: make variable
-	pushConstantRange.offset = 0;
-	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	pushConstantRange.size = sizeof(glm::fmat4) + sizeof(glm::fvec4) * 2;
-
-	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout.getHandle();
-	pipelineLayoutInfo.pushConstantRangeCount = 1;
-	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-
-	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &spotShadowPipelineLayout));
-
-	pipelineInfo.stageCount = 2;
-	pipelineInfo.pStages = spotShadowShader.getShaderStageCreateInfos();
-	pipelineInfo.layout = spotShadowPipelineLayout;
-	pipelineInfo.renderPass = shadowRenderPass.getHandle();
-
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &spotShadowPipeline));
-
-
-
-	viewport.width = (float)1280; /// TODO: variable resolutions require multiple pipelines or maybe dynamic state ?
-	viewport.height = (float)720;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	scissor.extent.width = 1280;
-	scissor.extent.height = 720;
-
-	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable = VK_TRUE;
-	depthStencil.depthWriteEnable = VK_TRUE;
-	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-	depthStencil.depthBoundsTestEnable = VK_FALSE;
-	depthStencil.minDepthBounds = 0.0f;
-	depthStencil.maxDepthBounds = Engine::maxDepth; /// TODO: make variable
-	pushConstantRange.offset = 0;
-	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	pushConstantRange.size = sizeof(glm::fmat4);
-
-	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &shadowDescriptorSetLayout.getHandle();
-	pipelineLayoutInfo.pushConstantRangeCount = 1;
-	pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-
-	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &sunShadowPipelineLayout));
-
-	pipelineInfo.stageCount = 2;
-	pipelineInfo.pStages = sunShadowShader.getShaderStageCreateInfos();
-	pipelineInfo.layout = sunShadowPipelineLayout;
-	pipelineInfo.renderPass = shadowRenderPass.getHandle();
-
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &sunShadowPipeline));
+	sunShadowPipeline.setShaderProgram(&sunShadowShader);
+	sunShadowPipeline.setPipelineLayout(&sunShadowPipelineLayout);
+	sunShadowPipeline.setVertexInputState(&defaultVertexInputState);
+	sunShadowPipeline.addViewport({ 0.f, 0.f, 1280.f, 720.f, 0.f, 1.f }, { 0, 0, 1280, 720 });
+	sunShadowPipeline.setMaxDepthBounds(Engine::maxDepth);
+	sunShadowPipeline.setRenderPass(&shadowRenderPass);
+	sunShadowPipeline.create(&logicalDevice);
 }
 
 void Renderer::createShadowDescriptorSets()
@@ -279,9 +123,9 @@ void Renderer::updateShadowCommands()
 
 		VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipeline));
+		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipeline.getHandle()));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipelineLayout, 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipelineLayout.getHandle(), 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
@@ -291,7 +135,7 @@ void Renderer::updateShadowCommands()
 		auto pos = l.getPosition();
 		glm::fvec4 push(pos.x, pos.y, pos.z, l.getRadius());
 
-		VK_VALIDATE(vkCmdPushConstants(cmd, pointShadowPipelineLayout, VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fvec4), &push));
+		VK_VALIDATE(vkCmdPushConstants(cmd, pointShadowPipelineLayout.getHandle(), VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fvec4), &push));
 		VK_VALIDATE(vkCmdDrawIndexedIndirect(cmd, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
 		VK_VALIDATE(vkCmdEndRenderPass(cmd));
@@ -314,9 +158,9 @@ void Renderer::updateShadowCommands()
 
 		VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipeline));
+		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipeline.getHandle()));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipelineLayout, 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipelineLayout.getHandle(), 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
@@ -333,7 +177,7 @@ void Renderer::updateShadowCommands()
 		push[19] = 0;
 		push[20] = l.getRadius() * 2.f;
 
-		VK_VALIDATE(vkCmdPushConstants(cmd, spotShadowPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(float) + sizeof(glm::fvec3), &push));
+		VK_VALIDATE(vkCmdPushConstants(cmd, spotShadowPipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(float) + sizeof(glm::fvec3), &push));
 		VK_VALIDATE(vkCmdDrawIndexedIndirect(cmd, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
 		VK_VALIDATE(vkCmdEndRenderPass(cmd));
@@ -359,9 +203,9 @@ void Renderer::updateShadowCommands()
 
 			VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-			VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipeline));
+			VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipeline.getHandle()));
 
-			VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipelineLayout, 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
+			VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipelineLayout.getHandle(), 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
 
 			VkBuffer vertexBuffers[] = { vertexIndexBuffer.getHandle() };
 			VkDeviceSize offsets[] = { 0 };
@@ -372,7 +216,7 @@ void Renderer::updateShadowCommands()
 			glm::fmat4 pv = *l.getProjView();
 			memcpy(push, &pv, sizeof(glm::fmat4));
 
-			VK_VALIDATE(vkCmdPushConstants(cmd, sunShadowPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4), &push));
+			VK_VALIDATE(vkCmdPushConstants(cmd, sunShadowPipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4), &push));
 			VK_VALIDATE(vkCmdDrawIndexedIndirect(cmd, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
 
 			VK_VALIDATE(vkCmdEndRenderPass(cmd));
@@ -396,12 +240,14 @@ void Renderer::destroyShadowDescriptorSetLayouts()
 
 void Renderer::destroyShadowPipeline()
 {
-	VK_VALIDATE(vkDestroyPipelineLayout(device, pointShadowPipelineLayout, 0));
-	VK_VALIDATE(vkDestroyPipeline(device, pointShadowPipeline, 0));
-	VK_VALIDATE(vkDestroyPipelineLayout(device, spotShadowPipelineLayout, 0));
-	VK_VALIDATE(vkDestroyPipeline(device, spotShadowPipeline, 0));
-	VK_VALIDATE(vkDestroyPipelineLayout(device, sunShadowPipelineLayout, 0));
-	VK_VALIDATE(vkDestroyPipeline(device, sunShadowPipeline, 0));
+	pointShadowPipelineLayout.destroy();
+	spotShadowPipelineLayout.destroy();
+	sunShadowPipelineLayout.destroy();
+
+	pointShadowPipeline.destroy();
+	spotShadowPipeline.destroy();
+	sunShadowPipeline.destroy();
+
 	pointShadowShader.destroy();
 	spotShadowShader.destroy();
 	sunShadowShader.destroy();

@@ -64,6 +64,8 @@ public:
 	VkQueue presentQueue;
 	VkExtent2D renderResolution;
 
+	vdu::VertexInputState defaultVertexInputState;
+
 	// Thread safe command pools and fencing
 
 	// For now just make sure each thread has its own command pool
@@ -158,8 +160,8 @@ public:
 	void destroyGBufferCommands();
 
 	// Pipeline objets
-	VkPipeline gBufferPipeline;
-	VkPipelineLayout gBufferPipelineLayout;
+	vdu::GraphicsPipeline gBufferPipeline;
+	vdu::PipelineLayout gBufferPipelineLayout;
 	
 	// Descriptors
 	vdu::DescriptorSetLayout gBufferDescriptorSetLayout;
@@ -201,14 +203,14 @@ public:
 	void destroyShadowCommands();
 
 	// Pipeline objets
-	VkPipeline pointShadowPipeline;
-	VkPipelineLayout pointShadowPipelineLayout;
+	vdu::GraphicsPipeline pointShadowPipeline;
+	vdu::PipelineLayout pointShadowPipelineLayout;
 
-	VkPipeline spotShadowPipeline;
-	VkPipelineLayout spotShadowPipelineLayout;
+	vdu::GraphicsPipeline spotShadowPipeline;
+	vdu::PipelineLayout spotShadowPipelineLayout;
 
-	VkPipeline sunShadowPipeline;
-	VkPipelineLayout sunShadowPipelineLayout;
+	vdu::GraphicsPipeline sunShadowPipeline;
+	vdu::PipelineLayout sunShadowPipelineLayout;
 
 	// Descriptors
 	vdu::DescriptorSetLayout shadowDescriptorSetLayout;
@@ -242,8 +244,8 @@ public:
 	void destroyPBRCommands();
 
 	// Pipeline objects
-	VkPipeline pbrPipeline;
-	VkPipelineLayout pbrPipelineLayout;
+	vdu::ComputePipeline pbrPipeline;
+	vdu::PipelineLayout pbrPipelineLayout;
 
 	// Descriptors
 	vdu::DescriptorSetLayout pbrDescriptorSetLayout;
@@ -261,7 +263,7 @@ public:
 	/// --------------------
 
 	// Functions
-	void createScreenSwapChain();
+	void createScreenSwapchain();
 	void createScreenDescriptorSetLayouts();
 	void createScreenPipeline();
 	void createScreenDescriptorSets();

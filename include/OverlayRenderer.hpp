@@ -5,6 +5,8 @@
 #include "vdu/DeviceMemory.hpp"
 #include "Model.hpp"
 #include "vdu/CommandBuffer.hpp"
+#include "vdu/Framebuffer.hpp"
+#include "vdu/Pipeline.hpp"
 
 class OLayer
 {
@@ -22,7 +24,7 @@ public:
 
 	Texture* getColour() { return &colAttachment; }
 	Texture* getDepth() { return &depAttachment; }
-	VkFramebuffer getFramebuffer() { return framebuffer; }
+	const vdu::Framebuffer& getFramebuffer() { return framebuffer; }
 
 	void setPosition(glm::ivec2 pPos);
 
@@ -43,7 +45,7 @@ private:
 	std::vector<OverlayElement*> elements;
 	std::unordered_map<std::string, OverlayElement*> elementLabels;
 
-	VkFramebuffer framebuffer;
+	vdu::Framebuffer framebuffer;
 	Texture colAttachment;
 	Texture depAttachment;
 
@@ -68,7 +70,8 @@ public:
 
 	void createOverlayRenderPass();
 	void createOverlayPipeline();
-	void createOverlayAttachmentsFramebuffers();
+	void createOverlayAttachments();
+	void createOverlayFramebuffer();
 	void createOverlayDescriptorSetLayouts();
 	void createOverlayDescriptorSets();
 	void createOverlayCommands();
@@ -87,7 +90,7 @@ public:
 	void addLayer(OLayer* layer);
 	void removeLayer(OLayer* layer);
 
-	VkRenderPass getRenderPass() { return overlayRenderPass; }
+	const vdu::RenderPass& getRenderPass() { return overlayRenderPass; }
 	vdu::DescriptorSetLayout& getDescriptorSetLayout() { return overlayDescriptorSetLayout; }
 
 private:
@@ -95,20 +98,22 @@ private:
 	std::set<OLayer*> layers;
 
 	// For rendering and combining layers
-	VkRenderPass overlayRenderPass;
+	vdu::RenderPass overlayRenderPass;
 
 	// Pipeline and command buffer for rendering elements
-	VkPipeline elementPipeline;
-	VkPipelineLayout elementPipelineLayout;
+	vdu::GraphicsPipeline elementPipeline;
+	vdu::PipelineLayout elementPipelineLayout;
 	vdu::CommandBuffer elementCommandBuffer;
 
 	// Pipeline and command buffer for rendering layers
-	VkPipeline combinePipeline;
-	VkPipelineLayout combinePipelineLayout;
+	vdu::GraphicsPipeline combinePipeline;
+	vdu::PipelineLayout combinePipelineLayout;
 	vdu::CommandBuffer combineCommandBuffer;
 
+	vdu::VertexInputState vertexInputState;
+
 	// Framebuffer for combined layers
-	VkFramebuffer framebuffer;
+	vdu::Framebuffer framebuffer;
 	Texture combinedLayers;
 	Texture combinedLayersDepth;
 
