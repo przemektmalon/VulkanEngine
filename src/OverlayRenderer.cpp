@@ -259,7 +259,7 @@ void OverlayRenderer::createOverlayPipeline()
 		colourBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 		colourBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
-		elementPipeline.setAttachmentColorBlendState("colour", colourBlendAttachment);
+		elementPipeline.setAttachmentColorBlendState("combined", colourBlendAttachment);
 
 		elementPipeline.addViewport({ 0.f, 0.f, (float)1280, (float)720, 0.f, 1.f }, { 0, 0, 1280, 720 });
 		elementPipeline.setVertexInputState(&Engine::renderer->screenVertexInputState);

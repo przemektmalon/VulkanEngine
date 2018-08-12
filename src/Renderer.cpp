@@ -44,6 +44,9 @@ void Renderer::initialise()
 
 		overlayShader.create(&logicalDevice);
 		overlayShader.compile();
+
+		combineOverlaysShader.create(&logicalDevice);
+		combineOverlaysShader.compile();
 	}
 
 	// Screen
@@ -87,11 +90,6 @@ void Renderer::initialise()
 
 	// Overlays
 	{
-
-
-		combineOverlaysShader.create(&logicalDevice);
-		combineOverlaysShader.compile();
-
 		overlayRenderer.createOverlayAttachments();
 		overlayRenderer.createOverlayRenderPass();
 		overlayRenderer.createOverlayDescriptorSetLayouts();
@@ -283,7 +281,7 @@ void Renderer::render()
 {
 	//PROFILE_START("qwaitidle");
 
-	VK_CHECK_RESULT(vkQueueWaitIdle(presentQueue));
+	lGraphicsQueue.waitIdle();
 
 	auto timestamps = queryPool.query();
 	memcpy(Engine::gpuTimeStamps, timestamps, sizeof(u64) * NUM_GPU_TIMESTAMPS);
@@ -308,18 +306,14 @@ void Renderer::render()
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-
 	submitInfo.waitSemaphoreCount = 0;
 	submitInfo.pWaitDstStageMask = 0;
-
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &gBufferCommands.getHandle();
-
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	lGraphicsQueue.submit(&submitInfo);
 	// From now on we cant update the gBuffer command buffer until the fence is signalled at some point in the future
 	// GBuffer command update will block
 	// Later we want to implement a double(or triple) buffering for command buffers and fences, so we can start updating next frames command buffer without blocking
@@ -331,7 +325,7 @@ void Renderer::render()
 	submitInfo.pCommandBuffers = &shadowCommandBuffer.getHandle();
 	submitInfo.pSignalSemaphores = &shadowFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	lGraphicsQueue.submit(&submitInfo);
 
 
 	submitInfo.pWaitSemaphores = &shadowFinishedSemaphore;
@@ -339,7 +333,7 @@ void Renderer::render()
 	submitInfo.pCommandBuffers = &pbrCommandBuffer.getHandle();;
 	submitInfo.pSignalSemaphores = &pbrFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	lGraphicsQueue.submit(&submitInfo);
 
 
 	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -348,7 +342,7 @@ void Renderer::render()
 	submitInfo.pCommandBuffers = &overlayRenderer.elementCommandBuffer.getHandle();
 	submitInfo.pSignalSemaphores = &overlayFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	lGraphicsQueue.submit(&submitInfo);
 
 
 	submitInfo.waitSemaphoreCount = 1;
@@ -357,7 +351,7 @@ void Renderer::render()
 	submitInfo.pCommandBuffers = &overlayRenderer.combineCommandBuffer.getHandle();
 	submitInfo.pSignalSemaphores = &overlayCombineFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	lGraphicsQueue.submit(&submitInfo);
 
 
 
@@ -367,8 +361,6 @@ void Renderer::render()
 	if (result != VK_SUCCESS)
 	{
 		DBG_SEVERE("Could not acquire next image");
-		//cleanupVulkanSwapChain();
-		//recreateVulkanSwapChain();
 		return;
 	}
 
@@ -380,24 +372,21 @@ void Renderer::render()
 	submitInfo.pCommandBuffers = &screenCommandBuffers.getHandle(imageIndex);
 	submitInfo.pSignalSemaphores = &screenFinishedSemaphore;
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	lGraphicsQueue.submit(&submitInfo);
 
-
-	VkPresentInfoKHR presentInfo = {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &screenFinishedSemaphore;
 
 	VkSwapchainKHR swapChains[] = { screenSwapchain.getHandle() };
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = &screenFinishedSemaphore;
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
-
 	presentInfo.pImageIndices = &imageIndex;
 
 	PROFILE_START("submitrender");
 
-	VK_CHECK_RESULT(vkQueuePresentKHR(presentQueue, &presentInfo));
+	lGraphicsQueue.present(&presentInfo);
 
 	PROFILE_END("submitrender");
 }
