@@ -14,7 +14,10 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 {
 	PROFILE_MUTEX("modeladdmutex", Engine::threading->addingModelInstanceMutex.lock());
 	if (modelNames.find(instanceName) != modelNames.end())
+	{
+		Engine::threading->addingModelInstanceMutex.unlock();
 		return; // Instance exists
+	}
 
 	int transformIndex = allInstances.size() * 100; // Dependant on list<vector<>> the instance is in
 
