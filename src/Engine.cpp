@@ -73,7 +73,7 @@ void Engine::start()
 	/*
 		Initialise worker threads (each one needs vulkan logical device before initialising its command pool)
 	*/
-	int numThreads = 2;
+	int numThreads = 4;
 	waitForProfilerInitMutex.lock();
 	threading = new Threading(numThreads);
 
@@ -147,6 +147,8 @@ void Engine::start()
 	*/
 	scriptEnv.initChai();
 	scriptEnv.evalFile("./res/scripts/script.chai");
+	scriptEnv.chai.add_global(chaiscript::var(std::ref(world)), "world");
+	scriptEnv.chai.add_global(chaiscript::var(std::ref(assets)), "assets");
 
 	PROFILE_END("init");
 
@@ -156,6 +158,7 @@ void Engine::start()
 		Load the rest of our assets defined in 'resources.xml'
 	*/
 	assets.loadAssets("/res/resources.xml");
+	
 	
 
 	/*
@@ -182,50 +185,8 @@ void Engine::start()
 
 	PROFILE_START("world");
 
-	// Adding models to the world
-	{
-		std::string materialList[6] = { "bamboo", "greasymetal", "marble", "dirt", "mahog", "copper" };
-
-		for (int i = 0; i < 3; ++i)
-		{
-			world.addModelInstance("box", "hollowbox" + std::to_string(i));
-			int s = 100;
-			int h = 100;
-			int sh = s / 2;
-			glm::fvec3 pos = glm::fvec3(s64(rand() % s) - sh, s64(rand() % h) / 5.f + 50.f, s64(rand() % s) - sh);
-			//world.modelNames["hollowbox" + std::to_string(i)]->transform = glm::translate(glm::fmat4(1), glm::fvec3(-((i % 5) * 2), std::floor(int(i / (int)5) * 2), 0));
-
-			Transform t;
-			t.setTranslation(pos);
-			t.setScale(glm::fvec3(10));
-			t.updateMatrix();
-
-			world.modelNames["hollowbox" + std::to_string(i)]->setTransform(t);
-			world.modelNames["hollowbox" + std::to_string(i)]->setMaterial(assets.getMaterial(materialList[i % 6]));
-			//world.modelNames["hollowbox" + std::to_string(i)]->makePhysicsObject();
-		}
-
-		world.addModelInstance("pbrsphere", "pbrsphere");
-		Transform t;
-		t.setTranslation(glm::fvec3(4,0,0));
-		t.setScale(glm::fvec3(10));
-		t.updateMatrix();
-
-		world.modelNames["pbrsphere"]->setTransform(t);
-		world.modelNames["pbrsphere"]->setMaterial(assets.getMaterial("marble"));
-		//world.modelNames["pbrsphere"]->makePhysicsObject();
-
-		world.addModelInstance("ground", "ground");
-		t.setTranslation(glm::fvec3(0, 0, 0));
-		t.updateMatrix();
-
-		world.modelNames["ground"]->setTransform(t);
-		world.modelNames["ground"]->setMaterial(assets.getMaterial("marble"));
-		//world.modelNames["ground"]->makePhysicsObject();
-
-		//world.addModelInstance("monkey");
-		//world.modelNames["monkey"]->transform = glm::translate(glm::fmat4(1), glm::fvec3(0, 10, 0));
-	}
+	// Startup script. Adds models to the world
+	scriptEnv.evalFile("./res/scripts/startup.chai");
 
 	initialised = 1;
 

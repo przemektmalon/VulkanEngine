@@ -1,0 +1,39 @@
+def startup()
+{
+	var materials = ["bamboo", "greasymetal", "marble", "dirt", "mahog", "copper"];
+
+	for (var i = 0; i < 6; ++i)
+	{
+		world.addModel("box", materials[i]);
+
+		var t = Transform();
+		t.setTranslation(fvec3(i*30,10,10));
+		t.setScale(fvec3(10,10,10));
+		t.updateMatrix();
+
+		world.getModel(materials[i]).setTransform(t);
+		world.getModel(materials[i]).setMaterial(assets.getMaterial(materials[i]));
+		world.getModel(materials[i]).makePhysical();
+	}
+
+	world.addModel("pbrsphere", "pbrsphere");
+
+	var t = Transform();
+	t.setTranslation(fvec3(4,0,0));
+	t.setScale(fvec3(10,10,10));
+	t.updateMatrix();
+
+	world.getModel("pbrsphere").setTransform(t);
+	world.getModel("pbrsphere").setMaterial(assets.getMaterial("marble"));
+	world.getModel("pbrsphere").makePhysical();
+
+	world.addModel("ground", "ground");
+	t.setTranslation(fvec3(0, 0, 0));
+	t.updateMatrix();
+
+	world.getModel("ground").setTransform(t);
+	world.getModel("ground").setMaterial(assets.getMaterial("marble"));
+	world.getModel("ground").makePhysical();
+}
+
+startup();
