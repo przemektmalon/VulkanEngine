@@ -160,9 +160,30 @@ void ScriptEnv::initChai()
 			"Model",
 			{ constructor<ModelInstance()>() },
 			{ { fun(&ModelInstance::getTransform), "getTransform" },
-			{ fun(&ModelInstance::makePhysicsObject), "makePhysical" } }
+			{ fun(&ModelInstance::setTransform), "setTransform" },
+			{ fun(&ModelInstance::makePhysicsObject), "makePhysical" },
+			{ fun(&ModelInstance::setMaterial), "setMaterial" } }
 		);
 		chai.add(m);
+	}
+	{
+		ModulePtr m = ModulePtr(new chaiscript::Module());
+		utility::add_class<Material>(*m,
+			"Material",
+			{ constructor<Material()>() },
+			{  }
+		);
+		chai.add(m);
+	}
+	{
+		ModulePtr m = ModulePtr(new chaiscript::Module());
+		utility::add_class<AssetStore>(*m,
+		"AssetStore",
+		{ constructor<AssetStore()>() },
+		{ { fun(&AssetStore::getMaterial), "getMaterial" },
+		{ fun(&AssetStore::getModel), "getModel" } }
+	);
+	chai.add(m);
 	}
 	{
 		ModulePtr m = ModulePtr(new chaiscript::Module());
@@ -210,10 +231,22 @@ void ScriptEnv::initChai()
 
 Boxed_Value ScriptEnv::evalFile(std::string path)
 {
-	return chai.eval_file(path);
+	try {
+		auto ret = chai.eval_file(path);
+		return ret;
+	}
+	catch (const chaiscript::exception::eval_error &e) {
+		DBG_SEVERE("Chaiscript eval error: " << e.pretty_print() << '\n');
+	}
 }
 
 Boxed_Value ScriptEnv::evalString(std::string script)
 {
-	return chai.eval(script);
+	try {
+		auto ret = chai.eval(script);
+		return ret;
+	}
+	catch (const chaiscript::exception::eval_error &e) {
+		DBG_SEVERE("Chaiscript eval error: " << e.pretty_print() << '\n');
+	}
 }
