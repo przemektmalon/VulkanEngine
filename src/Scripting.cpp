@@ -221,9 +221,21 @@ void ScriptEnv::initChai()
 
 	bool(*isKeyPressedFunc)(char) = Keyboard::isKeyPressed;
 
+#define ADD_TO_STRING_OVERLOAD(TYPE) \
+	std::string( *to_string_##TYPE## )( ##TYPE## ) = std::to_string; \
+	chai.add(fun( to_string_##TYPE## ), "to_string");
+	
+	ADD_TO_STRING_OVERLOAD(double);
+	ADD_TO_STRING_OVERLOAD(float);
+	ADD_TO_STRING_OVERLOAD(u64);
+	ADD_TO_STRING_OVERLOAD(s64);
+	ADD_TO_STRING_OVERLOAD(u32);
+	ADD_TO_STRING_OVERLOAD(s32);
+
 	chai.add(fun(isKeyPressedFunc), "isKeyPressed");
 	chai.add(fun([](Event& ev)->bool { return Engine::window->eventQ.pollEvent(ev); }), "pollEvent");
 	chai.add(fun([]()->float { return Engine::frameTime.getSecondsf(); }), "getFrameTime");
+	chai.add(fun([]()->u64 { return Engine::clock.now(); }), "getCurrentTime");
 	chai.add(fun([]()->Camera& { return Engine::camera; }), "getCamera");
 	chai.add(fun([]()->World& { return Engine::world; }), "getWorld");
 	chai.add(fun(resizeJobSubmitFunc), "setResolution");

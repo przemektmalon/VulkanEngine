@@ -89,8 +89,6 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 			DBG_SEVERE("Not supported yet"); /// TODO: this
 		}
 	}
-
-	
 }
 
 void World::removeModelInstance(std::string instanceName)

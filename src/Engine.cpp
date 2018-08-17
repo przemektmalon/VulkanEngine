@@ -311,8 +311,8 @@ void Engine::engineLoop()
 		t->join();
 	}
 	threading->cleanupJobs(); // Cleanup memory of finished jobs
-	vkQueueWaitIdle(renderer->lGraphicsQueue.getHandle());
-	vkQueueWaitIdle(renderer->lTransferQueue.getHandle());
+	renderer->lGraphicsQueue.waitIdle();
+	renderer->lTransferQueue.waitIdle();
 	quit();
 }
 
