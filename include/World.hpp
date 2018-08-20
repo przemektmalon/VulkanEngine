@@ -7,7 +7,7 @@ class World
 {
 public:
 
-	void addModelInstance(std::string modelName, std::string instanceName);
+	ModelInstance* addModelInstance(std::string modelName, std::string instanceName);
 	void removeModelInstance(std::string instanceName);
 	ModelInstance* getModelInstance(std::string instanceName);
 

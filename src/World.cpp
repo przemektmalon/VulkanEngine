@@ -10,13 +10,13 @@
 // To insert:
 //	Find first vector in list with size < 100 and push_back()
 
-void World::addModelInstance(std::string modelName, std::string instanceName)
+ModelInstance* World::addModelInstance(std::string modelName, std::string instanceName)
 {
 	PROFILE_MUTEX("modeladdmutex", Engine::threading->addingModelInstanceMutex.lock());
 	if (modelNames.find(instanceName) != modelNames.end())
 	{
 		Engine::threading->addingModelInstanceMutex.unlock();
-		return; // Instance exists
+		return nullptr; // Instance exists
 	}
 
 	int transformIndex = allInstances.size() * 100; // Dependant on list<vector<>> the instance is in
@@ -89,6 +89,7 @@ void World::addModelInstance(std::string modelName, std::string instanceName)
 			DBG_SEVERE("Not supported yet"); /// TODO: this
 		}
 	}
+	return insertPosition;
 }
 
 void World::removeModelInstance(std::string instanceName)

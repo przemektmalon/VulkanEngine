@@ -176,12 +176,15 @@ void ScriptEnv::initChai()
 		chai.add(m);
 	}
 	{
+		void(AssetStore::*addMaterialFlat)(std::string, glm::fvec3, float, float) = &AssetStore::addMaterial;
+
 		ModulePtr m = ModulePtr(new chaiscript::Module());
 		utility::add_class<AssetStore>(*m,
 		"AssetStore",
 		{ constructor<AssetStore()>() },
 		{ { fun(&AssetStore::getMaterial), "getMaterial" },
-		{ fun(&AssetStore::getModel), "getModel" } }
+		{ fun(&AssetStore::getModel), "getModel" },
+		{ fun(addMaterialFlat), "addMaterial" } }
 	);
 	chai.add(m);
 	}

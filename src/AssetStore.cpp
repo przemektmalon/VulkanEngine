@@ -252,3 +252,66 @@ void AssetStore::addMaterial(std::string name, std::string albedoSpec, std::stri
 	materials[matIndex].normalRough = getTexture(normalRough);
 	materials[matIndex].gpuIndexBase = (materials.size() - 1) * 2;
 }
+
+void AssetStore::addMaterial(std::string name, glm::fvec3 albedo, float roughness, float metal)
+{
+	auto find = materialIndices.find(name);
+	if (find != materialIndices.end())
+		return;
+
+	u32 matIndex = materials.size();
+	materialIndices[name] = matIndex;
+
+	auto genTexName = name + "_generated_COL=(" + std::to_string(albedo.x) + "," + std::to_string(albedo.y) + "," + std::to_string(albedo.z) + ",R=" + std::to_string(roughness) + "),M=" + std::to_string(metal);
+
+	{
+		auto genTexNameAlbedoSpec = genTexName + "_AS";
+		auto& tex = textures.try_emplace(genTexNameAlbedoSpec).first->second;
+		TextureCreateInfo ci;
+		ci.genMipMaps = false;
+		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ci.layers = 1;
+		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		ci.width = 1;
+		ci.height = 1;
+		u8 data[4];
+		data[0] = static_cast<u8>(albedo.x * 255.f);
+		data[1] = static_cast<u8>(albedo.y * 255.f);
+		data[2] = static_cast<u8>(albedo.z * 255.f);
+		data[3] = static_cast<u8>(metal * 255.f);
+		ci.pData = data;
+		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+
+		tex.loadToGPU(&ci);
+
+		materials[matIndex].albedoSpec = &tex;
+	}
+	{
+		auto genTexNameNormalRough = genTexName + "_NR";
+		auto& tex = textures.try_emplace(genTexNameNormalRough).first->second;
+		TextureCreateInfo ci;
+		ci.genMipMaps = false;
+		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ci.layers = 1;
+		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		ci.width = 1;
+		ci.height = 1;
+		u8 data[4];
+		data[0] = 128;
+		data[1] = 128;
+		data[2] = 255;
+		data[3] = static_cast<u8>(roughness * 255.f);
+		ci.pData = data;
+		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+
+		tex.loadToGPU(&ci);
+
+		materials[matIndex].normalRough = &tex;
+	}
+
+	materials[matIndex].gpuIndexBase = (materials.size() - 1) * 2;
+
+
+}

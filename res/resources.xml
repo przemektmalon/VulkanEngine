@@ -174,4 +174,11 @@
 		<physics>_groundphysics.xml</physics>
 	</model>
 
+	<model>
+		<path>_ENGINE_TEXT.obj</path>
+		<name>engineText</name>
+		<material>rustediron</material>
+		<physics></physics>
+	</model>
+
 </resources>

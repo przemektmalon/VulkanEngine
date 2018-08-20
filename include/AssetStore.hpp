@@ -31,6 +31,7 @@ public:
 	std::unordered_map<std::string, Font> fonts;
 
 	void addMaterial(std::string name, std::string albedoSpec, std::string normalRough);
+	void addMaterial(std::string name, glm::fvec3 albedo, float roughness, float metal);
 
 	FT_Library freetype;
 };

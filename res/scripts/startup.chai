@@ -2,39 +2,64 @@ def startup()
 {
 	var materials = ["bamboo", "greasymetal", "marble", "dirt", "mahog", "copper"];
 
-	for (var i = 0; i < 50; ++i)
+	// Boxes
+
+	var t = Transform();
+
+	for (var i = 0; i < 5; ++i)
 	{
 		var instanceName = "box" + to_string(i);
-		world.addModel("box", instanceName);
+		var model = world.addModel("box", instanceName);
 
-		var t = Transform();
+		
 		t.setTranslation(fvec3(i*30,10,10));
 		t.setScale(fvec3(10,10,10));
 		t.updateMatrix();
 
-		world.getModel(instanceName).setTransform(t);
-		world.getModel(instanceName).setMaterial(assets.getMaterial(materials[i%6]));
-		world.getModel(instanceName).makePhysical();
+		model.setTransform(t);
+		model.setMaterial(assets.getMaterial(materials[i%6]));
+		model.makePhysical();
 	}
 
-	world.addModel("pbrsphere", "pbrsphere");
+	// PBR Sphere
+	{
+		var model = world.addModel("pbrsphere", "pbrsphere");
 
-	var t = Transform();
-	t.setTranslation(fvec3(4,0,0));
-	t.setScale(fvec3(10,10,10));
-	t.updateMatrix();
+		t.setTranslation(fvec3(4,0,0));
+		t.setScale(fvec3(10,10,10));
+		t.updateMatrix();
 
-	world.getModel("pbrsphere").setTransform(t);
-	world.getModel("pbrsphere").setMaterial(assets.getMaterial("marble"));
-	world.getModel("pbrsphere").makePhysical();
+		model.setTransform(t);
+		model.setMaterial(assets.getMaterial("marble"));
+		model.makePhysical();
+	}
 
-	world.addModel("ground", "ground");
-	t.setTranslation(fvec3(0, 0, 0));
-	t.updateMatrix();
+	// Ground Plane
+	{
+		var model = world.addModel("ground", "ground");
 
-	world.getModel("ground").setTransform(t);
-	world.getModel("ground").setMaterial(assets.getMaterial("marble"));
-	world.getModel("ground").makePhysical();
+		t.setTranslation(fvec3(0, 0, 0));
+		t.setScale(fvec3(10,10,10));
+		t.updateMatrix();
+
+		model.setTransform(t);
+		model.setMaterial(assets.getMaterial("marble"));
+		model.makePhysical();
+	}
+
+	// 3D Text
+	{
+		var model = world.addModel("engineText", "engineText");
+
+		t.setTranslation(fvec3(0, 70, 50));
+		t.setScale(fvec3(50,50,50));
+		t.updateMatrix();
+
+		assets.addMaterial("orangeplastic", fvec3(1,0.52,0.15), 0.0, 0.0);
+
+		model.setTransform(t);
+		model.setMaterial(assets.getMaterial("orangeplastic"));
+	}
 }
 
 startup();
