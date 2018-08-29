@@ -57,7 +57,7 @@ void Engine::start()
 	} */
 
 	/// TODO: temporary, we need a configurations manager
-	maxDepth = 10000.f; 
+	maxDepth = 10000.f;
 
 	/// TODO: cameras should be objects in the world
 	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(120.f), 0.1, maxDepth);
@@ -73,14 +73,15 @@ void Engine::start()
 	/*
 		Initialise worker threads (each one needs vulkan logical device before initialising its command pool)
 	*/
-	int numThreads = 4;
+	int numThreads = 2;
 	waitForProfilerInitMutex.lock();
 	threading = new Threading(numThreads);
 
 	/*
 		Preallocating profiler tags to avoid thread clashes
 	*/
-	std::vector<std::string> profilerTags = { "init", "assets", "world", "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
+	std::vector<std::string> profilerTags = { 
+		"init", "assets", "world", "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
 		"shadowfence", "gbufferfence",
 
 		"gbuffer", "shadow", "pbr", "overlay", "overlaycombine",  "screen", "commands", "cullingdrawbuffer", // GPU Tags
@@ -133,8 +134,8 @@ void Engine::start()
 	/*
 		Submit graphics job (console rendering)
 	*/
-	auto renderConsoleJob = new Job<>(renderConsoleFunc, defaultAsyncJobDoneFunc);
-	threading->addGraphicsJob(renderConsoleJob, 1);
+	auto renderConsoleJob = new Job<>(renderConsoleFunc, defaultGPUJobDoneFunc);
+	threading->addGPUJob(renderConsoleJob);
 
 	/*
 		Create bullet physics dynamic world
@@ -165,7 +166,7 @@ void Engine::start()
 		Wait for all assets to load and be transferred to GPU
 		We wait here because in the next lines descriptor set updates require textures to be on the GPU
 	*/
-	while (!threading->allTransferJobsDone() || !threading->allRegularJobsDone())
+	while (!threading->allTransferJobsDone() || !threading->allNonGPUJobsDone())
 	{
 		// Submit any gpu transfer jobs that were children of DISK load jobs
 		processAllMainThreadJobs();
@@ -180,6 +181,7 @@ void Engine::start()
 	renderer->updateShadowDescriptorSets();
 	renderer->updatePBRDescriptorSets();
 	renderer->updatePBRCommands();
+	renderer->updateSSAODescriptorSets();
 
 	PROFILE_END("assets");
 
@@ -210,7 +212,7 @@ void Engine::start()
 	statsText->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	statsText->setCharSize(20);
 	statsText->setString("");
-	statsText->setPosition(glm::fvec2(0, 270));
+	statsText->setPosition(glm::fvec2(0, 250));
 
 	uiLayer->addElement(statsText);
 
@@ -236,24 +238,24 @@ void Engine::start()
 
 	uiLayer->addElement(threadStatsText);
 
-	while (!threading->allAsyncJobsDone() || !threading->allGraphicsJobsDone() || !threading->allRegularJobsDone() || !threading->allTransferJobsDone())
+	while (!threading->allGraphicsJobsDone() || !threading->allNonGPUJobsDone() || !threading->allTransferJobsDone())
 	{
 		processAllMainThreadJobs();
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 
 	renderer->updateScreenCommands();
-
+	
 	/*
 		These jobs are found in "CommonJobs.hpp"
 		They will be re-added at the end of each frame
 	*/
-	//threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultAsyncJobDoneFunc), 1);
-	threading->addGraphicsJob(new Job<>(renderJobFunc, defaultAsyncJobDoneFunc), 1);
-	threading->addJob(new Job<>(physicsJobFunc, defaultAsyncJobDoneFunc), 1);
-	//threading->addJob(new Job<>(physicsToEngineJobFunc, defaultAsyncJobDoneFunc), 1);
-	threading->addJob(new Job<>(scriptsJobFunc, defaultAsyncJobDoneFunc), 1);
-	threading->addJob(new Job<>(cleanupJobsJobFunc, defaultAsyncJobDoneFunc), 1);
+	//threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultCPUJobDoneFunc), 1);
+	threading->addGPUJob(new Job<>(renderJobFunc, defaultGPUJobDoneFunc));
+	threading->addCPUJob(new Job<>(physicsJobFunc, defaultCPUJobDoneFunc));
+	//threading->addJob(new Job<>(physicsToEngineJobFunc, defaultCPUJobDoneFunc), 1);
+	threading->addCPUJob(new Job<>(scriptsJobFunc, defaultCPUJobDoneFunc));
+	threading->addCPUJob(new Job<>(cleanupJobsJobFunc, defaultCPUJobDoneFunc));
 
 	threading->threadJobsProcessed[std::this_thread::get_id()] = 0;
 
@@ -393,12 +395,12 @@ void Engine::eventLoop()
 			if (key == Key::KC_1)
 			{
 				auto resizeJob = std::bind(resizeJobFunc, glm::ivec2(1920, 1080));
-				threading->addGraphicsJob(new Job<decltype(resizeJob)>(resizeJob, defaultAsyncJobDoneFunc), 1);
+				threading->addGPUJob(new Job<decltype(resizeJob)>(resizeJob, defaultGPUJobDoneFunc));
 			}
 			if (key == Key::KC_2)
 			{
 				auto resizeJob = std::bind(resizeJobFunc, glm::ivec2(1280, 720));
-				threading->addGraphicsJob(new Job<decltype(resizeJob)>(resizeJob, defaultAsyncJobDoneFunc), 1);
+				threading->addGPUJob(new Job<decltype(resizeJob)>(resizeJob, defaultGPUJobDoneFunc));
 			}
 			break;
 		}
@@ -420,7 +422,7 @@ void Engine::processAllMainThreadJobs()
 		job->run();
 		++threading->threadJobsProcessed[std::this_thread::get_id()];
 	}
-	while (threading->getJob(job, timeUntilNextJob))
+	while (threading->getCPUJob(job, timeUntilNextJob))
 	{
 		job->run();
 		++threading->threadJobsProcessed[std::this_thread::get_id()];
@@ -437,7 +439,7 @@ bool Engine::processNextMainThreadJob()
 		++threading->threadJobsProcessed[std::this_thread::get_id()];
 		return true;
 	}
-	else if (threading->getJob(job, timeUntilNextJob))
+	else if (threading->getCPUJob(job, timeUntilNextJob))
 	{
 		job->run();
 		++threading->threadJobsProcessed[std::this_thread::get_id()];
@@ -450,6 +452,7 @@ void Engine::updatePerformanceStatsDisplay()
 {
 	auto gBufferTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("gbuffer"));
 	auto shadowTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("shadow"));
+	auto ssaoTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("ssao"));
 	auto pbrTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("pbr"));
 	auto overlayTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("overlay"));
 	auto overlayCombineTime = PROFILE_TO_MS(PROFILE_GET_AVERAGE("overlaycombine"));
@@ -469,7 +472,7 @@ void Engine::updatePerformanceStatsDisplay()
 	auto overlayCombineTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("overlaycombine"));
 	auto screenTimeMin = PROFILE_TO_MS(PROFILE_GET_MIN("screen"));
 
-	auto totalGPUTime = gBufferTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
+	auto totalGPUTime = gBufferTime + ssaoTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
 	auto totalGPUMaxTime = gBufferTimeMax + shadowTimeMax + pbrTimeMax + overlayTimeMax + overlayCombineTimeMax + screenTimeMax;
 	auto totalGPUMinTime = gBufferTimeMin + shadowTimeMin + pbrTimeMin + overlayTimeMin + overlayCombineTimeMin + screenTimeMin;
 
@@ -535,6 +538,7 @@ void Engine::updatePerformanceStatsDisplay()
 		"---------------------------\n"
 		"GBuffer pass   : " + std::to_string(gBufferTime) + "ms\n" +
 		"Shadow pass    : " + std::to_string(shadowTime) + "ms\n" +
+		"SSAO pass      : " + std::to_string(ssaoTime) + "ms\n" +
 		"PBR pass       : " + std::to_string(pbrTime) + "ms\n" +
 		"Overlay pass   : " + std::to_string(overlayTime) + "ms\n" +
 		"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms\n" +

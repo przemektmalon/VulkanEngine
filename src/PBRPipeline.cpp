@@ -25,6 +25,7 @@ void Renderer::createPBRDescriptorSetLayouts()
 	dsl.addBinding("pbr", vdu::DescriptorType::StorageImage, 3, 1, vdu::ShaderStage::Compute);
 	dsl.addBinding("depth", vdu::DescriptorType::CombinedImageSampler, 4, 1, vdu::ShaderStage::Compute);
 	dsl.addBinding("skybox", vdu::DescriptorType::CombinedImageSampler, 5, 1, vdu::ShaderStage::Compute);
+	dsl.addBinding("ssao", vdu::DescriptorType::StorageImage, 6, 1, vdu::ShaderStage::Compute);
 
 	dsl.addBinding("camera", vdu::DescriptorType::UniformBuffer, 9, 1, vdu::ShaderStage::Compute);
 	dsl.addBinding("point_lights", vdu::DescriptorType::UniformBuffer, 10, 1, vdu::ShaderStage::Compute);
@@ -108,6 +109,9 @@ void Renderer::updatePBRDescriptorSets()
 
 	auto skyboxUpdater = updater->addImageUpdate("skybox");
 	*skyboxUpdater = { skySampler, Engine::assets.getTexture("skybox")->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+
+	auto ssaoUpdater = updater->addImageUpdate("ssao");
+	*ssaoUpdater = { textureSampler, ssaoFinalAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
 
 	auto lightCountsUpdater = updater->addBufferUpdate("light_counts");
 	*lightCountsUpdater = { lightManager.lightCountsBuffer.getHandle(), 0, 2 * sizeof(u32) };

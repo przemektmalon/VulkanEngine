@@ -47,6 +47,12 @@ void Renderer::initialise()
 
 		combineOverlaysShader.create(&logicalDevice);
 		combineOverlaysShader.compile();
+
+		ssaoShader.create(&logicalDevice);
+		ssaoShader.compile();
+
+		ssaoBlurShader.create(&logicalDevice);
+		ssaoBlurShader.compile();
 	}
 
 	// Screen
@@ -75,6 +81,18 @@ void Renderer::initialise()
 		createShadowPipeline();
 		createShadowDescriptorSets();
 		createShadowCommands();
+	}
+
+	// SSAO
+	/// TODO: Variable resolution ssao
+	{
+		createSSAOAttachments();
+		createSSAORenderPass();
+		createSSAODescriptorSetLayouts();
+		createSSAOPipeline();
+		createSSAOFramebuffer();
+		createSSAODescriptorSets();
+		createSSAOCommands();
 	}
 
 	// GBuffer
@@ -108,10 +126,21 @@ void Renderer::initialise()
 		int s = 300;
 		int sh = s / 2;
 		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 50, s64(r() % s) - sh));
-		glm::fvec3 col(1.0, 0.8, 1.0);
-		pl.setColour(col * glm::fvec3(2.3));
-		pl.setLinear(0.0001);
-		pl.setQuadratic(0.0001);
+		pl.setColour(glm::fvec3(2.5, 1.5, 0.5));
+		switch (i)
+		{
+		case 0:
+			pl.setColour(glm::fvec3(2.5, 1.5, 0.5));
+			break;
+		case 1:
+			pl.setColour(glm::fvec3(1.5, 2.5, 0.5));
+			break;
+		case 2:
+			pl.setColour(glm::fvec3(0.5, 1.5, 2.5));
+			break;
+		}
+		pl.setLinear(0.00001);
+		pl.setQuadratic(0.00001);
 		pl.setFadeStart(10000);
 		pl.setFadeLength(500);
 	}
@@ -288,6 +317,7 @@ void Renderer::render()
 
 	PROFILE_RESET("gbuffer");
 	PROFILE_RESET("shadow");
+	PROFILE_RESET("ssao");
 	PROFILE_RESET("pbr");
 	PROFILE_RESET("overlay");
 	PROFILE_RESET("overlaycombine");
@@ -295,6 +325,7 @@ void Renderer::render()
 
 	PROFILE_GPU_ADD_TIME("gbuffer", Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER], Engine::gpuTimeStamps[Renderer::END_GBUFFER]);
 	PROFILE_GPU_ADD_TIME("shadow", Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW], Engine::gpuTimeStamps[Renderer::END_SHADOW]);
+	PROFILE_GPU_ADD_TIME("ssao", Engine::gpuTimeStamps[Renderer::BEGIN_SSAO], Engine::gpuTimeStamps[Renderer::END_SSAO]);
 	PROFILE_GPU_ADD_TIME("pbr", Engine::gpuTimeStamps[Renderer::BEGIN_PBR], Engine::gpuTimeStamps[Renderer::END_PBR]);
 	PROFILE_GPU_ADD_TIME("overlay", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY], Engine::gpuTimeStamps[Renderer::END_OVERLAY]);
 	PROFILE_GPU_ADD_TIME("overlaycombine", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE], Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE]);
@@ -302,14 +333,18 @@ void Renderer::render()
 
 	//PROFILE_END("qwaitidle");
 
-
+	/////////////////////////////////////////
+	/*
+		GBUFFER
+	*/
+	/////////////////////////////////////////
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.waitSemaphoreCount = 0;
 	submitInfo.pWaitDstStageMask = 0;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &gBufferCommands.getHandle();
+	submitInfo.pCommandBuffers = &gBufferCommandBuffer.getHandle();
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 
@@ -318,23 +353,51 @@ void Renderer::render()
 	// GBuffer command update will block
 	// Later we want to implement a double(or triple) buffering for command buffers and fences, so we can start updating next frames command buffer without blocking
 
+
+	/////////////////////////////////////////
+	/*
+		SSAO & SHADOWS
+	*/
+	/////////////////////////////////////////
+
 	VkPipelineStageFlags waitStages1[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = &renderFinishedSemaphore;
 	submitInfo.pWaitDstStageMask = waitStages1;
-	submitInfo.pCommandBuffers = &shadowCommandBuffer.getHandle();
-	submitInfo.pSignalSemaphores = &shadowFinishedSemaphore;
+	VkCommandBuffer cmds[] = { ssaoCommandBuffer.getHandle(), shadowCommandBuffer.getHandle() };
+	submitInfo.commandBufferCount = 2;
+	submitInfo.pCommandBuffers = cmds;
+	VkSemaphore sems[] = { ssaoFinishedSemaphore, shadowFinishedSemaphore };
+	submitInfo.signalSemaphoreCount = 2;
+	submitInfo.pSignalSemaphores = sems;
 
 	lGraphicsQueue.submit(&submitInfo);
 
 
-	submitInfo.pWaitSemaphores = &shadowFinishedSemaphore;
-	submitInfo.pWaitDstStageMask = waitStages1;
-	submitInfo.pCommandBuffers = &pbrCommandBuffer.getHandle();;
+	/////////////////////////////////////////
+	/*
+		PBR
+	*/
+	/////////////////////////////////////////
+
+	VkPipelineStageFlags waitStagesPBR[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
+	VkSemaphore waitSemsPBR[] = { ssaoFinishedSemaphore, shadowFinishedSemaphore };
+	submitInfo.waitSemaphoreCount = 2;
+	submitInfo.pWaitSemaphores = waitSemsPBR;
+	submitInfo.pWaitDstStageMask = waitStagesPBR;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &pbrCommandBuffer.getHandle();
+	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &pbrFinishedSemaphore;
 
 	lGraphicsQueue.submit(&submitInfo);
 
+
+	/////////////////////////////////////////
+	/*
+		OVERLAY
+	*/
+	/////////////////////////////////////////
 
 	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 0;
@@ -353,8 +416,6 @@ void Renderer::render()
 
 	lGraphicsQueue.submit(&submitInfo);
 
-
-
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(device, screenSwapchain.getHandle(), std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
@@ -363,6 +424,13 @@ void Renderer::render()
 		DBG_SEVERE("Could not acquire next image");
 		return;
 	}
+
+
+	/////////////////////////////////////////
+	/*
+		SCREEN
+	*/
+	/////////////////////////////////////////
 
 	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSemaphore waitSems[] = { imageAvailableSemaphore, pbrFinishedSemaphore, overlayCombineFinishedSemaphore };
@@ -374,6 +442,11 @@ void Renderer::render()
 
 	lGraphicsQueue.submit(&submitInfo);
 
+	/////////////////////////////////////////
+	/*
+		PRESENT
+	*/
+	/////////////////////////////////////////
 
 	VkSwapchainKHR swapChains[] = { screenSwapchain.getHandle() };
 	VkPresentInfoKHR presentInfo = {};
@@ -462,10 +535,7 @@ void Renderer::populateDrawCmdBuffer()
 
 void Renderer::createVertexIndexBuffers()
 {
-	VkDeviceSize bufferSize = VERTEX_BUFFER_SIZE + INDEX_BUFFER_SIZE;
-	vertexIndexBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	vertexIndexBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-	vertexIndexBuffer.create(&logicalDevice, bufferSize);
+
 }
 
 void Renderer::pushModelDataToGPU(Model & model)
@@ -517,7 +587,12 @@ void Renderer::createDataBuffers()
 	drawCmdBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
 	drawCmdBuffer.create(&logicalDevice, sizeof(VkDrawIndexedIndirectCommand) * 1000);
 	
-	createVertexIndexBuffers();
+	VkDeviceSize bufferSize = VERTEX_BUFFER_SIZE + INDEX_BUFFER_SIZE;
+	vertexIndexBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	vertexIndexBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+	vertexIndexBuffer.create(&logicalDevice, bufferSize);
+
+
 
 	std::vector<Vertex2D> quad;
 	quad.push_back({ { -1,-1 },{ 0,0 } });
@@ -680,6 +755,10 @@ void Renderer::createUBOs()
 	transformUBO.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	transformUBO.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	transformUBO.create(&logicalDevice, 8 * 1024 * 1024);
+
+	ssaoConfigBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	ssaoConfigBuffer.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	ssaoConfigBuffer.create(&logicalDevice, sizeof(SSAOConfig));
 }
 
 /*
@@ -687,10 +766,10 @@ void Renderer::createUBOs()
 */
 void Renderer::createDescriptorPool()
 {
-	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 9);
+	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10);
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1430);
-	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 12);
-	descriptorPool.addSetCount(15);
+	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 13);
+	descriptorPool.addSetCount(20);
 
 	descriptorPool.create(&logicalDevice);
 
@@ -717,6 +796,7 @@ void Renderer::createSemaphores()
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &shadowFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayCombineFinishedSemaphore));
+	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &ssaoFinishedSemaphore));
 }
 
 VkCommandBuffer Renderer::beginTransferCommands()
@@ -760,8 +840,8 @@ void Renderer::submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence)
 		VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, submitInfo.pCommandBuffers));
 		// To free command buffer for non blocking jobs we will need to know when the gpu finished it !
 	};
-	auto submitJob = new Job<>(submitJobFunc, defaultTransferJobDoneFunc);
-	Engine::threading->addGPUTransferJob(submitJob, 0); /// TODO: make asynchronous
+	auto submitJob = new Job<>(submitJobFunc, defaultGPUTransferJobDoneFunc);
+	Engine::threading->addGPUTransferJob(submitJob); /// TODO: make asynchronous
 }
 
 VkCommandBuffer Renderer::beginSingleTimeCommands()
@@ -844,6 +924,28 @@ void Renderer::updateTransformBuffer()
 	//ModelInstance::toGPUTransformIndex = tIndex == 0 ? 1 : 0;
 
 	//Engine::threading->instanceTransformMutex.unlock();
+}
+
+void Renderer::updateSSAOConfigBuffer()
+{
+	ssaoConfigData.samples = 23;
+	ssaoConfigData.spiralTurns = 30;
+	ssaoConfigData.projScale = 500;
+	ssaoConfigData.radius = 10.f;
+	ssaoConfigData.bias = 0.01;
+	ssaoConfigData.intensity = 0.00001f;
+
+	auto& p = cameraUBOData.proj;
+	auto& r = renderResolution;
+
+	ssaoConfigData.projInfo = glm::fvec4(-2.f / (r.width * p[0][0]),
+										-2.f / (r.height*p[1][1]),
+										(1.f - p[0][2]) / p[0][0],
+										(1.f + p[1][2]) / p[1][1]);
+
+	void* data = ssaoConfigBuffer.getMemory()->map();
+	memcpy(data, &ssaoConfigData, sizeof(ssaoConfigData));
+	ssaoConfigBuffer.getMemory()->unmap();
 }
 
 void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount, VkImageAspectFlags aspect)
@@ -1070,3 +1172,5 @@ void Renderer::setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLa
 		0, nullptr,
 		1, &imageBarrier));
 }
+
+

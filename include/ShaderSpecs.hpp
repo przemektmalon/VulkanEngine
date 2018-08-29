@@ -93,3 +93,22 @@ public:
 	}
 };
 
+class SSAOShader : public vdu::ShaderProgram
+{
+public:
+	SSAOShader()
+	{
+		addModule(vdu::ShaderStage::Vertex, Engine::workingDirectory + "/res/shaders/ssao.glsl");
+		addModule(vdu::ShaderStage::Fragment, Engine::workingDirectory + "/res/shaders/ssao.glsl");
+	}
+};
+
+class SSAOBlurShader : public vdu::ShaderProgram
+{
+public:
+	SSAOBlurShader()
+	{
+		addModule(vdu::ShaderStage::Vertex, Engine::workingDirectory + "/res/shaders/ssaoBlur.glsl");
+		addModule(vdu::ShaderStage::Fragment, Engine::workingDirectory + "/res/shaders/ssaoBlur.glsl");
+	}
+};

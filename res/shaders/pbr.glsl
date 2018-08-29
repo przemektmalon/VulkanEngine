@@ -11,6 +11,7 @@ layout(binding=2, rg32f) uniform readonly image2D gNormal;
 layout(binding=3, rgba8) uniform readonly image2D gPBR;
 layout(binding=4) uniform sampler2D gDepth;
 layout(binding=5) uniform samplerCube skybox;
+layout(binding=6, r8) uniform readonly image2D gSSAO;
 
 #define MAX_LIGHTS_PER_TILE 256
 
@@ -209,7 +210,7 @@ void main()
 	const float nearZMaxf = uintBitsToFloat(nearZMax);
 
 	const float zNear = 0.1;
-	const float zFar = 5000.f;
+	const float zFar = 10000.f;
 
     const float realDepth = calcRealDepth(depth, zNear, zFar);
 
@@ -357,7 +358,8 @@ void main()
 
 		albedoSpec.xyz = albedoSpec.xyz * ssaoVal;
 		
-		litPixel += albedoSpec.xyz * ambient;
+		ssaoVal = imageLoad(gSSAO, pixel.xy).r;
+		litPixel += albedoSpec.xyz * ambient * ssaoVal;
 
 		float metallic = albedoSpec.a;
 		vec3 V = normalize(viewPos - worldPos);
@@ -398,7 +400,7 @@ void main()
 
 			float currentDepth = length(fragToLight);
 			    
-		    float bias = max(0.001f * (1.0 - dot(normal, lightDir)), 0.001f);
+		    float bias = max(1.1f * (1.0 - dot(normal, lightDir)), 1.1f);
 
 		    float shadow = 0.f;
 
@@ -523,7 +525,7 @@ void main()
 			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
 
-		vec4 colour = sunLight.data.colour;
+		/*vec4 colour = sunLight.data.colour;
 		vec4 direction = sunLight.data.direction;
 		direction.y = -direction.y;
 
@@ -592,7 +594,7 @@ void main()
 
 		        break;
 	        }
-		}
+		}*/
 
 		//litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 
@@ -608,5 +610,11 @@ void main()
 		litPixel += vec3(10.0,0.0,10.0);
 	}*/
 
+	//ssaoVal = imageLoad(gSSAO, pixel.xy).r;
+	//imageStore(outColour, pixel, vec4(vec3(ssaoVal),1.f));
+	/*if (depth != 1.f)
+		imageStore(outColour, pixel, vec4(vec3(depth),1.f));
+	else
+		imageStore(outColour, pixel, vec4(vec3(0,1,0),1.f));*/
 	imageStore(outColour, pixel, vec4(litPixel,1.f));
 }

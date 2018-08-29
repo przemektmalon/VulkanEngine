@@ -49,9 +49,9 @@ static void initialiseCommonJobs()
 			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
 			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
-			auto nextPhysicsJob = new Job<>(physicsJobFunc, defaultAsyncJobDoneFunc);
+			auto nextPhysicsJob = new Job<>(physicsJobFunc, defaultCPUJobDoneFunc);
 			nextPhysicsJob->setScheduledTime(endTime + microsecondsBetweenPhysicsUpdates);
-			Engine::threading->addJob(nextPhysicsJob, 1);
+			Engine::threading->addCPUJob(nextPhysicsJob);
 		}
 	};
 
@@ -67,9 +67,9 @@ static void initialiseCommonJobs()
 			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
 			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
-			auto nextPhysicsJob = new Job<>(physicsToEngineJobFunc, defaultAsyncJobDoneFunc);
+			auto nextPhysicsJob = new Job<>(physicsToEngineJobFunc, defaultCPUJobDoneFunc);
 			nextPhysicsJob->setScheduledTime(Engine::clock.now() + microsecondsBetweenPhysicsUpdates);
-			Engine::threading->addJob(nextPhysicsJob, 1);
+			Engine::threading->addCPUJob(nextPhysicsJob);
 		}
 	};
 
@@ -85,9 +85,9 @@ static void initialiseCommonJobs()
 			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
 			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
-			auto nextPhysicsJob = new Job<>(physicsToGPUJobFunc, defaultAsyncJobDoneFunc);
+			auto nextPhysicsJob = new Job<>(physicsToGPUJobFunc, defaultGPUJobDoneFunc);
 			nextPhysicsJob->setScheduledTime(Engine::clock.now() + microsecondsBetweenPhysicsUpdates);
-			Engine::threading->addGraphicsJob(nextPhysicsJob, 1);
+			Engine::threading->addGPUJob(nextPhysicsJob);
 		}
 	};
 
@@ -98,7 +98,7 @@ static void initialiseCommonJobs()
 
 		Engine::renderer->lightManager.sunLight.calcProjs();
 		Engine::renderer->lightManager.updateSunLight();
-		//Engine::renderer->updateGBufferDescriptorSets();
+		Engine::renderer->updateGBufferDescriptorSets();
 
 		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
 		PROFILE_START("cullingdrawbuffer");
@@ -112,9 +112,11 @@ static void initialiseCommonJobs()
 		Engine::renderer->updatePBRCommands();
 		Engine::renderer->updateGBufferCommands();
 		Engine::renderer->updateShadowCommands(); // Mutex with engine model transform update
+		Engine::renderer->updateSSAOCommands();
 		Engine::renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
 		PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
 		Engine::renderer->updateCameraBuffer();
+		Engine::renderer->updateSSAOConfigBuffer();
 		Engine::threading->instanceTransformMutex.unlock();
 		PROFILE_END("commands");
 
@@ -125,7 +127,7 @@ static void initialiseCommonJobs()
 		PROFILE_END("setuprender");
 
 		if (Engine::engineRunning)
-			Engine::threading->addGraphicsJob(new Job<>(renderJobFunc, defaultAsyncJobDoneFunc), 1);
+			Engine::threading->addGPUJob(new Job<>(renderJobFunc, defaultGPUJobDoneFunc));
 	};
 
 	scriptsJobFunc = []() -> void {
@@ -146,9 +148,9 @@ static void initialiseCommonJobs()
 
 		if (Engine::engineRunning)
 		{
-			auto nextScriptsJob = new Job<>(scriptsJobFunc, defaultAsyncJobDoneFunc);
+			auto nextScriptsJob = new Job<>(scriptsJobFunc, defaultCPUJobDoneFunc);
 			nextScriptsJob->setScheduledTime(Engine::clock.now() + 10000);
-			Engine::threading->addJob(nextScriptsJob, 1);
+			Engine::threading->addCPUJob(nextScriptsJob);
 		}
 	};
 
@@ -158,9 +160,9 @@ static void initialiseCommonJobs()
 
 		if (Engine::engineRunning)
 		{
-			auto nextCleanupJob = new Job<>(cleanupJobsJobFunc, defaultAsyncJobDoneFunc);
+			auto nextCleanupJob = new Job<>(cleanupJobsJobFunc, defaultCPUJobDoneFunc);
 			nextCleanupJob->setScheduledTime(Engine::clock.now() + 10000);
-			Engine::threading->addJob(nextCleanupJob, 1);
+			Engine::threading->addCPUJob(nextCleanupJob);
 		}
 	};
 

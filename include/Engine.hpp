@@ -65,7 +65,7 @@ public:
 	static std::mt19937_64 rand;
 	static float maxDepth;
 	static OLayer* uiLayer;
-	static u64 gpuTimeStamps[12];
+	static u64 gpuTimeStamps[14];
 	static std::atomic_char initialised;
 	static std::mutex waitForProfilerInitMutex;
 	static std::string workingDirectory;

@@ -74,6 +74,7 @@ void Renderer::createGBufferPipeline()
 	gBufferPipeline.setPipelineLayout(&gBufferPipelineLayout);
 	gBufferPipeline.setRenderPass(&gBufferRenderPass);
 	gBufferPipeline.setMaxDepthBounds(Engine::maxDepth);
+	gBufferPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	gBufferPipeline.create(&logicalDevice);
 }
 
@@ -98,6 +99,8 @@ void Renderer::updateGBufferDescriptorSets()
 		return;
 
 	gBufferDescriptorSetNeedsUpdate = false;
+
+	Engine::console->postMessage("Updating gBuffer descriptor set!", glm::fvec3(0.1, 0.1, 0.9));
 
 	auto updater = gBufferDescriptorSet.makeUpdater();
 
@@ -148,7 +151,7 @@ void Renderer::updateGBufferDescriptorSets()
 
 void Renderer::createGBufferCommands()
 {
-	gBufferCommands.allocate(&logicalDevice, &commandPool);
+	gBufferCommandBuffer.allocate(&logicalDevice, &commandPool);
 }
 
 void Renderer::updateGBufferCommands()
@@ -165,12 +168,12 @@ void Renderer::updateGBufferCommands()
 	//PROFILE_END("gbufferfence");
 
 	bufferFreeMutex.lock();
-	gBufferCommands.free();
+	gBufferCommandBuffer.free();
 	bufferFreeMutex.unlock();
 
 	createGBufferCommands();
 
-	auto cmd = gBufferCommands.getHandle();
+	auto cmd = gBufferCommandBuffer.getHandle();
 
 	// From now on until we reset the gbuffer fence at the end of this function we cant submit a gBuffer command buffer
 
@@ -257,5 +260,5 @@ void Renderer::destroyGBufferDescriptorSets()
 
 void Renderer::destroyGBufferCommands()
 {
-	gBufferCommands.free();
+	gBufferCommandBuffer.free();
 }

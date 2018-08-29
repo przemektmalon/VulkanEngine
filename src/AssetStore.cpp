@@ -81,9 +81,9 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		}, &tex);
 
 		tex.prepare(paths, name);
-		auto job = new Job<decltype(texLoadFunc)>(texLoadFunc, defaultJobDoneFunc);
-		job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, defaultTransferJobDoneFunc, JobBase::Type::Transfer));
-		Engine::threading->addJob(job);
+		auto job = new Job<decltype(texLoadFunc)>(texLoadFunc, defaultCPUJobDoneFunc);
+		job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, defaultGPUTransferJobDoneFunc, JobBase::Type::GPUTransfer));
+		Engine::threading->addCPUJob(job);
 	}
 
 	// Textures ---------------------------------------------------------------------

@@ -44,6 +44,7 @@ public:
 	enum GPUTimeStamps { 
 		BEGIN_GBUFFER,			END_GBUFFER, 
 		BEGIN_SHADOW,			END_SHADOW, 
+		BEGIN_SSAO,				END_SSAO,
 		BEGIN_PBR,				END_PBR, 
 		BEGIN_OVERLAY,			END_OVERLAY, 
 		BEGIN_OVERLAY_COMBINE,	END_OVERLAY_COMBINE, 
@@ -109,6 +110,7 @@ public:
 	VkSemaphore shadowFinishedSemaphore;
 	VkSemaphore overlayFinishedSemaphore;
 	VkSemaphore overlayCombineFinishedSemaphore;
+	VkSemaphore ssaoFinishedSemaphore;
 
 	// Samplers
 	VkSampler textureSampler;
@@ -134,6 +136,8 @@ public:
 	CombineOverlaysShader combineOverlaysShader;
 	SunShadowShader sunShadowShader;
 	CombineSceneShader combineSceneShader;
+	SSAOShader ssaoShader;
+	SSAOBlurShader ssaoBlurShader;
 
 	/// --------------------
 	/// GBuffer pipeline
@@ -179,7 +183,7 @@ public:
 	vdu::RenderPass gBufferRenderPass;
 
 	// Command buffer
-	vdu::CommandBuffer gBufferCommands;
+	vdu::CommandBuffer gBufferCommandBuffer;
 	bool gBufferCmdsNeedUpdate;
 
 	/// --------------------
@@ -222,6 +226,79 @@ public:
 	// Command buffer
 	vdu::CommandBuffer shadowCommandBuffer;
 	VkFence shadowFence;
+
+	/// --------------------
+	/// SSAO pipeline
+	/// --------------------
+
+	// Functions
+	void createSSAOAttachments();
+	void createSSAORenderPass();
+	void createSSAODescriptorSetLayouts();
+	void createSSAOPipeline();
+	void createSSAOFramebuffer();
+	void createSSAODescriptorSets();
+	void createSSAOCommands();
+
+	void updateSSAODescriptorSets();
+	void updateSSAOCommands();
+
+	void destroySSAOAttachments();
+	void destroySSAORenderPass();
+	void destroySSAODescriptorSetLayouts();
+	void destroySSAOPipeline();
+	void destroySSAOFramebuffer();
+	void destroySSAODescriptorSets();
+	void destroySSAOCommands();
+
+	// Pipeline objets
+	vdu::GraphicsPipeline ssaoPipeline;
+	vdu::PipelineLayout ssaoPipelineLayout;
+	vdu::VertexInputState ssaoVertexInputState;
+
+	vdu::GraphicsPipeline ssaoBlurPipeline;
+	vdu::PipelineLayout ssaoBlurPipelineLayout;
+
+	// Descriptors
+	vdu::DescriptorSetLayout ssaoDescriptorSetLayout;
+	vdu::DescriptorSet ssaoDescriptorSet;
+
+	vdu::DescriptorSetLayout ssaoBlurDescriptorSetLayout;
+	vdu::DescriptorSet ssaoBlurDescriptorSet;
+
+	vdu::DescriptorSetLayout ssaoFinalDescriptorSetLayout;
+	vdu::DescriptorSet ssaoFinalDescriptorSet;
+
+	// Descriptor data
+	struct SSAOConfig
+	{
+		int samples;
+		int spiralTurns;
+		float projScale;
+		float radius;
+		float bias;
+		float intensity;
+		glm::fvec2 PADDING;
+		glm::fvec4 projInfo;
+	} ssaoConfigData;
+
+	vdu::Buffer ssaoConfigBuffer;
+
+	vdu::Framebuffer ssaoFramebuffer;
+	Texture ssaoColourAttachment;
+
+	vdu::Framebuffer ssaoBlurFramebuffer;
+	Texture ssaoBlurAttachment;
+
+	vdu::Framebuffer ssaoFinalFramebuffer;
+	Texture ssaoFinalAttachment;
+
+	// Render pass
+	vdu::RenderPass ssaoRenderPass;
+	vdu::RenderPass ssaoBlurRenderPass;
+
+	// Command buffer
+	vdu::CommandBuffer ssaoCommandBuffer;
 
 	/// --------------------
 	/// PBR shading pipeline
@@ -344,5 +421,6 @@ public:
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fence = VK_NULL_HANDLE);
 	void updateCameraBuffer();
 	void updateTransformBuffer();
+	void updateSSAOConfigBuffer();
 };
 
