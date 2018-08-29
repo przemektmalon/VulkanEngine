@@ -24,6 +24,8 @@ public:
 	Model* getModel(std::string modName) { auto ret = models.find(modName); return ret != models.end() ? &ret->second : nullptr; }
 	Font* getFont(std::string fontName) { auto ret = fonts.find(fontName); return ret != fonts.end() ? &ret->second : nullptr; }
 
+	/// TODO: big problem with this is that when maps grow, any pointers to assets become invalid
+	///       we want custom allocators and containers that tackle this problem efficiently
 	std::unordered_map<std::string, Model> models;
 	std::unordered_map<u32, Material> materials;
 	std::unordered_map<std::string, u32> materialIndices;

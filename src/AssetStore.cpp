@@ -181,7 +181,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		fontNode = fontNode->next_sibling("font");
 	}
 
-	// Fonts ------------------------------------------------------------------------
+	// Fonts -------------------------------------------------------------------------
 }
 
 void AssetStore::loadDefaultAssets()

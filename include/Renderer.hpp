@@ -39,7 +39,11 @@ public:
 	void cleanupForReInit();
 	void render();
 
+	void createShaders();
+	void compileShaders();
 	void reloadShaders();
+
+	void updateConfigs();
 
 	enum GPUTimeStamps { 
 		BEGIN_GBUFFER,			END_GBUFFER, 

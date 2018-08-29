@@ -255,28 +255,48 @@ void Renderer::updateSSAOCommands()
 
 void Renderer::destroySSAOAttachments()
 {
+	ssaoColourAttachment.destroy();
+	ssaoBlurAttachment.destroy();
+	ssaoFinalAttachment.destroy();
 }
 
 void Renderer::destroySSAORenderPass()
 {
+	ssaoRenderPass.destroy();
+	ssaoBlurRenderPass.destroy();
 }
 
 void Renderer::destroySSAODescriptorSetLayouts()
 {
+	ssaoDescriptorSetLayout.destroy();
+	ssaoBlurDescriptorSetLayout.destroy();
+	ssaoFinalDescriptorSetLayout.destroy();
 }
 
 void Renderer::destroySSAOPipeline()
 {
+	ssaoPipelineLayout.destroy();
+	ssaoPipeline.destroy();
+
+	ssaoBlurPipelineLayout.destroy();
+	ssaoBlurPipeline.destroy();
 }
 
 void Renderer::destroySSAOFramebuffer()
 {
+	ssaoFramebuffer.destroy();
+	ssaoBlurFramebuffer.destroy();
+	ssaoFinalFramebuffer.destroy();
 }
 
 void Renderer::destroySSAODescriptorSets()
 {
+	ssaoDescriptorSet.free();
+	ssaoBlurDescriptorSet.free();
+	ssaoFinalDescriptorSet.free();
 }
 
 void Renderer::destroySSAOCommands()
 {
+	ssaoCommandBuffer.free();
 }

@@ -32,28 +32,8 @@ void Renderer::initialise()
 	defaultVertexInputState.addAttributes(Vertex::getAttributeDescriptions());
 
 	// Shaders
-	{
-		gBufferShader.create(&logicalDevice);
-		gBufferShader.compile();
-
-		screenShader.create(&logicalDevice);
-		screenShader.compile();
-
-		pbrShader.create(&logicalDevice);
-		pbrShader.compile();
-
-		overlayShader.create(&logicalDevice);
-		overlayShader.compile();
-
-		combineOverlaysShader.create(&logicalDevice);
-		combineOverlaysShader.compile();
-
-		ssaoShader.create(&logicalDevice);
-		ssaoShader.compile();
-
-		ssaoBlurShader.create(&logicalDevice);
-		ssaoBlurShader.compile();
-	}
+	createShaders();
+	compileShaders();
 
 	// Screen
 	{
@@ -225,12 +205,23 @@ void Renderer::cleanup()
 		//destroyGBufferCommands();
 	}
 
-	// Shadow pipelins
+	// Shadow pipeline
 	{
 		destroyShadowRenderPass();
 		destroyShadowDescriptorSetLayouts();
 		destroyShadowPipeline();
 		//destroyShadowCommands();
+	}
+
+	// SSAO pipeline
+	{
+		destroySSAOAttachments();
+		destroySSAORenderPass();
+		destroySSAODescriptorSetLayouts();
+		destroySSAOPipeline();
+		destroySSAOFramebuffer();
+		//destroySSAODescriptorSets();
+		//destroySSAOCommands();
 	}
 
 	// PBR pipeline
@@ -280,25 +271,51 @@ void Renderer::cleanup()
 
 	combineOverlaysShader.destroy();
 	overlayShader.destroy();
-
+	ssaoShader.destroy();
+	ssaoBlurShader.destroy();
 	logicalDevice.destroy();
 }
 
 void Renderer::cleanupForReInit()
 {
-	destroyGBufferAttachments();
-	destroyGBufferRenderPass();
-	destroyGBufferPipeline();
-	destroyGBufferFramebuffers();
-	destroyGBufferCommands();
+	// GBuffer pipeline
+	{
+		destroyGBufferAttachments();
+		destroyGBufferRenderPass();
+		destroyGBufferPipeline();
+		destroyGBufferFramebuffers();
+		destroyGBufferCommands();
+	}
 
-	destroyPBRAttachments();
-	destroyPBRPipeline();
-	destroyPBRCommands();
+	// Shadow pipeline
+	{
+		destroyShadowRenderPass();
+		destroyShadowPipeline();
+		destroyShadowCommands();
+	}
 
-	destroyScreenPipeline();
-	destroyScreenCommands();
-	destroyScreenSwapChain();
+	// SSAO pipeline
+	{
+		destroySSAOAttachments();
+		destroySSAORenderPass();
+		destroySSAOPipeline();
+		destroySSAOFramebuffer();
+		destroySSAOCommands();
+	}
+
+	// PBR pipeline
+	{
+		destroyPBRAttachments();
+		destroyPBRPipeline();
+		destroyPBRCommands();
+	}
+
+	// Screen pipeline
+	{
+		destroyScreenPipeline();
+		destroyScreenCommands();
+		destroyScreenSwapChain();
+	}
 
 	overlayRenderer.cleanupForReInit();
 }
@@ -468,29 +485,80 @@ void Renderer::reloadShaders()
 {
 	VK_CHECK_RESULT(vkDeviceWaitIdle(device));
 
+	gBufferShader.reload();
+	screenShader.reload();
+	pbrShader.reload();
+	overlayShader.reload();
+	combineOverlaysShader.reload();
+	ssaoShader.reload();
+	ssaoBlurShader.reload();
+	pointShadowShader.reload();
+
+	compileShaders();
+
 	destroyGBufferPipeline();
 	destroyPBRPipeline();
 	destroyScreenPipeline();
+	destroyShadowPipeline();
+	destroySSAOPipeline();
+	overlayRenderer.destroyOverlayPipeline();
 
 	destroyGBufferCommands();
 	destroyPBRCommands();
 	destroyScreenCommands();
-
-	gBufferShader.reload();
-	pbrShader.reload();
-	screenShader.reload();
+	destroyShadowPipeline();
+	destroySSAOPipeline();
+	overlayRenderer.destroyOverlayCommands();
 
 	createGBufferPipeline();
 	createPBRPipeline();
 	createScreenPipeline();
+	createShadowPipeline();
+	createSSAOPipeline();
+	overlayRenderer.createOverlayPipeline();
 
 	createGBufferCommands();
 	createPBRCommands();
 	createScreenCommands();
+	createShadowCommands();
+	createSSAOCommands();
+	overlayRenderer.createOverlayCommands();
 
 	updateGBufferCommands();
 	updatePBRCommands();
 	updateScreenCommands();
+	updateShadowCommands();
+	updateSSAOCommands();
+	overlayRenderer.updateOverlayCommands();
+}
+
+void Renderer::updateConfigs()
+{
+	/// TODO: check for changes first
+
+	updateSSAOConfigBuffer();
+}
+
+void Renderer::createShaders()
+{
+	gBufferShader.create(&logicalDevice);
+	screenShader.create(&logicalDevice);
+	pbrShader.create(&logicalDevice);
+	overlayShader.create(&logicalDevice);
+	combineOverlaysShader.create(&logicalDevice);
+	ssaoShader.create(&logicalDevice);
+	ssaoBlurShader.create(&logicalDevice);
+}
+
+void Renderer::compileShaders()
+{
+	gBufferShader.compile();
+	screenShader.compile();
+	pbrShader.compile();
+	overlayShader.compile();
+	combineOverlaysShader.compile();
+	ssaoShader.compile();
+	ssaoBlurShader.compile();
 }
 
 void Renderer::populateDrawCmdBuffer()
@@ -928,12 +996,14 @@ void Renderer::updateTransformBuffer()
 
 void Renderer::updateSSAOConfigBuffer()
 {
-	ssaoConfigData.samples = 23;
-	ssaoConfigData.spiralTurns = 30;
-	ssaoConfigData.projScale = 500;
-	ssaoConfigData.radius = 10.f;
-	ssaoConfigData.bias = 0.01;
-	ssaoConfigData.intensity = 0.00001f;
+	const auto& ssao = Engine::config.render.ssao;
+
+	ssaoConfigData.samples = ssao.samples;
+	ssaoConfigData.spiralTurns = ssao.spiralTurns;;
+	ssaoConfigData.projScale = ssao.projScale;
+	ssaoConfigData.radius = ssao.radius;
+	ssaoConfigData.bias = ssao.bias;
+	ssaoConfigData.intensity = ssao.intensity;
 
 	auto& p = cameraUBOData.proj;
 	auto& r = renderResolution;

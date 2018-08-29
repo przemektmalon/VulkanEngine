@@ -9,6 +9,7 @@
 #include "Engine.hpp"
 #include "Window.hpp"
 #include "CommonJobs.hpp"
+#include "EngineConfig.hpp"
 
 using namespace chaiscript;
 
@@ -180,14 +181,14 @@ void ScriptEnv::initChai()
 
 		ModulePtr m = ModulePtr(new chaiscript::Module());
 		utility::add_class<AssetStore>(*m,
-		"AssetStore",
-		{ constructor<AssetStore()>() },
-		{ { fun(&AssetStore::getMaterial), "getMaterial" },
-		{ fun(&AssetStore::getModel), "getModel" },
-		{ fun(addMaterialFlat), "addMaterial" } }
-	);
-	chai.add(m);
-	}
+			"AssetStore",
+			{ constructor<AssetStore()>() },
+			{ { fun(&AssetStore::getMaterial), "getMaterial" },
+			{ fun(&AssetStore::getModel), "getModel" },
+			{ fun(addMaterialFlat), "addMaterial" } }
+		);
+		chai.add(m);
+		}
 	{
 		ModulePtr m = ModulePtr(new chaiscript::Module());
 		utility::add_class<Event>(*m,
@@ -242,6 +243,44 @@ void ScriptEnv::initChai()
 	chai.add(fun([]()->Camera& { return Engine::camera; }), "getCamera");
 	chai.add(fun([]()->World& { return Engine::world; }), "getWorld");
 	chai.add(fun(resizeJobSubmitFunc), "setResolution");
+
+
+	{
+		ModulePtr m = ModulePtr(new Module());
+		utility::add_class<EngineConfig::Render::SSAO>(*m,
+			"EngineConfig::Render::SSAO",
+			{ constructor<EngineConfig::Render::SSAO()>() },
+			{ { fun(&EngineConfig::Render::SSAO::radius), "radius" },
+			  { fun(&EngineConfig::Render::SSAO::samples), "samples" },
+			  { fun(&EngineConfig::Render::SSAO::frameScale), "frameScale" }, 
+			  { fun(&EngineConfig::Render::SSAO::projScale), "projScale" }, 
+			  { fun(&EngineConfig::Render::SSAO::spiralTurns), "spiralTurns" }, 
+			  { fun(&EngineConfig::Render::SSAO::bias), "bias" }, 
+			  { fun(&EngineConfig::Render::SSAO::intensity), "intensity" }, }
+		);
+		chai.add(m);
+	}
+	{
+		ModulePtr m = ModulePtr(new Module());
+		utility::add_class<EngineConfig::Render>(*m,
+			"EngineConfig::Render",
+			{ constructor<EngineConfig::Render()>() },
+			{ { fun(&EngineConfig::Render::ssao), "ssao" } }
+		);
+		chai.add(m);
+	}
+	{
+		ModulePtr m = ModulePtr(new Module());
+		utility::add_class<EngineConfig>(*m,
+			"EngineConfig",
+			{ constructor<EngineConfig()>() },
+			{ { fun(&EngineConfig::render), "render" } }
+		);
+		chai.add(m);
+	}
+
+
+
 }
 
 Boxed_Value ScriptEnv::evalFile(std::string path)

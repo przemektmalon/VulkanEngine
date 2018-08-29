@@ -43,6 +43,7 @@ public:
 	static xcb_connection_t * connection;
 #endif
 
+	static EngineConfig config;
 	static AssetStore assets;
 	static World world;
 	static Clock clock;

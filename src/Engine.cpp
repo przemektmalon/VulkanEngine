@@ -121,6 +121,8 @@ void Engine::start()
 	console->create();
 	renderer->overlayRenderer.addLayer(console->getLayer()); // The console is a UI overlay
 
+
+
 	/*
 		This graphics job will 'loop' (see Console::renderAtStartup) until initialisation is complete
 	*/
@@ -150,6 +152,7 @@ void Engine::start()
 	scriptEnv.evalFile("./res/scripts/script.chai");
 	scriptEnv.chai.add_global(chaiscript::var(std::ref(world)), "world");
 	scriptEnv.chai.add_global(chaiscript::var(std::ref(assets)), "assets");
+	scriptEnv.chai.add_global(chaiscript::var(std::ref(config)), "config");
 
 	PROFILE_END("init");
 
@@ -388,9 +391,15 @@ void Engine::eventLoop()
 				else
 					engineRunning = false;
 			}
+			if (console->isActive())
+				break;
 			if (key == Key::KC_TILDE)
 			{
 				console->toggle();
+			}
+			if (key == Key::KC_L)
+			{
+				//renderer->reloadShaders();
 			}
 			if (key == Key::KC_1)
 			{
@@ -711,6 +720,7 @@ HINSTANCE Engine::win32InstanceHandle;
 #ifdef __linux__
 xcb_connection_t * Engine::connection;
 #endif
+EngineConfig Engine::config;
 Clock Engine::clock;
 Window* Engine::window;
 Renderer* Engine::renderer;

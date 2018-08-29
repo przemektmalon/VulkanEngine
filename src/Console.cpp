@@ -114,14 +114,16 @@ void Console::inputChar(char c)
 	}
 	else if (c == 127) // delete
 	{
-		if (blinkerPosition < input->getString().length() - 1)
+		if (blinkerPosition < s.length() - 1)
 		{
 			s.erase(blinkerPosition + 1, 1);
 		}
 	}
 	else if (c == 13) // enter
 	{
-		postMessage(std::string(input->getString().c_str() + 2), glm::fvec3(0.9, 0.9, 0.9));
+		std::string command = s.c_str() + 2;
+
+		postMessage(command, glm::fvec3(0.9, 0.9, 0.9));
 
 		layer->removeElement(input);
 		delete input;
@@ -144,7 +146,7 @@ void Console::inputChar(char c)
 			try {
 				
 				// Submit command and get boxed return value
-				auto ret = Engine::scriptEnv.evalString(std::string(s.c_str() + 2));
+				auto ret = Engine::scriptEnv.evalString(std::string(command));
 
 				// Get boxed values type info
 				auto& retVal = ret.get();

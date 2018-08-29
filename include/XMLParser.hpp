@@ -97,6 +97,8 @@ public:
 	std::string getString(xml_base<>* base)
 	{
 		std::string ret;
+		if (!base)
+			return ret;
 		if (!base->value())
 			return ret;
 		ret.assign(base->value(), base->value_size());
