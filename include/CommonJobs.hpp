@@ -115,8 +115,9 @@ static void initialiseCommonJobs()
 		Engine::renderer->updateSSAOCommands();
 		Engine::renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
 		PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
+		Engine::renderer->updateConfigs();
 		Engine::renderer->updateCameraBuffer();
-		Engine::renderer->updateSSAOConfigBuffer();
+		//Engine::renderer->updateSSAOConfigBuffer();
 		Engine::threading->instanceTransformMutex.unlock();
 		PROFILE_END("commands");
 

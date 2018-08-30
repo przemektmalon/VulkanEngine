@@ -9,6 +9,7 @@
 #include "PhysicsWorld.hpp"
 #include "Console.hpp"
 #include "Scripting.hpp"
+#include "EngineConfig.hpp"
 
 class Threading;
 class OLayer;

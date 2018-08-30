@@ -249,14 +249,14 @@ void ScriptEnv::initChai()
 		ModulePtr m = ModulePtr(new Module());
 		utility::add_class<EngineConfig::Render::SSAO>(*m,
 			"EngineConfig::Render::SSAO",
-			{ constructor<EngineConfig::Render::SSAO()>() },
-			{ { fun(&EngineConfig::Render::SSAO::radius), "radius" },
-			  { fun(&EngineConfig::Render::SSAO::samples), "samples" },
-			  { fun(&EngineConfig::Render::SSAO::frameScale), "frameScale" }, 
-			  { fun(&EngineConfig::Render::SSAO::projScale), "projScale" }, 
-			  { fun(&EngineConfig::Render::SSAO::spiralTurns), "spiralTurns" }, 
-			  { fun(&EngineConfig::Render::SSAO::bias), "bias" }, 
-			  { fun(&EngineConfig::Render::SSAO::intensity), "intensity" }, }
+			{  },
+			{ { fun(&EngineConfig::Render::SSAO::setRadius), "setRadius" },
+			  { fun(&EngineConfig::Render::SSAO::setSamples), "setSamples" },
+			  { fun(&EngineConfig::Render::SSAO::setFrameScale), "setFrameScale" }, 
+			  { fun(&EngineConfig::Render::SSAO::setProjScale), "setProjScale" }, 
+			  { fun(&EngineConfig::Render::SSAO::setSpiralTurns), "setSpiralTurns" }, 
+			  { fun(&EngineConfig::Render::SSAO::setBias), "setBias" }, 
+			  { fun(&EngineConfig::Render::SSAO::setIntensity), "setIntensity" }, }
 		);
 		chai.add(m);
 	}
@@ -264,7 +264,7 @@ void ScriptEnv::initChai()
 		ModulePtr m = ModulePtr(new Module());
 		utility::add_class<EngineConfig::Render>(*m,
 			"EngineConfig::Render",
-			{ constructor<EngineConfig::Render()>() },
+			{ },
 			{ { fun(&EngineConfig::Render::ssao), "ssao" } }
 		);
 		chai.add(m);
@@ -290,7 +290,7 @@ Boxed_Value ScriptEnv::evalFile(std::string path)
 		return ret;
 	}
 	catch (const chaiscript::exception::eval_error &e) {
-		DBG_SEVERE("Chaiscript eval error: " << e.pretty_print() << '\n');
+		DBG_WARNING("Chaiscript eval error: " << e.pretty_print() << '\n');
 	}
 }
 
@@ -301,6 +301,6 @@ Boxed_Value ScriptEnv::evalString(std::string script)
 		return ret;
 	}
 	catch (const chaiscript::exception::eval_error &e) {
-		DBG_SEVERE("Chaiscript eval error: " << e.pretty_print() << '\n');
+		DBG_WARNING("Chaiscript eval error: " << e.pretty_print() << '\n');
 	}
 }

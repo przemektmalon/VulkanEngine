@@ -534,9 +534,29 @@ void Renderer::reloadShaders()
 
 void Renderer::updateConfigs()
 {
-	/// TODO: check for changes first
+	auto& config = Engine::config;
 
-	updateSSAOConfigBuffer();
+	for (auto group : config.changedGroups)
+	{
+		switch (group) {
+		case EngineConfig::SSAO_Group:
+			updateSSAOConfigBuffer();
+			break;
+		}
+	}
+
+	for (auto special : config.changedSpecials)
+	{
+		switch (special) {
+		case EngineConfig::SSAO_FrameScale:
+			
+			break;
+		}
+	}
+
+	config.changedGroups.clear();
+	config.changedSpecials.clear();
+	
 }
 
 void Renderer::createShaders()
@@ -996,16 +1016,18 @@ void Renderer::updateTransformBuffer()
 
 void Renderer::updateSSAOConfigBuffer()
 {
+	Engine::console->postMessage("Updating SSAO config buffer", glm::fvec3(0.1, 0.1, 0.9));
+
 	const auto& ssao = Engine::config.render.ssao;
 
-	ssaoConfigData.samples = ssao.samples;
-	ssaoConfigData.spiralTurns = ssao.spiralTurns;;
-	ssaoConfigData.projScale = ssao.projScale;
-	ssaoConfigData.radius = ssao.radius;
-	ssaoConfigData.bias = ssao.bias;
-	ssaoConfigData.intensity = ssao.intensity;
+	ssaoConfigData.samples = ssao.getSamples();
+	ssaoConfigData.spiralTurns = ssao.getSpiralTurns();
+	ssaoConfigData.projScale = ssao.getProjScale();
+	ssaoConfigData.radius = ssao.getRadius();
+	ssaoConfigData.bias = ssao.getBias();
+	ssaoConfigData.intensity = ssao.getIntensity();
 
-	auto& p = cameraUBOData.proj;
+	auto& p = Engine::camera.getProj();
 	auto& r = renderResolution;
 
 	ssaoConfigData.projInfo = glm::fvec4(-2.f / (r.width * p[0][0]),
