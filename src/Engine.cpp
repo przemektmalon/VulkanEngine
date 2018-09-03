@@ -128,7 +128,7 @@ void Engine::start()
 		The console will start reporting progress of initialisation (loading assets)
 	*/
 	console = new Console();
-	console->create();
+	console->create(glm::ivec2(window->resX, 276));
 	renderer->overlayRenderer.addLayer(console->getLayer()); // The console is a UI overlay
 
 	/*
@@ -337,6 +337,7 @@ void Engine::eventLoop()
 {
 	// Process engine events
 	Event ev;
+	window->eventQ.pushEventMutex.lock();
 	while (window->eventQ.pollEvent(ev)) {
 		/*try {
 		scriptEnv.evalString("processEvent()");
@@ -346,6 +347,14 @@ void Engine::eventLoop()
 		std::cout << e.what() << std::endl;
 		}*/
 		switch (ev.type) {
+		case(Event::WindowResized):
+		{
+			auto consoleSizeUpdateJobFunc = std::bind([](Console* cons) -> void {
+				console->setResolution(glm::ivec2(Engine::window->resX, 276));
+				console->postMessage("Window resized", glm::fvec3(0.2, 0.9, 0.2));
+			}, console);
+			threading->addGPUJob(new Job<>(consoleSizeUpdateJobFunc, defaultGPUJobDoneFunc));
+		}
 		case(Event::TextInput):
 		{
 			console->inputChar(ev.eventUnion.textInputEvent.character);
@@ -422,6 +431,7 @@ void Engine::eventLoop()
 		window->eventQ.popEvent();
 	}
 	physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
+	window->eventQ.pushEventMutex.unlock();
 }
 
 void Engine::processAllMainThreadJobs()

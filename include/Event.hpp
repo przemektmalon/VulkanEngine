@@ -37,11 +37,17 @@ struct Event
 			s16 wheelDelta;
 		};
 		mouse_struct mouseEvent;
+		struct window_struct {
+			glm::ivec2 position;
+			glm::ivec2 resolution;
+		};
+		window_struct windowEvent;
 	} eventUnion;
 
 	EventUnion::key_struct getKeyEvent() { return eventUnion.keyEvent; }
 	EventUnion::mouse_struct getMouseEvent() { return eventUnion.mouseEvent; }
 	EventUnion::text_struct getTextEvent() { return eventUnion.textInputEvent; }
+	EventUnion::window_struct getWindowEvent() { return eventUnion.windowEvent; }
 
 	void constructKey(Key pKey, bool pShift, bool pAlt, bool pSys, bool pCtrl, bool pCaps)
 	{
@@ -203,6 +209,12 @@ struct Event
 		}
 		eventUnion.textInputEvent.character = 0;
 	}
+
+	void constructWindow(glm::ivec2 pPosition, glm::ivec2 pResolution)
+	{
+		eventUnion.windowEvent.position = pPosition;
+		eventUnion.windowEvent.resolution = pResolution;
+	}
 };
 
 /*
@@ -255,8 +267,12 @@ public:
 
 	void pushEvent(Event& pEvent)
 	{
+		pushEventMutex.lock();
 		events.push(pEvent);
+		pushEventMutex.unlock();
 	}
+
+	std::mutex pushEventMutex;
 };
 
 /*
@@ -283,9 +299,6 @@ public:
 	glm::ivec2 getPosition() { return eventUnion.mouseEvent.position; }
 	glm::fvec2 getMove() { return eventUnion.mouseEvent.move; }
 	int getDelta() { return eventUnion.mouseEvent.wheelDelta; }
-
-private:
-	void setPosition(glm::ivec2 pPos) { eventUnion.mouseEvent.position = pPos; }
 };
 
 /*
@@ -295,4 +308,14 @@ class TextInputEvent : private Event
 {
 public:
 	char getCharacter() { return eventUnion.textInputEvent.character; }
+};
+
+/*
+	@brief  Specialised window event class.
+*/
+class WindowEvent : private Event
+{
+public:
+	glm::ivec2 getPosition() { return eventUnion.windowEvent.position; }
+	glm::ivec2 getResolution() { return eventUnion.windowEvent.resolution; }
 };

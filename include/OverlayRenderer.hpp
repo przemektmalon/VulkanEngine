@@ -27,6 +27,7 @@ public:
 	const vdu::Framebuffer& getFramebuffer() { return framebuffer; }
 
 	void setPosition(glm::ivec2 pPos);
+	void setResolution(glm::ivec2 pRes);
 
 	void updateVerts();
 	bool needsDrawUpdate();

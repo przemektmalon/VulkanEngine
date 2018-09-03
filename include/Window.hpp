@@ -50,6 +50,8 @@ public:
 	VkSurfaceKHR vkSurface;
 	u32 resX;
 	u32 resY;
+	u32 posX;
+	u32 posY;
 	std::string windowName;
 	EventQ eventQ;
 #ifdef _WIN32

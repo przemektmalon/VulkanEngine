@@ -111,6 +111,9 @@ void Window::resize(u32 newResX, u32 newResY)
 #ifdef _WIN32
 	SetWindowPos(win32WindowHandle, 0, 0, 0, newResX, newResY, SWP_NOOWNERZORDER | SWP_NOZORDER);
 #endif
+	Event we(Event::Type::WindowResized); // Window event
+	we.constructWindow(glm::ivec2(posX, posY), glm::ivec2(resX, resY));
+	eventQ.pushEvent(we);
 }
 
 /*

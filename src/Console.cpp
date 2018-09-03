@@ -8,10 +8,10 @@
 #include "Renderer.hpp"
 #include "Profiler.hpp"
 
-void Console::create()
+void Console::create(glm::ivec2 resolution)
 {
 	layer = new OLayer();
-	layer->create(glm::ivec2(Engine::window->resX, 276));
+	layer->create(resolution);
 
 	input = new Text();
 
@@ -373,6 +373,14 @@ void Console::renderAtStartup()
 		auto renderAgainJob = new Job<decltype(renderAgainFunc)>(renderAgainFunc, defaultGPUJobDoneFunc);
 		Engine::threading->addGPUJob(renderAgainJob);
 	}
+}
+
+void Console::setResolution(glm::ivec2 res)
+{
+	messagePostMutex.lock();
+	updateBacks();
+	layer->setResolution(glm::ivec2(Engine::window->resX, 276));
+	messagePostMutex.unlock();
 }
 
 void Console::updatePositions()

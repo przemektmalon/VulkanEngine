@@ -10,7 +10,7 @@ class Console
 public:
 	Console() : active(true), layer(0), timeSinceBlink(0), blinkerPosition(1), oldBlinkerPosition(1), scrollPosition(0) {}
 
-	void create();
+	void create(glm::ivec2 resolution);
 	void update();
 	void inputChar(char c);
 	void moveBlinker(Key k);
@@ -24,6 +24,8 @@ public:
 
 	void renderAtStartup();
 
+	void setResolution(glm::ivec2 res);
+
 private:
 
 	void updatePositions();
@@ -35,6 +37,8 @@ private:
 	std::list<Text*> output;
 	std::list<std::string> history;
 	std::string oldText;
+
+	glm::ivec2 resolution;
 
 	UIPolygon* backs[2];
 	UIPolygon* blinker;

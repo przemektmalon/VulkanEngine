@@ -55,7 +55,6 @@ void OLayer::cleanup()
 {
 	colAttachment.destroy();
 	depAttachment.destroy();
-	//VK_VALIDATE(vkFreeDescriptorSets(Engine::renderer->device, Engine::renderer->descriptorPool, 1, &imageDescriptor));
 	framebuffer.destroy();
 	quadBuffer.destroy();
 	for (auto element : elements)
@@ -121,6 +120,16 @@ void OLayer::removeElement(OverlayElement * el)
 void OLayer::setPosition(glm::ivec2 pPos)
 {
 	position = pPos;
+	updateVerts();
+}
+
+void OLayer::setResolution(glm::ivec2 pRes)
+{
+	colAttachment.destroy();
+	depAttachment.destroy();
+	framebuffer.destroy();
+	quadBuffer.destroy();
+	create(pRes);
 	updateVerts();
 }
 
