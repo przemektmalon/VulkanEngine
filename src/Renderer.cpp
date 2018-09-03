@@ -1050,7 +1050,7 @@ void Renderer::submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence)
 		VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, submitInfo.pCommandBuffers));
 		// To free command buffer for non blocking jobs we will need to know when the gpu finished it !
 	};
-	auto submitJob = new Job<>(submitJobFunc, defaultGPUTransferJobDoneFunc);
+	auto submitJob = new Job<>(submitJobFunc);
 	Engine::threading->addGPUTransferJob(submitJob); /// TODO: make asynchronous
 }
 

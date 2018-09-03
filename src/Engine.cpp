@@ -81,7 +81,7 @@ void Engine::start()
 		Preallocating profiler tags to avoid thread clashes
 	*/
 	std::vector<std::string> profilerTags = { 
-		"init", "assets", "world", "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
+		"init", "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
 		"shadowfence", "gbufferfence",
 
 		"gbuffer", "shadow", "pbr", "overlay", "overlaycombine",  "screen", "commands", "cullingdrawbuffer", // GPU Tags
@@ -144,7 +144,7 @@ void Engine::start()
 	/*
 		Submit graphics job (console rendering)
 	*/
-	auto renderConsoleJob = new Job<>(renderConsoleFunc, defaultGPUJobDoneFunc);
+	auto renderConsoleJob = new Job<>(renderConsoleFunc, JobBase::GPU);
 	threading->addGPUJob(renderConsoleJob);
 
 	/*
@@ -157,17 +157,11 @@ void Engine::start()
 	*/
 	scriptEnv.evalFile("./res/scripts/script.chai");
 
-	PROFILE_END("init");
-
-	PROFILE_START("assets");
-
 	/*
 		Load the rest of our assets defined in 'resources.xml'
 	*/
 	assets.loadAssets("/res/resources.xml");
 	
-	
-
 	/*
 		Wait for all assets to load and be transferred to GPU
 		We wait here because in the next lines descriptor set updates require textures to be on the GPU
@@ -189,20 +183,14 @@ void Engine::start()
 	renderer->updatePBRCommands();
 	renderer->updateSSAODescriptorSets();
 
-	PROFILE_END("assets");
-
-	PROFILE_START("world");
+	initialised = 1;
 
 	// Startup script. Adds models to the world
 	scriptEnv.evalFile("./res/scripts/startup.chai");
 
-	initialised = 1;
-
-	PROFILE_END("world");
+	PROFILE_END("init");
 
 	console->postMessage("Initialisation time : " + std::to_string(PROFILE_TO_S(PROFILE_GET_AVERAGE("init"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
-	console->postMessage("Asset load time     : " + std::to_string(PROFILE_TO_S(PROFILE_GET_AVERAGE("assets"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
-	console->postMessage("World loading time  : " + std::to_string(PROFILE_TO_S(PROFILE_GET_AVERAGE("world"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
 
 	/*
 		Creating UI layer for displaying profiling stats
@@ -244,12 +232,6 @@ void Engine::start()
 
 	uiLayer->addElement(threadStatsText);
 
-	while (!threading->allGraphicsJobsDone() || !threading->allNonGPUJobsDone() || !threading->allTransferJobsDone())
-	{
-		processAllMainThreadJobs();
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
-	}
-
 	renderer->updateScreenCommands();
 	
 	// GPU commands
@@ -266,11 +248,11 @@ void Engine::start()
 		They will be re-added at the end of each frame
 	*/
 	//threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultCPUJobDoneFunc), 1);
-	threading->addGPUJob(new Job<>(renderJobFunc, defaultGPUJobDoneFunc));
-	threading->addCPUJob(new Job<>(physicsJobFunc, defaultCPUJobDoneFunc));
+	threading->addGPUJob(new Job<>(renderJobFunc, JobBase::GPU));
+	threading->addCPUJob(new Job<>(physicsJobFunc));
 	//threading->addJob(new Job<>(physicsToEngineJobFunc, defaultCPUJobDoneFunc), 1);
-	threading->addCPUJob(new Job<>(scriptsJobFunc, defaultCPUJobDoneFunc));
-	threading->addCPUJob(new Job<>(cleanupJobsJobFunc, defaultCPUJobDoneFunc));
+	threading->addCPUJob(new Job<>(scriptsJobFunc));
+	threading->addCPUJob(new Job<>(cleanupJobsJobFunc));
 
 	threading->threadJobsProcessed[std::this_thread::get_id()] = 0;
 
@@ -339,13 +321,6 @@ void Engine::eventLoop()
 	Event ev;
 	window->eventQ.pushEventMutex.lock();
 	while (window->eventQ.pollEvent(ev)) {
-		/*try {
-		scriptEnv.evalString("processEvent()");
-		}
-		catch (chaiscript::exception::eval_error e)
-		{
-		std::cout << e.what() << std::endl;
-		}*/
 		switch (ev.type) {
 		case(Event::WindowResized):
 		{
@@ -353,7 +328,7 @@ void Engine::eventLoop()
 				console->setResolution(glm::ivec2(Engine::window->resX, 276));
 				console->postMessage("Window resized", glm::fvec3(0.2, 0.9, 0.2));
 			}, console);
-			threading->addGPUJob(new Job<>(consoleSizeUpdateJobFunc, defaultGPUJobDoneFunc));
+			threading->addGPUJob(new Job<>(consoleSizeUpdateJobFunc, JobBase::GPU));
 		}
 		case(Event::TextInput):
 		{

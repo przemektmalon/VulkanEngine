@@ -301,6 +301,8 @@ void Console::postMessage(std::string msg, glm::fvec3 colour)
 
 void Console::renderAtStartup()
 {
+	Engine::window->processMessages();
+
 	Engine::threading->physToGPUMutex.lock();
 
 	Engine::renderer->overlayRenderer.updateOverlayCommands();
@@ -370,7 +372,7 @@ void Console::renderAtStartup()
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(15));
 		auto renderAgainFunc = std::bind(&Console::renderAtStartup, this);
-		auto renderAgainJob = new Job<decltype(renderAgainFunc)>(renderAgainFunc, defaultGPUJobDoneFunc);
+		auto renderAgainJob = new Job<decltype(renderAgainFunc)>(renderAgainFunc, JobBase::GPU);
 		Engine::threading->addGPUJob(renderAgainJob);
 	}
 }

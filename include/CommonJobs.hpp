@@ -41,7 +41,7 @@ static void initialiseCommonJobs()
 			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
 			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
-			auto nextPhysicsJob = new Job<>(physicsJobFunc, defaultCPUJobDoneFunc);
+			auto nextPhysicsJob = new Job<>(physicsJobFunc);
 			nextPhysicsJob->setScheduledTime(endTime + microsecondsBetweenPhysicsUpdates);
 			Engine::threading->addCPUJob(nextPhysicsJob);
 		}
@@ -59,7 +59,7 @@ static void initialiseCommonJobs()
 			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
 			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
-			auto nextPhysicsJob = new Job<>(physicsToEngineJobFunc, defaultCPUJobDoneFunc);
+			auto nextPhysicsJob = new Job<>(physicsToEngineJobFunc);
 			nextPhysicsJob->setScheduledTime(Engine::clock.now() + microsecondsBetweenPhysicsUpdates);
 			Engine::threading->addCPUJob(nextPhysicsJob);
 		}
@@ -77,7 +77,7 @@ static void initialiseCommonJobs()
 			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
 			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
-			auto nextPhysicsJob = new Job<>(physicsToGPUJobFunc, defaultGPUJobDoneFunc);
+			auto nextPhysicsJob = new Job<>(physicsToGPUJobFunc, JobBase::GPU);
 			nextPhysicsJob->setScheduledTime(Engine::clock.now() + microsecondsBetweenPhysicsUpdates);
 			Engine::threading->addGPUJob(nextPhysicsJob);
 		}
@@ -117,7 +117,7 @@ static void initialiseCommonJobs()
 		PROFILE_END("setuprender");
 
 		if (Engine::engineRunning)
-			Engine::threading->addGPUJob(new Job<>(renderJobFunc, defaultGPUJobDoneFunc));
+			Engine::threading->addGPUJob(new Job<>(renderJobFunc, JobBase::GPU));
 	};
 
 	scriptsJobFunc = []() -> void {
@@ -138,7 +138,7 @@ static void initialiseCommonJobs()
 
 		if (Engine::engineRunning)
 		{
-			auto nextScriptsJob = new Job<>(scriptsJobFunc, defaultCPUJobDoneFunc);
+			auto nextScriptsJob = new Job<>(scriptsJobFunc);
 			nextScriptsJob->setScheduledTime(Engine::clock.now() + 10000);
 			Engine::threading->addCPUJob(nextScriptsJob);
 		}
@@ -150,7 +150,7 @@ static void initialiseCommonJobs()
 
 		if (Engine::engineRunning)
 		{
-			auto nextCleanupJob = new Job<>(cleanupJobsJobFunc, defaultCPUJobDoneFunc);
+			auto nextCleanupJob = new Job<>(cleanupJobsJobFunc);
 			nextCleanupJob->setScheduledTime(Engine::clock.now() + 10000);
 			Engine::threading->addCPUJob(nextCleanupJob);
 		}

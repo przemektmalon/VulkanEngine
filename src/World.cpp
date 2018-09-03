@@ -71,14 +71,14 @@ ModelInstance* World::addModelInstance(std::string modelName, std::string instan
 			
 			if (Engine::initialised == 1) {
 				// Engine running, add async transfer job to run in transfer queue to prevent blocking rendering thread
-				auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, defaultCPUJobDoneFunc);
-				job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, defaultGPUTransferJobDoneFunc, JobBase::Type::GPUTransfer));
+				auto job = new Job<decltype(loadJobFunc)>(loadJobFunc);
+				job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, JobBase::Type::GPUTransfer));
 				Engine::threading->addCPUJob(job);
 			}
 			else {
 				// Engine is initialising so add a non async job, its ok to block during initialisation
-				auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, defaultCPUJobDoneFunc);
-				job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, defaultCPUJobDoneFunc));
+				auto job = new Job<decltype(loadJobFunc)>(loadJobFunc);
+				job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc));
 				Engine::threading->addCPUJob(job);
 			}
 		}

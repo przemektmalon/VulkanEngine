@@ -21,5 +21,5 @@ void EngineConfig::Render::setResolution(glm::ivec2 set)
 		Engine::physicalDevice->querySurfaceCapabilities(Engine::window->vkSurface);
 		Engine::config.changedSpecials.insert(Render_Resolution);
 	},set);
-	Engine::threading->addGPUJob(new Job<decltype(resizeJobFunc)>(resizeJobFunc, defaultGPUJobDoneFunc));
+	Engine::threading->addGPUJob(new Job<decltype(resizeJobFunc)>(resizeJobFunc, JobBase::GPU));
 }

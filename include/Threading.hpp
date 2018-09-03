@@ -55,12 +55,12 @@ protected:
 
 typedef std::function<void(void)> VoidJobType;
 
-template<typename JobFuncType = VoidJobType, typename DoneFuncType = VoidJobType>
+template<typename JobFuncType = VoidJobType>
 class Job : public JobBase
 {
 public:
-	Job(JobFuncType pJobFunction, DoneFuncType pDoneFunction) : jobFunction(pJobFunction), doneFunction(pDoneFunction), JobBase(CPU) {}
-	Job(JobFuncType pJobFunction, DoneFuncType pDoneFunction, Type pType) : jobFunction(pJobFunction), doneFunction(pDoneFunction), JobBase(pType) {}
+	Job(JobFuncType pJobFunction) : jobFunction(pJobFunction), JobBase(CPU) {}
+	Job(JobFuncType pJobFunction, Type pType) : jobFunction(pJobFunction), JobBase(pType) {}
 
 	void run()
 	{
@@ -80,15 +80,26 @@ public:
 				break;
 			}
 		}	
-		doneFunction();
+
+		switch (type)
+		{
+			case (CPU):
+				Engine::threading->totalCPUJobsFinished.fetch_add(1);
+				break;
+			case (GPU):
+				Engine::threading->totalGPUJobsFinished.fetch_add(1);
+				break;
+			case (GPUTransfer):
+				Engine::threading->totalGPUTransferJobsFinished.fetch_add(1);
+				break;
+		}
+
 		Engine::threading->freeJob(this);
 	}
-
 
 private:
 
 	JobFuncType jobFunction;
-	DoneFuncType doneFunction;
 };
 
 class Threading
@@ -195,18 +206,3 @@ public:
 
 	std::mutex layersMutex;
 };
-
-static void defaultCPUJobDoneFunc()
-{
-	Engine::threading->totalCPUJobsFinished.fetch_add(1);
-}
-
-static void defaultGPUJobDoneFunc()
-{
-	Engine::threading->totalGPUJobsFinished.fetch_add(1);
-}
-
-static void defaultGPUTransferJobDoneFunc()
-{
-	Engine::threading->totalGPUTransferJobsFinished.fetch_add(1);
-}
