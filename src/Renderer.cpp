@@ -31,6 +31,12 @@ void Renderer::initialise()
 	defaultVertexInputState.addBinding(Vertex::getBindingDescription());
 	defaultVertexInputState.addAttributes(Vertex::getAttributeDescriptions());
 
+	ssaoVertexInputState.addBinding(Vertex2D::getBindingDescription());
+	ssaoVertexInputState.addAttributes(Vertex2D::getAttributeDescriptions());
+
+	screenVertexInputState.addBinding(Vertex2D::getBindingDescription());
+	screenVertexInputState.addAttributes(Vertex2D::getAttributeDescriptions());
+
 	// Shaders
 	createShaders();
 	compileShaders();
@@ -64,7 +70,6 @@ void Renderer::initialise()
 	}
 
 	// SSAO
-	/// TODO: Variable resolution ssao
 	{
 		createSSAOAttachments();
 		createSSAORenderPass();
@@ -99,7 +104,7 @@ void Renderer::initialise()
 
 	createDataBuffers();
 
-	for (int i = 0; i < 3; ++i)
+	for (int i = 0; i < 1; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
@@ -149,11 +154,9 @@ void Renderer::reInitialise()
 	// Pipeline attachments
 	createGBufferAttachments();
 	createPBRAttachments();
-	//createScreenAttachments();
 
 	// Pipeline render passes
 	createGBufferRenderPass();
-	//createScreenRenderPass();
 	overlayRenderer.createOverlayRenderPass();
 	overlayRenderer.createOverlayAttachments();
 	overlayRenderer.createOverlayFramebuffer();
@@ -166,7 +169,6 @@ void Renderer::reInitialise()
 
 	// Pipeline framebuffers
 	createGBufferFramebuffers();
-	//createScreenFramebuffers();
 
 	// Pipeline commands
 	createGBufferCommands();
@@ -239,7 +241,7 @@ void Renderer::cleanup()
 		destroyScreenPipeline();
 		//destroyScreenDescriptorSets();
 		//destroyScreenCommands();
-		destroyScreenSwapChain();
+		destroyScreenSwapchain();
 	}
 
 	overlayRenderer.cleanup();
@@ -266,6 +268,7 @@ void Renderer::cleanup()
 	vertexIndexBuffer.destroy();
 	drawCmdBuffer.destroy();
 	screenQuadBuffer.destroy();
+	ssaoConfigBuffer.destroy();
 
 	lightManager.cleanup();
 
@@ -273,6 +276,12 @@ void Renderer::cleanup()
 	overlayShader.destroy();
 	ssaoShader.destroy();
 	ssaoBlurShader.destroy();
+	pointShadowShader.destroy();
+	spotShadowShader.destroy();
+	sunShadowShader.destroy();
+	gBufferShader.destroy();
+	pbrShader.destroy();
+	screenShader.destroy();
 	logicalDevice.destroy();
 }
 
@@ -314,7 +323,7 @@ void Renderer::cleanupForReInit()
 	{
 		destroyScreenPipeline();
 		destroyScreenCommands();
-		destroyScreenSwapChain();
+		destroyScreenSwapchain();
 	}
 
 	overlayRenderer.cleanupForReInit();
@@ -493,6 +502,8 @@ void Renderer::reloadShaders()
 	ssaoShader.reload();
 	ssaoBlurShader.reload();
 	pointShadowShader.reload();
+	spotShadowShader.reload();
+	sunShadowShader.reload();
 
 	compileShaders();
 
@@ -506,8 +517,8 @@ void Renderer::reloadShaders()
 	destroyGBufferCommands();
 	destroyPBRCommands();
 	destroyScreenCommands();
-	destroyShadowPipeline();
-	destroySSAOPipeline();
+	destroyShadowCommands();
+	destroySSAOCommands();
 	overlayRenderer.destroyOverlayCommands();
 
 	createGBufferPipeline();
@@ -548,8 +559,113 @@ void Renderer::updateConfigs()
 	for (auto special : config.changedSpecials)
 	{
 		switch (special) {
-		case EngineConfig::SSAO_FrameScale:
+		case EngineConfig::Render_Resolution:
+
+			// Recreate the screen pipeline and resolution dependant components
+			{
+				destroyScreenPipeline();
+				destroyScreenCommands();
+				destroyScreenSwapchain();
+
+				createScreenSwapchain();
+				createScreenCommands();
+				createScreenPipeline();
+			}
+
+			// Recreate the gBuffer pipeline and resoulution dependant components
+			{
+				destroyGBufferAttachments();
+				destroyGBufferRenderPass();
+				destroyGBufferFramebuffers();
+				destroyGBufferPipeline();
+				destroyGBufferCommands();
+
+				createGBufferAttachments();
+				createGBufferRenderPass();
+				createGBufferFramebuffers();
+				createGBufferPipeline();
+				createGBufferCommands();
+
+				updateGBufferCommands();
+			}
 			
+			// Recreate the SSAO pipeline and resolution dependant components
+			{
+				destroySSAOAttachments();
+				destroySSAORenderPass();
+				destroySSAOFramebuffer();
+				destroySSAODescriptorSets();
+				destroySSAOPipeline();
+				destroySSAOCommands();
+
+				createSSAOAttachments();
+				createSSAORenderPass();
+				createSSAOFramebuffer();
+				createSSAODescriptorSets();
+				createSSAOPipeline();
+				createSSAOCommands();
+
+				updateSSAODescriptorSets();
+				updateSSAOCommands();
+			}
+
+			// Recreate the PBR pipeline and resolution dependant components
+			{
+				destroyPBRAttachments();
+				destroyPBRPipeline();
+				destroyPBRCommands();
+
+				createPBRAttachments();
+				createPBRPipeline();
+				createPBRCommands();
+
+				updatePBRDescriptorSets();
+				updatePBRCommands();
+				
+				// We dont need to update all descriptors, just resolution dependant ones
+				auto updater = pbrDescriptorSet.makeUpdater();
+
+				auto outputUpdater = updater->addImageUpdate("output");
+				*outputUpdater = { textureSampler, pbrOutput.getView(), VK_IMAGE_LAYOUT_GENERAL };
+
+				auto albedoUpdater = updater->addImageUpdate("albedo");
+				*albedoUpdater = { textureSampler, gBufferColourAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
+
+				auto normalUpdater = updater->addImageUpdate("normal");
+				*normalUpdater = { textureSampler, gBufferNormalAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
+
+				auto pbrUpdater = updater->addImageUpdate("pbr");
+				*pbrUpdater = { textureSampler, gBufferPBRAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
+
+				auto depthUpdater = updater->addImageUpdate("depth");
+				*depthUpdater = { textureSampler, gBufferDepthAttachment.getView(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
+
+				auto ssaoUpdater = updater->addImageUpdate("ssao");
+				*ssaoUpdater = { textureSampler, ssaoFinalAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
+
+				pbrDescriptorSet.submitUpdater(updater);
+				pbrDescriptorSet.destroyUpdater(updater);
+			}
+
+			// Recreate the overlay pipeline and resolution dependant components
+			{
+				overlayRenderer.cleanupForReInit();
+
+				overlayRenderer.createOverlayRenderPass();
+				overlayRenderer.createOverlayPipeline();
+				overlayRenderer.createOverlayAttachments();
+				overlayRenderer.createOverlayFramebuffer();
+				overlayRenderer.createOverlayCommands();
+
+				overlayRenderer.updateOverlayCommands();
+			}
+
+			// Update screen commands and descriptor sets
+			{
+				updateScreenDescriptorSets();
+				updateScreenCommands();
+			}
+
 			break;
 		}
 	}
@@ -568,6 +684,9 @@ void Renderer::createShaders()
 	combineOverlaysShader.create(&logicalDevice);
 	ssaoShader.create(&logicalDevice);
 	ssaoBlurShader.create(&logicalDevice);
+	pointShadowShader.create(&logicalDevice);
+	spotShadowShader.create(&logicalDevice);
+	sunShadowShader.create(&logicalDevice);
 }
 
 void Renderer::compileShaders()
@@ -579,6 +698,9 @@ void Renderer::compileShaders()
 	combineOverlaysShader.compile();
 	ssaoShader.compile();
 	ssaoBlurShader.compile();
+	pointShadowShader.compile();
+	spotShadowShader.compile();
+	sunShadowShader.compile();
 }
 
 void Renderer::populateDrawCmdBuffer()

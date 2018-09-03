@@ -25,9 +25,6 @@ void Renderer::createScreenPipeline()
 	screenPipelineLayout.addDescriptorSetLayout(&screenDescriptorSetLayout);
 	screenPipelineLayout.create(&logicalDevice);
 
-	screenVertexInputState.addBinding(Vertex2D::getBindingDescription());
-	screenVertexInputState.addAttributes(Vertex2D::getAttributeDescriptions());
-
 	screenPipeline.setShaderProgram(&screenShader);
 	screenPipeline.setVertexInputState(&screenVertexInputState);
 	screenPipeline.addViewport({ 0.f, 0.f, (float)renderResolution.width, (float)renderResolution.height, 0.f, 1.f }, { 0, 0, renderResolution.width, renderResolution.height });
@@ -157,7 +154,7 @@ void Renderer::updateScreenCommandsForConsole()
 	}
 }
 
-void Renderer::destroyScreenSwapChain()
+void Renderer::destroyScreenSwapchain()
 {
 	screenSwapchain.destroy();
 }
@@ -171,7 +168,6 @@ void Renderer::destroyScreenPipeline()
 {
 	screenPipelineLayout.destroy();
 	screenPipeline.destroy();
-	screenShader.destroy();
 }
 
 void Renderer::destroyScreenDescriptorSets()

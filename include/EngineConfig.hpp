@@ -8,7 +8,7 @@ void postMessage(std::string msg, glm::fvec3 col);
 struct EngineConfig
 {
 	enum Group { SSAO_Group };
-	enum Special { SSAO_FrameScale, Render_Resolution };
+	enum Special { Render_Resolution };
 
 	EngineConfig() : render(changedGroups, changedSpecials) {}
 
@@ -21,16 +21,6 @@ struct EngineConfig
 		public:
 			SSAO() = delete;
 			SSAO(std::set<Group>& cg, std::set<Special>& cs) : changedGroups(cg), changedSpecials(cs) {}
-
-			void setFrameScale(float set) {
-				if (set <= 0.0 || set > 2.0) {
-					postMessage("Invalid SSAO frameScale setting. Range: (0,2]", ERROR_COL);
-					return;
-				}
-				frameScale = set;
-				changedSpecials.insert(SSAO_FrameScale);
-			}
-			float getFrameScale() const { return frameScale; }
 
 			void setSamples(int set) {
 				if (set < 0) {
@@ -93,7 +83,6 @@ struct EngineConfig
 			float getIntensity() const { return intensity; }
 
 		private:
-			float frameScale;
 			int samples;
 			int spiralTurns;
 			float projScale;
@@ -105,14 +94,7 @@ struct EngineConfig
 			std::set<Special>& changedSpecials;
 		} ssao;
 
-		void setResolution(glm::ivec2 set) {
-			if (set.x % 16 != 0 || set.y % 16 != 0 || set.x <= 0 || set.y <= 0) {
-				postMessage("Invalid Render resolution setting. Must be multiple of 16", ERROR_COL);
-				return;
-			}
-			resolution = set;
-			changedSpecials.insert(Render_Resolution);
-		}
+		void setResolution(glm::ivec2 set);
 		glm::ivec2 getResolution() { return resolution; }
 
 	private:

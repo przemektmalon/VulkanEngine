@@ -72,9 +72,6 @@ void Renderer::createSSAOPipeline()
 	ssaoPipelineLayout.addDescriptorSetLayout(&ssaoDescriptorSetLayout);
 	ssaoPipelineLayout.create(&logicalDevice);
 
-	ssaoVertexInputState.addBinding(Vertex2D::getBindingDescription());
-	ssaoVertexInputState.addAttributes(Vertex2D::getAttributeDescriptions());
-
 	/// TODO: Variable scale ssao resolution
 	ssaoPipeline.addViewport({ 0.f, 0.f, (float)renderResolution.width, (float)renderResolution.height, 0.f, 1.f }, { 0, 0, renderResolution.width, renderResolution.height });
 	ssaoPipeline.setVertexInputState(&ssaoVertexInputState);

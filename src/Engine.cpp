@@ -103,6 +103,16 @@ void Engine::start()
 	waitForProfilerInitMutex.unlock();
 
 	/*
+		Initialise scripting environment and initialise configs from script 'config.chai'
+		For example camera movement is done within the script right now
+	*/
+	scriptEnv.initChai();
+	scriptEnv.chai.add_global(chaiscript::var(std::ref(world)), "world");
+	scriptEnv.chai.add_global(chaiscript::var(std::ref(assets)), "assets");
+	scriptEnv.chai.add_global(chaiscript::var(std::ref(config)), "config");
+	scriptEnv.evalFile("./res/scripts/config.chai");
+
+	/*
 		Initialise the rest of the renderer resources (now that threads are initialised we can submit jobs)
 	*/
 	renderer->initialise();
@@ -120,8 +130,6 @@ void Engine::start()
 	console = new Console();
 	console->create();
 	renderer->overlayRenderer.addLayer(console->getLayer()); // The console is a UI overlay
-
-
 
 	/*
 		This graphics job will 'loop' (see Console::renderAtStartup) until initialisation is complete
@@ -145,14 +153,9 @@ void Engine::start()
 	physicsWorld.create();
 
 	/*
-		Initialise scripting environment and evaluate some functions in 'script.chai'
-		For example camera movement is done within the script right now
+		Camera movement done in this script
 	*/
-	scriptEnv.initChai();
 	scriptEnv.evalFile("./res/scripts/script.chai");
-	scriptEnv.chai.add_global(chaiscript::var(std::ref(world)), "world");
-	scriptEnv.chai.add_global(chaiscript::var(std::ref(assets)), "assets");
-	scriptEnv.chai.add_global(chaiscript::var(std::ref(config)), "config");
 
 	PROFILE_END("init");
 
@@ -249,6 +252,15 @@ void Engine::start()
 
 	renderer->updateScreenCommands();
 	
+	// GPU commands
+	{
+		renderer->updatePBRCommands();
+		renderer->updateGBufferCommands();
+		renderer->updateShadowCommands(); // Mutex with engine model transform update
+		renderer->updateSSAOCommands();
+		renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
+	}
+
 	/*
 		These jobs are found in "CommonJobs.hpp"
 		They will be re-added at the end of each frame
@@ -400,16 +412,6 @@ void Engine::eventLoop()
 			if (key == Key::KC_L)
 			{
 				//renderer->reloadShaders();
-			}
-			if (key == Key::KC_1)
-			{
-				auto resizeJob = std::bind(resizeJobFunc, glm::ivec2(1920, 1080));
-				threading->addGPUJob(new Job<decltype(resizeJob)>(resizeJob, defaultGPUJobDoneFunc));
-			}
-			if (key == Key::KC_2)
-			{
-				auto resizeJob = std::bind(resizeJobFunc, glm::ivec2(1280, 720));
-				threading->addGPUJob(new Job<decltype(resizeJob)>(resizeJob, defaultGPUJobDoneFunc));
 			}
 			break;
 		}
@@ -657,8 +659,8 @@ void Engine::createWindow()
 #endif
 	wci.width = 1280;
 	wci.height = 720;
-	wci.posX = 1820-1280;
-	wci.posY = 980-720;
+	wci.posX = 0;
+	wci.posY = 0;
 	wci.title = "Vulkan Engine";
 	wci.borderless = true;
 

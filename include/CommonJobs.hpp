@@ -13,17 +13,9 @@ static VoidJobType physicsToGPUJobFunc;
 static VoidJobType renderJobFunc;
 static VoidJobType scriptsJobFunc;
 static VoidJobType cleanupJobsJobFunc;
-static std::function<void(glm::ivec2)> resizeJobFunc;
-static std::function<void(glm::ivec2)> resizeJobSubmitFunc;
 
 static void initialiseCommonJobs()
 {
-	resizeJobFunc = [](glm::ivec2 res) -> void {
-		Engine::window->resize(res.x, res.y);
-		Engine::physicalDevice->querySurfaceCapabilities(Engine::window->vkSurface);
-		Engine::renderer->reInitialise();
-	};
-
 	physicsJobFunc = []() -> void {
 		PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock());
 		PROFILE_START("physics");
@@ -109,15 +101,12 @@ static void initialiseCommonJobs()
 
 		PROFILE_START("setuprender");
 		PROFILE_START("commands");
-		Engine::renderer->updatePBRCommands();
+		Engine::renderer->updateConfigs();
 		Engine::renderer->updateGBufferCommands();
 		Engine::renderer->updateShadowCommands(); // Mutex with engine model transform update
-		Engine::renderer->updateSSAOCommands();
 		Engine::renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
 		PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
-		Engine::renderer->updateConfigs();
 		Engine::renderer->updateCameraBuffer();
-		//Engine::renderer->updateSSAOConfigBuffer();
 		Engine::threading->instanceTransformMutex.unlock();
 		PROFILE_END("commands");
 

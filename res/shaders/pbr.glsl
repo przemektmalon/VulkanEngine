@@ -610,11 +610,11 @@ void main()
 		litPixel += vec3(10.0,0.0,10.0);
 	}*/
 
-	ssaoVal = imageLoad(gSSAO, pixel.xy).r;
-	imageStore(outColour, pixel, vec4(vec3(ssaoVal),1.f));
+	//ssaoVal = imageLoad(gSSAO, pixel.xy).r;
+	//imageStore(outColour, pixel, vec4(vec3(ssaoVal),1.f));
 	/*if (depth != 1.f)
 		imageStore(outColour, pixel, vec4(vec3(depth),1.f));
 	else
 		imageStore(outColour, pixel, vec4(vec3(0,1,0),1.f));*/
-	//imageStore(outColour, pixel, vec4(litPixel,1.f));
+	imageStore(outColour, pixel, vec4(litPixel,1.f));
 }

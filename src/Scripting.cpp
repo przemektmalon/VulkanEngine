@@ -43,7 +43,7 @@ void ScriptEnv::initChai()
 	{
 		ModulePtr m = ModulePtr(new chaiscript::Module());
 		utility::add_class<glm::fvec2>(*m,
-			"fvec3",
+			"fvec2",
 			{ constructor<glm::fvec2()>(),
 			constructor<glm::fvec2(const glm::fvec2 &)>(),
 			constructor<glm::fvec2(float,float)>() },
@@ -53,6 +53,18 @@ void ScriptEnv::initChai()
 			{ fun(sub2Func), "-" },
 			{ fun(mul2Func), "*" },
 			{ fun(mul2aFunc), "*" }, }
+		);
+		chai.add(m);
+	}
+	{
+		ModulePtr m = ModulePtr(new chaiscript::Module());
+		utility::add_class<glm::ivec2>(*m,
+			"ivec2",
+			{ constructor<glm::ivec2()>(),
+			constructor<glm::ivec2(const glm::fvec2 &)>(),
+			constructor<glm::ivec2(float,float)>() },
+			{ { fun(&glm::ivec2::x), "x" },
+			{ fun(&glm::ivec2::y), "y" } }
 		);
 		chai.add(m);
 	}
@@ -242,7 +254,6 @@ void ScriptEnv::initChai()
 	chai.add(fun([]()->u64 { return Engine::clock.now(); }), "getCurrentTime");
 	chai.add(fun([]()->Camera& { return Engine::camera; }), "getCamera");
 	chai.add(fun([]()->World& { return Engine::world; }), "getWorld");
-	chai.add(fun(resizeJobSubmitFunc), "setResolution");
 
 
 	{
@@ -252,7 +263,6 @@ void ScriptEnv::initChai()
 			{  },
 			{ { fun(&EngineConfig::Render::SSAO::setRadius), "setRadius" },
 			  { fun(&EngineConfig::Render::SSAO::setSamples), "setSamples" },
-			  { fun(&EngineConfig::Render::SSAO::setFrameScale), "setFrameScale" }, 
 			  { fun(&EngineConfig::Render::SSAO::setProjScale), "setProjScale" }, 
 			  { fun(&EngineConfig::Render::SSAO::setSpiralTurns), "setSpiralTurns" }, 
 			  { fun(&EngineConfig::Render::SSAO::setBias), "setBias" }, 
@@ -265,7 +275,8 @@ void ScriptEnv::initChai()
 		utility::add_class<EngineConfig::Render>(*m,
 			"EngineConfig::Render",
 			{ },
-			{ { fun(&EngineConfig::Render::ssao), "ssao" } }
+			{ { fun(&EngineConfig::Render::ssao), "ssao" },
+			  { fun(&EngineConfig::Render::setResolution), "setResolution"} }
 		);
 		chai.add(m);
 	}

@@ -354,7 +354,7 @@ public:
 	void updateScreenCommands();
 	void updateScreenCommandsForConsole();
 
-	void destroyScreenSwapChain();
+	void destroyScreenSwapchain();
 	void destroyScreenDescriptorSetLayouts();
 	void destroyScreenPipeline();
 	void destroyScreenDescriptorSets();

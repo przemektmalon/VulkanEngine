@@ -212,7 +212,6 @@ void Renderer::destroyPBRPipeline()
 {
 	pbrPipelineLayout.destroy();
 	pbrPipeline.destroy();
-	pbrShader.destroy();
 }
 
 void Renderer::destroyPBRDescriptorSets()

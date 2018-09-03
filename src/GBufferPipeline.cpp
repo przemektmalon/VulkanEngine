@@ -245,7 +245,6 @@ void Renderer::destroyGBufferPipeline()
 {
 	gBufferPipelineLayout.destroy();
 	gBufferPipeline.destroy();
-	gBufferShader.destroy();
 }
 
 void Renderer::destroyGBufferFramebuffers()

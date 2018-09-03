@@ -24,8 +24,6 @@ void Renderer::createShadowPipeline()
 	pointShadowPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fvec4) });
 	pointShadowPipelineLayout.addDescriptorSetLayout(&shadowDescriptorSetLayout);
 	pointShadowPipelineLayout.create(&logicalDevice);
-	pointShadowShader.create(&logicalDevice);
-	pointShadowShader.compile();
 	pointShadowPipeline.setShaderProgram(&pointShadowShader);
 	pointShadowPipeline.setPipelineLayout(&pointShadowPipelineLayout);
 	pointShadowPipeline.setVertexInputState(&defaultVertexInputState);
@@ -37,8 +35,6 @@ void Renderer::createShadowPipeline()
 	spotShadowPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4) * 2 });
 	spotShadowPipelineLayout.addDescriptorSetLayout(&shadowDescriptorSetLayout);
 	spotShadowPipelineLayout.create(&logicalDevice);
-	spotShadowShader.create(&logicalDevice);
-	spotShadowShader.compile();
 	spotShadowPipeline.setShaderProgram(&spotShadowShader);
 	spotShadowPipeline.setPipelineLayout(&spotShadowPipelineLayout);
 	spotShadowPipeline.setVertexInputState(&defaultVertexInputState);
@@ -50,8 +46,6 @@ void Renderer::createShadowPipeline()
 	sunShadowPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) });
 	sunShadowPipelineLayout.addDescriptorSetLayout(&shadowDescriptorSetLayout);
 	sunShadowPipelineLayout.create(&logicalDevice);
-	sunShadowShader.create(&logicalDevice);
-	sunShadowShader.compile();
 	sunShadowPipeline.setShaderProgram(&sunShadowShader);
 	sunShadowPipeline.setPipelineLayout(&sunShadowPipelineLayout);
 	sunShadowPipeline.setVertexInputState(&defaultVertexInputState);
@@ -248,9 +242,7 @@ void Renderer::destroyShadowPipeline()
 	spotShadowPipeline.destroy();
 	sunShadowPipeline.destroy();
 
-	pointShadowShader.destroy();
-	spotShadowShader.destroy();
-	sunShadowShader.destroy();
+	
 }
 
 void Renderer::destroyShadowDescriptorSets()

@@ -1,16 +1,5 @@
 def startup()
 {
-	// Render configs
-
-	config.render.ssao.setRadius(10.0);
-	config.render.ssao.setSamples(22);
-	config.render.ssao.setFrameScale(1.0);
-	config.render.ssao.setProjScale(500.0);
-	config.render.ssao.setSpiralTurns(30);
-	config.render.ssao.setBias(0.01);
-	config.render.ssao.setIntensity(0.00001);
-
-
 	var materials = ["bamboo", "greasymetal", "marble", "dirt", "mahog", "copper"];
 
 	// Boxes
