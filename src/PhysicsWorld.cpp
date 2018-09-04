@@ -9,6 +9,25 @@
 #include "Window.hpp"
 #include "Threading.hpp"
 
+void PhysicsWorld::addRigidBody(PhysicsObject * body)
+{
+	Engine::threading->physObjectAddMutex.lock();
+	objectsToAdd.push_back(body);
+	Engine::threading->physObjectAddMutex.unlock();
+}
+
+void PhysicsWorld::updateAddedObjects()
+{
+	Engine::threading->physObjectAddMutex.lock();
+	for (auto object : objectsToAdd)
+	{
+		dynamicsWorld->addRigidBody(object->rigidBody);
+		objects.push_back(object);
+	}
+	objectsToAdd.clear();
+	Engine::threading->physObjectAddMutex.unlock();
+}
+
 void PhysicsWorld::updateModels()
 {
 	auto tIndex = ModelInstance::toEngineTransformIndex;

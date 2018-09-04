@@ -53,13 +53,13 @@ def addBoxes()
 	var materials = ["bamboo", "greasymetal", "marble", "dirt", "mahog", "copper"];
 	var t = Transform();
 
-	for (var i = 0; i < 5; ++i)
+	for (var i = 0; i < 500; ++i)
 	{
 		var instanceName = "box" + to_string(i);
 		var model = world.addModel("box", instanceName);
 
 		
-		t.setTranslation(fvec3(i*30,10,10));
+		t.setTranslation(fvec3(30,i*30 + 30,10));
 		t.setScale(fvec3(10,10,10));
 		t.updateMatrix();
 

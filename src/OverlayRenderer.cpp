@@ -66,6 +66,8 @@ void OLayer::cleanup()
 
 void OLayer::addElement(OverlayElement * el)
 {
+	Engine::threading->layersMutex.lock();
+
 	auto find = std::find(elements.begin(), elements.end(), el);
 	if (find == elements.end())
 	{
@@ -94,6 +96,8 @@ void OLayer::addElement(OverlayElement * el)
 		}
 		elementLabels.insert(std::make_pair(newName, el));
 	}
+
+	Engine::threading->layersMutex.unlock();
 }
 
 OverlayElement * OLayer::getElement(std::string pName)
@@ -109,12 +113,14 @@ OverlayElement * OLayer::getElement(std::string pName)
 
 void OLayer::removeElement(OverlayElement * el)
 {
+	Engine::threading->layersMutex.lock();
 	for (auto itr = elements.begin(); itr != elements.end(); ++itr)
 	{
 		if (*itr == el)
 			itr = elements.erase(itr);
 	}
 	elementLabels.erase(el->getName());
+	Engine::threading->layersMutex.unlock();
 }
 
 void OLayer::setPosition(glm::ivec2 pPos)
@@ -285,9 +291,6 @@ void OverlayRenderer::createOverlayPipeline()
 		combinePipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) });
 		combinePipelineLayout.addDescriptorSetLayout(&overlayDescriptorSetLayout);
 		combinePipelineLayout.create(&Engine::renderer->logicalDevice);
-
-		vertexInputState.addBinding(VertexNoNormal::getBindingDescription());
-		vertexInputState.addAttributes(VertexNoNormal::getAttributeDescriptions());
 
 		VkPipelineColorBlendAttachmentState colourBlendAttachment = {};
 		colourBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;

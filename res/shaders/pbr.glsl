@@ -400,7 +400,7 @@ void main()
 
 			float currentDepth = length(fragToLight);
 			    
-		    float bias = max(1.1f * (1.0 - dot(normal, lightDir)), 1.1f);
+		    float bias = max(2.1f * (1.0 - dot(normal, lightDir)), 2.1f);
 
 		    float shadow = 0.f;
 

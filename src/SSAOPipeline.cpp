@@ -72,7 +72,6 @@ void Renderer::createSSAOPipeline()
 	ssaoPipelineLayout.addDescriptorSetLayout(&ssaoDescriptorSetLayout);
 	ssaoPipelineLayout.create(&logicalDevice);
 
-	/// TODO: Variable scale ssao resolution
 	ssaoPipeline.addViewport({ 0.f, 0.f, (float)renderResolution.width, (float)renderResolution.height, 0.f, 1.f }, { 0, 0, renderResolution.width, renderResolution.height });
 	ssaoPipeline.setVertexInputState(&ssaoVertexInputState);
 	ssaoPipeline.setShaderProgram(&ssaoShader);
@@ -86,7 +85,6 @@ void Renderer::createSSAOPipeline()
 	ssaoBlurPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_FRAGMENT_BIT,0,sizeof(glm::ivec2) });
 	ssaoBlurPipelineLayout.create(&logicalDevice);
 
-	/// TODO: Variable scale ssao resolution
 	ssaoBlurPipeline.addViewport({ 0.f, 0.f, (float)renderResolution.width, (float)renderResolution.height, 0.f, 1.f }, { 0, 0, renderResolution.width, renderResolution.height });
 	ssaoBlurPipeline.setVertexInputState(&ssaoVertexInputState);
 	ssaoBlurPipeline.setShaderProgram(&ssaoBlurShader);

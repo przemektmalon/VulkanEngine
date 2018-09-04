@@ -220,6 +220,7 @@ public:
 	std::mutex physBulletMutex;
 	std::mutex physToEngineMutex;
 	std::mutex physToGPUMutex;
+	std::mutex physObjectAddMutex;
 
 	std::mutex instanceTransformMutex;
 	std::mutex addingModelInstanceMutex;

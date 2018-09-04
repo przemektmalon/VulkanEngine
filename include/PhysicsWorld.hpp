@@ -32,16 +32,13 @@ public:
 		dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
 	}
 
-	void addRigidBody(PhysicsObject* body)
-	{
-		dynamicsWorld->addRigidBody(body->rigidBody);
-		objects.push_back(body);
-	}
+	void addRigidBody(PhysicsObject* body);
+
+	void updateAddedObjects();
 
 	void removeRigidBody(PhysicsObject* body)
 	{
 		dynamicsWorld->removeRigidBody(body->rigidBody);
-
 	}
 
 	void step(float dt)
@@ -66,6 +63,7 @@ public:
 	btDiscreteDynamicsWorld* dynamicsWorld;
 
 	std::vector<PhysicsObject*> objects;
+	std::vector<PhysicsObject*> objectsToAdd;
 
 	int savedState;
 	btRigidBody* pickedBody;

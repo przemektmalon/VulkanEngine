@@ -19,6 +19,7 @@ static void initialiseCommonJobs()
 	physicsJobFunc = []() -> void {
 		PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock());
 		PROFILE_START("physics");
+		Engine::physicsWorld.updateAddedObjects();
 		static u64 endTime = Engine::clock.now();
 		u64 timeSinceLastPhysics = Engine::clock.now() - endTime;
 		Engine::physicsWorld.step(float(timeSinceLastPhysics) / 1000.f);
@@ -93,6 +94,7 @@ static void initialiseCommonJobs()
 
 		Engine::threading->addMaterialMutex.lock();
 
+		Engine::renderer->executeFenceDelayedActions();
 		Engine::renderer->destroyDelayedBuffers();
 
 		u32 i = 0;

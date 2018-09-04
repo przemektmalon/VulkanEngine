@@ -34,9 +34,7 @@ public:
 	// Top level
 	void initialiseDevice();
 	void initialise();
-	void reInitialise();
 	void cleanup();
-	void cleanupForReInit();
 	void render();
 
 	void createShaders();

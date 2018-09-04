@@ -402,7 +402,10 @@ void Engine::eventLoop()
 			}
 			if (key == Key::KC_L)
 			{
-				//renderer->reloadShaders();
+				auto reloadJobFunc = []() -> void {
+					Engine::renderer->reloadShaders();
+				};
+				threading->addGPUJob(new Job<>(reloadJobFunc, JobBase::GPU));
 			}
 			break;
 		}
@@ -705,6 +708,8 @@ void Engine::quit()
 	renderer->cleanup();
 	window->destroy();
 	instance.destroy();
+	delete renderer;
+	delete window;
 }
 
 

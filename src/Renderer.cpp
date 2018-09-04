@@ -37,6 +37,9 @@ void Renderer::initialise()
 	screenVertexInputState.addBinding(Vertex2D::getBindingDescription());
 	screenVertexInputState.addAttributes(Vertex2D::getAttributeDescriptions());
 
+	overlayRenderer.vertexInputState.addBinding(VertexNoNormal::getBindingDescription());
+	overlayRenderer.vertexInputState.addAttributes(VertexNoNormal::getAttributeDescriptions());
+
 	// Shaders
 	createShaders();
 	compileShaders();
@@ -140,55 +143,8 @@ void Renderer::initialise()
 	lightManager.sunLight.calcProjs();
 
 	lightManager.updateSunLight();
-}
 
-void Renderer::reInitialise()
-{
-	VK_CHECK_RESULT(vkDeviceWaitIdle(device));
-
-	cleanupForReInit();
-
-	// Swap chain
-	createScreenSwapchain();
-
-	// Pipeline attachments
-	createGBufferAttachments();
-	createPBRAttachments();
-
-	// Pipeline render passes
-	createGBufferRenderPass();
-	overlayRenderer.createOverlayRenderPass();
-	overlayRenderer.createOverlayAttachments();
-	overlayRenderer.createOverlayFramebuffer();
-
-	// Pipeline objects
-	createGBufferPipeline();
-	createPBRPipeline();
-	createScreenPipeline();
-	overlayRenderer.createOverlayPipeline();
-
-	// Pipeline framebuffers
-	createGBufferFramebuffers();
-
-	// Pipeline commands
-	createGBufferCommands();
-	createPBRCommands();
-	createScreenCommands();
-	overlayRenderer.createOverlayCommands();
-
-	// Pipeline descriptor sets
-	updateGBufferDescriptorSets();
-	updatePBRDescriptorSets();
-	updateScreenDescriptorSets();
-
-	// Pipeline commands
-
-	gBufferCmdsNeedUpdate = true;
-
-	updateGBufferCommands();
-	updatePBRCommands();
-	updateScreenCommands();
-	overlayRenderer.updateOverlayCommands();
+	initialiseQueryPool();
 }
 
 /*
@@ -283,50 +239,6 @@ void Renderer::cleanup()
 	pbrShader.destroy();
 	screenShader.destroy();
 	logicalDevice.destroy();
-}
-
-void Renderer::cleanupForReInit()
-{
-	// GBuffer pipeline
-	{
-		destroyGBufferAttachments();
-		destroyGBufferRenderPass();
-		destroyGBufferPipeline();
-		destroyGBufferFramebuffers();
-		destroyGBufferCommands();
-	}
-
-	// Shadow pipeline
-	{
-		destroyShadowRenderPass();
-		destroyShadowPipeline();
-		destroyShadowCommands();
-	}
-
-	// SSAO pipeline
-	{
-		destroySSAOAttachments();
-		destroySSAORenderPass();
-		destroySSAOPipeline();
-		destroySSAOFramebuffer();
-		destroySSAOCommands();
-	}
-
-	// PBR pipeline
-	{
-		destroyPBRAttachments();
-		destroyPBRPipeline();
-		destroyPBRCommands();
-	}
-
-	// Screen pipeline
-	{
-		destroyScreenPipeline();
-		destroyScreenCommands();
-		destroyScreenSwapchain();
-	}
-
-	overlayRenderer.cleanupForReInit();
 }
 
 /*
@@ -701,7 +613,11 @@ void Renderer::initialiseQueryPool()
 	}
 	cmd.end();
 
+	vdu::QueueSubmission submit;
+	submit.addCommands(&cmd);
 
+	lGraphicsQueue.submit(&submit);
+	lGraphicsQueue.waitIdle();
 }
 
 void Renderer::populateDrawCmdBuffer()

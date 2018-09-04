@@ -137,13 +137,6 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 		r->addFenceDelayedAction(fe, delayedBufferDestructionFunc);
 
-		/*for (int i = 0; i < m_layers; ++i)
-		{
-			stagingBuffers[i].destroy();
-		}
-
-		delete[] stagingBuffers;*/
-
 		if (isMipped)
 		{
 			auto cmd = r->beginSingleTimeCommands();
