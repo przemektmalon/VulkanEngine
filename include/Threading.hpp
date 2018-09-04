@@ -8,7 +8,7 @@
 class JobBase
 {
 public:
-	enum Type { CPU, GPU, GPUTransfer };
+	enum Type { CPU, GPU, CPUTransfer, GPUTransfer };
 
 protected:
 
@@ -75,6 +75,9 @@ public:
 			case (GPU):
 				Engine::threading->addGPUJob(child);
 				break;
+			case (CPUTransfer):
+				Engine::threading->addCPUTransferJob(child);
+				break;
 			case (GPUTransfer):
 				Engine::threading->addGPUTransferJob(child);
 				break;
@@ -88,6 +91,9 @@ public:
 				break;
 			case (GPU):
 				Engine::threading->totalGPUJobsFinished.fetch_add(1);
+				break;
+			case (CPUTransfer):
+				Engine::threading->totalCPUTransferJobsFinished.fetch_add(1);
 				break;
 			case (GPUTransfer):
 				Engine::threading->totalGPUTransferJobsFinished.fetch_add(1);
@@ -139,6 +145,9 @@ public:
 	// During rendering CPU to GPU memory transfer operation will be submitted to a separate transfer queue from the main thread
 	void addGPUTransferJob(JobBase* jobToAdd);
 
+	// DISK <-> RAM transfer operation will have their own thread
+	void addCPUTransferJob(JobBase* jobToAdd);
+
 	// Each worker will grab the next job
 	bool getCPUJob(JobBase*& job, s64& timeUntilNextJob);
 
@@ -148,6 +157,9 @@ public:
 	// The main thread will grab these jobs each iteration of its loop and send them to the GPU tranfers queue
 	bool getGPUTransferJob(JobBase*& job, s64& timeUntilNextJob);
 
+	// The DISK thread will grab these jobs
+	bool getCPUTransferJob(JobBase*& job, s64& timeUntilNextJob);
+
 	// Executed by each worker thread 
 	// Thread_locals with special construction are initialised here
 	void update();
@@ -155,11 +167,14 @@ public:
 	// Executed by graphics submission thread before regular update
 	void updateGraphics();
 
+	// Executed by DISK IO thread
+	void updateCPUTransfers();
+
 	// Are all regular jobs done
 	bool allNonGPUJobsDone();
 
 	// Are all transfer jobs done
-	bool allTransferJobsDone();
+	bool allGPUTransferJobsDone();
 
 	// Are all graphics jobs done
 	bool allGraphicsJobsDone();
@@ -179,6 +194,9 @@ public:
 	std::list<JobBase*> gpuTransferJobs;
 	std::mutex gpuTransferJobsQueueMutex;
 
+	std::list<JobBase*> cpuTransferJobs;
+	std::mutex cpuTransferJobsQueueMutex;
+
 	std::list<JobBase*> jobsToFree;
 	std::mutex jobsFreeMutex;
 
@@ -190,6 +208,9 @@ public:
 
 	std::atomic_char32_t totalGPUTransferJobsAdded;
 	std::atomic_char32_t totalGPUTransferJobsFinished;
+
+	std::atomic_char32_t totalCPUTransferJobsAdded;
+	std::atomic_char32_t totalCPUTransferJobsFinished;
 
 	std::vector<std::thread*> workers;
 
@@ -203,6 +224,8 @@ public:
 	std::mutex instanceTransformMutex;
 	std::mutex addingModelInstanceMutex;
 	std::mutex pushingModelToGPUMutex;
+
+	std::mutex addMaterialMutex;
 
 	std::mutex layersMutex;
 };

@@ -90,7 +90,52 @@ static void initialiseCommonJobs()
 
 		Engine::renderer->lightManager.sunLight.calcProjs();
 		Engine::renderer->lightManager.updateSunLight();
-		Engine::renderer->updateGBufferDescriptorSets();
+
+		Engine::threading->addMaterialMutex.lock();
+
+		Engine::renderer->destroyDelayedBuffers();
+
+		u32 i = 0;
+		for (auto& material : Engine::assets.materials)
+		{
+			if (!material.second.checkAvailability(Asset::AWAITING_DESCRIPTOR_UPDATE))
+			{
+				i += 2;
+				continue;
+			}
+
+			material.second.getAvailability() &= ~Asset::AWAITING_DESCRIPTOR_UPDATE;
+
+			auto updater = Engine::renderer->gBufferDescriptorSet.makeUpdater();
+			auto texturesUpdate = updater->addImageUpdate("textures", i, 2);
+
+			texturesUpdate[0].sampler = Engine::renderer->textureSampler;
+			texturesUpdate[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			texturesUpdate[1].sampler = Engine::renderer->textureSampler;
+			texturesUpdate[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			if (material.second.albedoSpec->getHandle())
+				texturesUpdate[0].imageView = material.second.albedoSpec->getView();
+			else
+				texturesUpdate[0].imageView = Engine::assets.getTexture("blank")->getView();
+
+			if (material.second.normalRough)
+			{
+				if (material.second.normalRough->getView())
+					texturesUpdate[1].imageView = material.second.normalRough->getView();
+				else
+					texturesUpdate[1].imageView = Engine::assets.getTexture("black")->getView();
+			}
+			else
+				texturesUpdate[1].imageView = Engine::assets.getTexture("black")->getView();
+
+			i += 2;
+
+			Engine::renderer->gBufferDescriptorSet.submitUpdater(updater);
+			Engine::renderer->gBufferDescriptorSet.destroyUpdater(updater);
+		}
+
+		Engine::threading->addMaterialMutex.unlock();
 
 		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
 		PROFILE_START("cullingdrawbuffer");

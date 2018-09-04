@@ -14,6 +14,8 @@ public:
 		ON_GPU = 4,
 		LOADING_TO_RAM = 8,
 		LOADING_TO_GPU = 16,
+		ON_DESCRIPTOR = 32,
+		AWAITING_DESCRIPTOR_UPDATE = 64
 	};
 
 	Asset() : type(Undefined), availability(0), ramPointer(0), gpuMemory(0), size(0) {}

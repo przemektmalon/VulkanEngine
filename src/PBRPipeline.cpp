@@ -108,7 +108,7 @@ void Renderer::updatePBRDescriptorSets()
 	*depthUpdater = { textureSampler, gBufferDepthAttachment.getView(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
 
 	auto skyboxUpdater = updater->addImageUpdate("skybox");
-	*skyboxUpdater = { skySampler, Engine::assets.getTexture("skybox")->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+	*skyboxUpdater = { skySampler, Engine::assets.getTexture("blankCube")->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 
 	auto ssaoUpdater = updater->addImageUpdate("ssao");
 	*ssaoUpdater = { textureSampler, ssaoFinalAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };

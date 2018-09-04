@@ -13,6 +13,8 @@ void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 {
 	availability |= LOADING_TO_RAM;
 
+	//Engine::console->postMessage("Loading model: " + diskPaths[0], glm::fvec3(0.8, 0.8, 0.3));
+
 	for (auto& path : diskPaths)
 	{
 		Assimp::Importer importer;
@@ -75,7 +77,7 @@ void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 	availability |= ON_RAM;
 	availability &= ~LOADING_TO_RAM;
 
-	Engine::console->postMessage("Loading model: " + diskPaths[0], glm::fvec3(0.8, 0.8, 0.3));
+	material->loadToRAM();
 }
 
 void Model::loadToGPU(void * pCreateStruct)
@@ -86,6 +88,8 @@ void Model::loadToGPU(void * pCreateStruct)
 	availability |= ON_GPU;
 	availability &= ~LOADING_TO_GPU;
 	Engine::threading->pushingModelToGPUMutex.unlock();
+
+	material->loadToGPU();
 }
 
 void ModelInstance::setModel(Model * m)
@@ -97,6 +101,18 @@ void ModelInstance::setModel(Model * m)
 void ModelInstance::setMaterial(Material* pMaterial)
 {
 	material = pMaterial;
+
+	auto loadJobFunc = std::bind([](Material* m) -> void {
+		m->loadToRAM();
+	}, material);
+
+	auto toGPUFunc = std::bind([](Material* m) -> void {
+		m->loadToGPU();
+	}, material);
+
+	auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, JobBase::CPUTransfer);
+	job->setChild(new Job<decltype(toGPUFunc)>(toGPUFunc, JobBase::GPUTransfer));
+	Engine::threading->addCPUTransferJob(job);
 }
 
 /*void ModelInstance::makePhysicsObject(btCollisionShape * collisionShape, float mass)

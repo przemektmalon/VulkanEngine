@@ -390,7 +390,6 @@ public:
 	// It should keep track of free memory which may be "holes" (after removing memory from middle of buffer) and allocate if new additions fit
 	// If we want to compact data (not sure if this will be worth the effort) we'd have to keep track of which memory regions are used by which models
 
-	vdu::Buffer stagingBuffer;
 	vdu::Buffer screenQuadBuffer;
 	
 	vdu::Buffer vertexIndexBuffer;
@@ -400,13 +399,70 @@ public:
 	void pushModelDataToGPU(Model& model);
 	void createDataBuffers();
 
+	void addFenceDelayedAction(vdu::Fence* fe, std::function<void(void)> action)
+	{
+		fenceDelayedActionMutex.lock();
+		fenceDelayedActions[fe] = action;
+		fenceDelayedActionMutex.unlock();
+	}
+	void executeFenceDelayedActions()
+	{
+		fenceDelayedActionMutex.lock();
+		for (auto itr = fenceDelayedActions.begin(); itr != fenceDelayedActions.end();)
+		{
+			if (itr->first->isSignalled())
+			{
+				itr->second();
+				itr = fenceDelayedActions.erase(itr);
+			}
+			else
+			{
+				++itr;
+			}
+		}
+		fenceDelayedActionMutex.unlock();
+	}
+	std::mutex fenceDelayedActionMutex;
+	std::unordered_map<vdu::Fence*, std::function<void(void)>> fenceDelayedActions;
+
+	void addDelayedBufferDesctruction(vdu::Fence* fe, vdu::Buffer* buff, uint32_t numBuffers = 1)
+	{
+		delayedBufferDestructionsMutex.lock();
+		delayedBufferDestructions[fe] = std::make_pair(buff, numBuffers);
+		delayedBufferDestructionsMutex.unlock();
+	}
+	void destroyDelayedBuffers()
+	{
+		delayedBufferDestructionsMutex.lock();
+		for (auto itr = delayedBufferDestructions.begin(); itr != delayedBufferDestructions.end();)
+		{
+			if (itr->first->isSignalled())
+			{
+				itr->second.first->destroy();
+				delete itr->second.first;
+
+				itr->first->destroy();
+				delete itr->first;
+
+				itr = delayedBufferDestructions.erase(itr);
+			}
+			else
+			{
+				++itr;
+			}
+		}
+		delayedBufferDestructionsMutex.unlock();
+	}
+	std::mutex delayedBufferDestructionsMutex;
+	std::unordered_map<vdu::Fence*, std::pair<vdu::Buffer*,uint32_t>> delayedBufferDestructions;
+
 	// End GPU mem management
 	
+	void initialiseQueryPool();
+
 	// Draw buffers
 	vdu::Buffer drawCmdBuffer;
 	void populateDrawCmdBuffer();
-
-	std::vector<OverlayElement*> overlayElems;
 
 	// Uniform buffers
 	CameraUBOData cameraUBOData;

@@ -73,7 +73,7 @@ void Engine::start()
 	/*
 		Initialise worker threads (each one needs vulkan logical device before initialising its command pool)
 	*/
-	int numThreads = 2;
+	int numThreads = 3;
 	waitForProfilerInitMutex.lock();
 	threading = new Threading(numThreads);
 
@@ -91,7 +91,7 @@ void Engine::start()
 	};
 
 	int i = 0;
-	std::vector<std::thread::id> threadIDs(numThreads);
+	std::vector<std::thread::id> threadIDs(numThreads+1);
 	for (auto& thread : threading->workers) {
 		threadIDs[i] = thread->get_id();
 		threading->threadIDAssociations.insert(std::make_pair(i + 1, thread->get_id()));
@@ -120,9 +120,16 @@ void Engine::start()
 	/*
 		Default assets are null assets (blank textures to fall back on when desired not found)
 		Also load a font for the console to use for reporting initialisation progress
+		We need to block execution until they are loaded so we dont have any threading errors and the console can work
 	*/
 	assets.loadDefaultAssets();
 	assets.loadAssets("/res/consolefontresource.xml");
+	world.addModelInstance("nullModel", "nullModel"); // Null model needed in the world to prevent warning about empty vertex/index buffers
+
+	while (!threading->allGPUTransferJobsDone())
+	{
+		std::this_thread::yield();
+	}
 
 	/*
 		The console will start reporting progress of initialisation (loading assets)
@@ -166,7 +173,7 @@ void Engine::start()
 		Wait for all assets to load and be transferred to GPU
 		We wait here because in the next lines descriptor set updates require textures to be on the GPU
 	*/
-	while (!threading->allTransferJobsDone() || !threading->allNonGPUJobsDone())
+	while (!threading->allGPUTransferJobsDone() || !threading->allNonGPUJobsDone())
 	{
 		// Submit any gpu transfer jobs that were children of DISK load jobs
 		processAllMainThreadJobs();

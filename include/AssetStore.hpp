@@ -20,7 +20,9 @@ public:
 		auto ret = materials.find(ind->second);
 		return ret != materials.end() ? &ret->second : nullptr;
 	}
-	Texture* getTexture(std::string texName) { auto ret = textures.find(texName); return ret != textures.end() ? &ret->second : nullptr; }
+	Texture* getTexture(std::string texName) { 
+		auto ret = textures.find(texName); 
+		return ret != textures.end() ? &ret->second : nullptr; }
 	Model* getModel(std::string modName) { auto ret = models.find(modName); return ret != models.end() ? &ret->second : nullptr; }
 	Font* getFont(std::string fontName) { auto ret = fonts.find(fontName); return ret != fonts.end() ? &ret->second : nullptr; }
 

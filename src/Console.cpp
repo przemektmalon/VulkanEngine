@@ -146,7 +146,7 @@ void Console::inputChar(char c)
 			try {
 				
 				// Submit command and get boxed return value
-				auto ret = Engine::scriptEnv.evalString(std::string(command));
+				auto ret = Engine::scriptEnv.chai.eval(std::string(command));
 
 				// Get boxed values type info
 				auto& retVal = ret.get();

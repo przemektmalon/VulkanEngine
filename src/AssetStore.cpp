@@ -64,7 +64,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 		}
 
 		auto& tex = textures.try_emplace(name).first->second;
-		TextureCreateInfo ci;
+		/*TextureCreateInfo ci;
 		ci.genMipMaps = mip;
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -80,10 +80,10 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 			tex->loadToGPU();
 		}, &tex);
 
+		auto job = new Job<decltype(texLoadFunc)>(texLoadFunc, JobBase::CPUTransfer);
+		job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, JobBase::GPUTransfer));
+		Engine::threading->addCPUTransferJob(job);*/
 		tex.prepare(paths, name);
-		auto job = new Job<decltype(texLoadFunc)>(texLoadFunc);
-		job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, JobBase::Type::GPUTransfer));
-		Engine::threading->addCPUJob(job);
 	}
 
 	// Textures ---------------------------------------------------------------------
@@ -236,10 +236,27 @@ void AssetStore::loadDefaultAssets()
 
 		tex.loadToGPU(&ci);
 	}
+
+	{
+		addMaterial("null", "blank", "blank");
+	}
+
+	{
+		auto& model = models.try_emplace("nullModel").first->second;
+		model.lodPaths = { "/res/models/nullmodel.obj" };
+		model.lodLimits = { 0 };
+
+		model.prepare(model.lodPaths, "nullModel");
+		model.material = getMaterial("null");
+		model.loadToRAM();
+		model.loadToGPU();
+	}
 }
 
 void AssetStore::addMaterial(std::string name, std::string albedoSpec, std::string normalRough)
 {
+	Engine::threading->addMaterialMutex.lock();
+
 	auto find = materialIndices.find(name);
 	if (find != materialIndices.end())
 		return;
@@ -247,10 +264,12 @@ void AssetStore::addMaterial(std::string name, std::string albedoSpec, std::stri
 	u32 matIndex = materials.size();
 	materialIndices[name] = matIndex;
 
-
+	materials.try_emplace(matIndex, name);
 	materials[matIndex].albedoSpec = getTexture(albedoSpec);
 	materials[matIndex].normalRough = getTexture(normalRough);
 	materials[matIndex].gpuIndexBase = (materials.size() - 1) * 2;
+
+	Engine::threading->addMaterialMutex.unlock();
 }
 
 void AssetStore::addMaterial(std::string name, glm::fvec3 albedo, float roughness, float metal)

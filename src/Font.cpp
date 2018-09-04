@@ -164,11 +164,14 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 
 	const auto& r = Engine::renderer;
 
-	vdu::Buffer staging;
-	staging.createStaging(&r->logicalDevice, totalGlyphSetTexSize);
+	auto stagingBuffer = new vdu::Buffer;
+	stagingBuffer->createStaging(&r->logicalDevice, totalGlyphSetTexSize);
+
+	auto fe = new vdu::Fence;
+	fe->create(&r->logicalDevice);
 
 	VkDeviceSize copyOffset = 0;
-	void* data = staging.getMemory()->map(0, totalGlyphSetTexSize);
+	void* data = stagingBuffer->getMemory()->map(0, totalGlyphSetTexSize);
 	for (int i = 1; i < NO_PRINTABLE_CHARS; ++i)
 	{
 		char* dst = (char*)data; dst += copyOffset;
@@ -176,7 +179,7 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 		copyOffset += chars[i].data.size();
 	}
 
-	staging.getMemory()->unmap();
+	stagingBuffer->getMemory()->unmap();
 
 	auto cmd = r->beginSingleTimeCommands();
 
@@ -199,16 +202,14 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 		region.imageOffset = offset;
 		region.imageExtent = extent;
 
-		vkCmdCopyBufferToImage(cmd, staging.getHandle(), glyphs->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		vkCmdCopyBufferToImage(cmd, stagingBuffer->getHandle(), glyphs->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 		copyOffset += chars[i].data.size();
 	}
 
-	r->endSingleTimeCommands(cmd);
+	r->endSingleTimeCommands(cmd, fe->getHandle());
 
-	staging.destroy();
-
-	//r->destroyStagingBuffer(stagingBuffer);
+	r->addDelayedBufferDesctruction(fe, stagingBuffer);
 
 	height = pFace->size->metrics.height >> 6;
 	ascender = pFace->size->metrics.ascender >> 6;

@@ -3,8 +3,12 @@
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
+Texture::Texture() : vdu::Texture() {}
+
 void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 {
+	availability |= LOADING_TO_RAM;
+
 	auto ci = (TextureCreateInfo*)pCreateStruct;
 
 	isMipped = ci->genMipMaps;
@@ -26,6 +30,7 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 			if (img[i].data.size() == 0)
 			{
 				DBG_WARNING("Failed to load image: " << diskPaths[i]);
+				availability &= ~LOADING_TO_RAM;
 				return;
 			}
 			if (i > 0 && img->components != components && img->bpp != components)
@@ -39,6 +44,7 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 			if (img[i].width != w || img[i].height != h)
 			{
 				DBG_WARNING("Cube texture layer dimensions must be equal");
+				availability &= ~LOADING_TO_RAM;
 				return;
 			}
 			w = img[i].width; h = img[i].height;
@@ -53,7 +59,6 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 		m_height = img->height;
 		size = img->data.size() * m_layers;
 
-		availability |= ON_RAM;
 		ramPointer = img->data.data();
 	}
 	else
@@ -68,12 +73,13 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 		{
 			img = new Image;
 			img->setSize(m_width, m_height, components);
-			memcpy(img->data.data(), ci->pData, size);
-
-			availability |= ON_RAM;
+			memcpy(img->data.data(), ci->pData, size);			
 			ramPointer = img->data.data();
 		}
 	}
+
+	availability |= ON_RAM;
+	availability &= ~LOADING_TO_RAM;
 }
 
 void Texture::loadToGPU(void * pCreateStruct)
@@ -106,6 +112,8 @@ void Texture::loadToGPU(void * pCreateStruct)
 		auto cmd = r->beginSingleTimeCommands();
 
 		vdu::Buffer* stagingBuffers = new vdu::Buffer[m_layers];
+		vdu::Fence* fe = new vdu::Fence;
+		fe->create(&r->logicalDevice);
 
 		for (int i = 0; i < m_layers; ++i)
 		{
@@ -116,14 +124,25 @@ void Texture::loadToGPU(void * pCreateStruct)
 			stagingBuffers[i].cmdCopyTo(cmd, this, 0, 0, i, 1);
 		}
 
-		r->endSingleTimeCommands(cmd);
+		r->endSingleTimeCommands(cmd,fe->getHandle());
 
-		for (int i = 0; i < m_layers; ++i)
+		auto delayedBufferDestructionFunc = std::bind([](vdu::Fence* fe, vdu::Buffer* buff, u32 layers) -> void {
+			for (u32 i = 0; i < layers; ++i) {
+				buff[i].destroy();
+			}
+			delete[] buff;
+			fe->destroy();
+			delete fe;
+		}, fe, stagingBuffers, m_layers);
+
+		r->addFenceDelayedAction(fe, delayedBufferDestructionFunc);
+
+		/*for (int i = 0; i < m_layers; ++i)
 		{
 			stagingBuffers[i].destroy();
 		}
 
-		delete[] stagingBuffers;
+		delete[] stagingBuffers;*/
 
 		if (isMipped)
 		{
@@ -176,7 +195,7 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 			r->endSingleTimeCommands(cmd);
 
-			stagingBuffer.destroy();
+			//stagingBuffer.destroy();
 
 			if (isMipped)
 			{
@@ -195,6 +214,9 @@ void Texture::loadToGPU(void * pCreateStruct)
 		}
 	}
 
+	availability |= ON_GPU;
+	availability &= ~LOADING_TO_GPU;
+
 	Engine::renderer->gBufferDescriptorSetNeedsUpdate = true;
 }
 
@@ -205,60 +227,3 @@ void Texture::cleanupRAM(FreeFunc fr)
 void Texture::cleanupGPU()
 {
 }
-
-/*void Texture::generateMipMaps()
-{
-	std::vector<std::vector<Image>> mips;
-	mips.resize(m_layers);
-	for (auto& layer : mips)
-		layer.resize(maxMipLevel);
-
-	const auto r = Engine::renderer;
-
-	VkDeviceSize allMipsSize = (img[0].data.size() * 1.335) * m_layers;
-	Buffer stagingBuffer;
-	r->createStagingBuffer(stagingBuffer, allMipsSize);
-
-	VkDeviceSize offset = 0;
-
-	std::vector<VkBufferImageCopy> copyRegions;
-
-	int lay = 0;
-	for (auto& layer : mips)
-	{
-		int lvl = 1;
-		Image* prevMip = img + lay;
-		for (auto& level : layer)
-		{
-			prevMip->generateMipMap(level);
-			r->copyToStagingBuffer(stagingBuffer, &level.data[0], level.data.size(), offset);
-			
-			VkBufferImageCopy region = {};
-			region.imageSubresource.aspectMask = vkAspect;
-			region.imageSubresource.mipLevel = lvl;
-			region.imageSubresource.baseArrayLayer = lay;
-			region.imageSubresource.layerCount = 1;
-			region.imageExtent.width = level.width;
-			region.imageExtent.height = level.height;
-			region.imageExtent.depth = 1;
-			region.bufferOffset = offset;
-
-			copyRegions.push_back(region);
-
-			offset += level.data.size();
-			prevMip = &level;
-			++lvl;
-		}
-		++lay;
-	}
-
-	VkCommandBuffer commandBuffer = r->beginSingleTimeCommands();
-
-	vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.getBuffer(), vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions.size(), copyRegions.data());
-
-	r->setImageLayout(commandBuffer, *this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkLayout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-
-	r->endSingleTimeCommands(commandBuffer);
-
-	r->destroyStagingBuffer(stagingBuffer);
-}*/

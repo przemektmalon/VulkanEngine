@@ -17,7 +17,7 @@ struct TextureCreateInfo : vdu::TextureCreateInfo
 class Texture : public Asset , public vdu::Texture
 {
 public:
-	Texture() : vdu::Texture() {}
+	Texture();
 
 	void setName(std::string pName) { name = pName; }
 

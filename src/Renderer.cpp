@@ -365,16 +365,11 @@ void Renderer::render()
 	*/
 	/////////////////////////////////////////
 
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.waitSemaphoreCount = 0;
-	submitInfo.pWaitDstStageMask = 0;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &gBufferCommandBuffer.getHandle();
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
+	vdu::QueueSubmission submission;
+	submission.addCommands(&gBufferCommandBuffer);
+	submission.addSignal(renderFinishedSemaphore);
+	lGraphicsQueue.submit(&submission);
 
-	lGraphicsQueue.submit(&submitInfo);
 	// From now on we cant update the gBuffer command buffer until the fence is signalled at some point in the future
 	// GBuffer command update will block
 	// Later we want to implement a double(or triple) buffering for command buffers and fences, so we can start updating next frames command buffer without blocking
@@ -386,18 +381,14 @@ void Renderer::render()
 	*/
 	/////////////////////////////////////////
 
-	VkPipelineStageFlags waitStages1[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &renderFinishedSemaphore;
-	submitInfo.pWaitDstStageMask = waitStages1;
-	VkCommandBuffer cmds[] = { ssaoCommandBuffer.getHandle(), shadowCommandBuffer.getHandle() };
-	submitInfo.commandBufferCount = 2;
-	submitInfo.pCommandBuffers = cmds;
-	VkSemaphore sems[] = { ssaoFinishedSemaphore, shadowFinishedSemaphore };
-	submitInfo.signalSemaphoreCount = 2;
-	submitInfo.pSignalSemaphores = sems;
-
-	lGraphicsQueue.submit(&submitInfo);
+	submission.clear();
+	submission.addWait(renderFinishedSemaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	submission.addCommands(&ssaoCommandBuffer);
+	submission.addCommands(&shadowCommandBuffer);
+	submission.addSignal(ssaoFinishedSemaphore);
+	submission.addSignal(shadowFinishedSemaphore);
+	
+	lGraphicsQueue.submit(&submission);
 
 
 	/////////////////////////////////////////
@@ -406,17 +397,13 @@ void Renderer::render()
 	*/
 	/////////////////////////////////////////
 
-	VkPipelineStageFlags waitStagesPBR[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
-	VkSemaphore waitSemsPBR[] = { ssaoFinishedSemaphore, shadowFinishedSemaphore };
-	submitInfo.waitSemaphoreCount = 2;
-	submitInfo.pWaitSemaphores = waitSemsPBR;
-	submitInfo.pWaitDstStageMask = waitStagesPBR;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &pbrCommandBuffer.getHandle();
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &pbrFinishedSemaphore;
-
-	lGraphicsQueue.submit(&submitInfo);
+	submission.clear();
+	submission.addWait(ssaoFinishedSemaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	submission.addWait(shadowFinishedSemaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	submission.addCommands(&pbrCommandBuffer);
+	submission.addSignal(pbrFinishedSemaphore);
+	
+	lGraphicsQueue.submit(&submission);
 
 
 	/////////////////////////////////////////
@@ -425,22 +412,18 @@ void Renderer::render()
 	*/
 	/////////////////////////////////////////
 
-	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.waitSemaphoreCount = 0;
-	submitInfo.pWaitDstStageMask = waitStages2;
-	submitInfo.pCommandBuffers = &overlayRenderer.elementCommandBuffer.getHandle();
-	submitInfo.pSignalSemaphores = &overlayFinishedSemaphore;
+	submission.clear();
+	submission.addCommands(&overlayRenderer.elementCommandBuffer);
+	submission.addSignal(overlayFinishedSemaphore);
+	
+	lGraphicsQueue.submit(&submission);
 
-	lGraphicsQueue.submit(&submitInfo);
-
-
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &overlayFinishedSemaphore;
-	submitInfo.pWaitDstStageMask = waitStages2;
-	submitInfo.pCommandBuffers = &overlayRenderer.combineCommandBuffer.getHandle();
-	submitInfo.pSignalSemaphores = &overlayCombineFinishedSemaphore;
-
-	lGraphicsQueue.submit(&submitInfo);
+	submission.clear();
+	submission.addWait(overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	submission.addCommands(&overlayRenderer.combineCommandBuffer);
+	submission.addSignal(overlayCombineFinishedSemaphore);
+	
+	lGraphicsQueue.submit(&submission);
 
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(device, screenSwapchain.getHandle(), std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
@@ -458,6 +441,8 @@ void Renderer::render()
 	*/
 	/////////////////////////////////////////
 
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSemaphore waitSems[] = { imageAvailableSemaphore, pbrFinishedSemaphore, overlayCombineFinishedSemaphore };
 	submitInfo.pWaitSemaphores = waitSems;
@@ -465,6 +450,8 @@ void Renderer::render()
 	submitInfo.pWaitDstStageMask = waitStages3;
 	submitInfo.pCommandBuffers = &screenCommandBuffers.getHandle(imageIndex);
 	submitInfo.pSignalSemaphores = &screenFinishedSemaphore;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.signalSemaphoreCount = 1;
 
 	lGraphicsQueue.submit(&submitInfo);
 
@@ -703,6 +690,20 @@ void Renderer::compileShaders()
 	sunShadowShader.compile();
 }
 
+void Renderer::initialiseQueryPool()
+{
+	vdu::CommandBuffer cmd;
+	cmd.allocate(&logicalDevice, &commandPool);
+	cmd.begin();
+	for (int i = 0; i < NUM_GPU_TIMESTAMPS; ++i)
+	{
+		queryPool.cmdTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, i);
+	}
+	cmd.end();
+
+
+}
+
 void Renderer::populateDrawCmdBuffer()
 {
 	//VkDrawIndexedIndirectCommand* cmd = new VkDrawIndexedIndirectCommand[Engine::world.instancesToDraw.size()];
@@ -754,17 +755,19 @@ void Renderer::pushModelDataToGPU(Model & model)
 	{
 		// Copy vertices through staging buffer
 
-		vertexIndexBuffer.createStaging(stagingBuffer);
-		memcpy(stagingBuffer.getMemory()->map(), lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex));
-		stagingBuffer.getMemory()->unmap();
+		vdu::Buffer* stagingBuffer = new vdu::Buffer;
+		vertexIndexBuffer.createStaging(*stagingBuffer);
+		memcpy(stagingBuffer->getMemory()->map(), lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex));
+		stagingBuffer->getMemory()->unmap();
+
+		auto fe = new vdu::Fence;
+		fe->create(&logicalDevice);
 
 		auto cmd = beginSingleTimeCommands();
-		stagingBuffer.cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.vertexDataLength * sizeof(Vertex), 0, vertexInputByteOffset);
-		endSingleTimeCommands(cmd);
+		stagingBuffer->cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.vertexDataLength * sizeof(Vertex), 0, vertexInputByteOffset);
+		endSingleTimeCommands(cmd,fe->getHandle());
 
-		stagingBuffer.destroy();
-
-		//vertexIndexBuffer.setMem(lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex), vertexInputByteOffset);
+		addDelayedBufferDesctruction(fe, stagingBuffer);
 
 		lodLevel.firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
 		vertexInputByteOffset += lodLevel.vertexDataLength * sizeof(Vertex);
@@ -772,17 +775,19 @@ void Renderer::pushModelDataToGPU(Model & model)
 
 		// Copy indices through staging buffer
 
-		vertexIndexBuffer.createStaging(stagingBuffer);
-		memcpy(stagingBuffer.getMemory()->map(), lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32));
-		stagingBuffer.getMemory()->unmap();
+		stagingBuffer = new vdu::Buffer;
+		vertexIndexBuffer.createStaging(*stagingBuffer);
+		memcpy(stagingBuffer->getMemory()->map(), lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32));
+		stagingBuffer->getMemory()->unmap();
+
+		fe = new vdu::Fence;
+		fe->create(&logicalDevice);
 
 		cmd = beginSingleTimeCommands();
-		stagingBuffer.cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.indexDataLength * sizeof(u32), 0, INDEX_BUFFER_BASE + indexInputByteOffset);
-		endSingleTimeCommands(cmd);
+		stagingBuffer->cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.indexDataLength * sizeof(u32), 0, INDEX_BUFFER_BASE + indexInputByteOffset);
+		endSingleTimeCommands(cmd,fe->getHandle());
 
-		stagingBuffer.destroy();
-
-		//vertexIndexBuffer.setMem(lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32), INDEX_BUFFER_BASE + indexInputByteOffset);
+		addDelayedBufferDesctruction(fe, stagingBuffer);
 
 		lodLevel.firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
 		indexInputByteOffset += lodLevel.indexDataLength * sizeof(u32);
@@ -816,17 +821,21 @@ void Renderer::createDataBuffers()
 	screenQuadBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	screenQuadBuffer.create(&logicalDevice, quad.size() * sizeof(Vertex2D));
 
-	screenQuadBuffer.createStaging(stagingBuffer);
+	auto stagingBuffer = new vdu::Buffer;
+	screenQuadBuffer.createStaging(*stagingBuffer);
 
-	auto data = stagingBuffer.getMemory()->map();
+	auto fe = new vdu::Fence;
+	fe->create(&logicalDevice);
+
+	auto data = stagingBuffer->getMemory()->map();
 	memcpy(data, quad.data(), quad.size() * sizeof(Vertex2D));
-	stagingBuffer.getMemory()->unmap();
+	stagingBuffer->getMemory()->unmap();
 
 	auto cmd = beginSingleTimeCommands();
-	stagingBuffer.cmdCopyTo(cmd, &screenQuadBuffer);
-	endSingleTimeCommands(cmd);
+	stagingBuffer->cmdCopyTo(cmd, &screenQuadBuffer);
+	endSingleTimeCommands(cmd, fe->getHandle());
 
-	stagingBuffer.destroy();
+	addDelayedBufferDesctruction(fe, stagingBuffer);
 
 	createUBOs();
 }
@@ -1084,12 +1093,12 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fenc
 
 	Engine::threading->physToGPUMutex.lock();
 
-	VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence));
-	VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue)); /// TODO: non blocking queue submissions !
+	VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
+	//VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue)); /// TODO: non blocking queue submissions !
 
 	Engine::threading->physToGPUMutex.unlock();
 
-	VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, &commandBuffer));
+	//VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, &commandBuffer));
 }
 
 /*

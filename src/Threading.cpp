@@ -4,19 +4,22 @@
 #include "Renderer.hpp"
 #include "Profiler.hpp"
 
-Threading::Threading(int pNumThreads) : workers(pNumThreads-1)
+Threading::Threading(int pNumThreads) : workers(pNumThreads)
 {
 	totalCPUJobsAdded = 0;
 	totalCPUJobsFinished = 0;
 	totalGPUTransferJobsAdded = 0;
 	totalGPUTransferJobsFinished = 0;
+	totalCPUTransferJobsAdded = 0;
+	totalCPUTransferJobsFinished = 0;
 	totalGPUJobsAdded = 0;
 	totalGPUJobsFinished = 0;
 	for (int i = 0; i < pNumThreads - 2; ++i)
 	{
 		workers[i] = new std::thread(&Threading::update, this);
 	}
-	workers[pNumThreads - 2] = new std::thread(&Threading::updateGraphics, this);
+	workers[pNumThreads - 1] = new std::thread(&Threading::updateGraphics, this);
+	workers[pNumThreads - 2] = new std::thread(&Threading::updateCPUTransfers, this);
 }
 
 Threading::~Threading()
@@ -50,6 +53,14 @@ void Threading::addGPUTransferJob(JobBase * jobToAdd)
 	totalGPUTransferJobsAdded += 1;
 	gpuTransferJobs.push_back(jobToAdd);
 	gpuTransferJobsQueueMutex.unlock();
+}
+
+void Threading::addCPUTransferJob(JobBase * jobToAdd)
+{
+	cpuTransferJobsQueueMutex.lock();
+	totalCPUTransferJobsAdded += 1;
+	cpuTransferJobs.push_back(jobToAdd);
+	cpuTransferJobsQueueMutex.unlock();
 }
 
 bool Threading::getCPUJob(JobBase *& job, s64& timeUntilNextJob)
@@ -127,6 +138,32 @@ bool Threading::getGPUTransferJob(JobBase *& job, s64& timeUntilNextJob)
 	job = *jobItr;
 	gpuTransferJobs.erase(jobItr);
 	gpuTransferJobsQueueMutex.unlock();
+	return true;
+}
+
+bool Threading::getCPUTransferJob(JobBase *& job, s64 & timeUntilNextJob)
+{
+	cpuTransferJobsQueueMutex.lock();
+	if (cpuTransferJobs.empty())
+	{
+		cpuTransferJobsQueueMutex.unlock();
+		return false;
+	}
+	auto jobItr = cpuTransferJobs.begin();
+	timeUntilNextJob = std::max((s64)0, (*jobItr)->getScheduledTime() - (s64)Engine::clock.now());
+	while (timeUntilNextJob != 0)
+	{
+		++jobItr;
+		if (jobItr == cpuTransferJobs.end())
+		{
+			cpuTransferJobsQueueMutex.unlock();
+			return false;
+		}
+		timeUntilNextJob = std::max((s64)0, std::min((*jobItr)->getScheduledTime() - (s64)Engine::clock.now(), timeUntilNextJob));
+	}
+	job = *jobItr;
+	cpuTransferJobs.erase(jobItr);
+	cpuTransferJobsQueueMutex.unlock();
 	return true;
 }
 
@@ -210,24 +247,56 @@ void Threading::updateGraphics()
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
+	Engine::renderer->executeFenceDelayedActions();
 	Engine::renderer->lGraphicsQueue.waitIdle();
 	Engine::renderer->lTransferQueue.waitIdle();
 	Engine::renderer->commandPool.destroy();
 }
 
-bool Threading::allNonGPUJobsDone()
+void Threading::updateCPUTransfers()
 {
-	return totalCPUJobsAdded.load() == totalCPUJobsFinished.load();
+	Engine::waitForProfilerInitMutex.lock();
+	Engine::waitForProfilerInitMutex.unlock();
+	initThreadProfilerTagsMutex.lock();
+	Profiler::prealloc(std::vector<std::thread::id>{ std::this_thread::get_id() }, std::vector<std::string>{ "thread_" + getThisThreadIDString() });
+	initThreadProfilerTagsMutex.unlock();
+
+	threadJobsProcessed[std::this_thread::get_id()] = 0;
+
+	JobBase* job;
+	bool readyToTerminate = false;
+	s64 timeUntilNextJob;
+	while (!readyToTerminate)
+	{
+		PROFILE_START("thread_" + getThisThreadIDString());
+		if (getCPUTransferJob(job, timeUntilNextJob))
+		{
+			++threadJobsProcessed[std::this_thread::get_id()];
+			job->run();
+		}
+		else
+		{
+			readyToTerminate = !Engine::engineRunning;
+			if (timeUntilNextJob > 10'000)
+				std::this_thread::yield();
+		}
+		PROFILE_END("thread_" + getThisThreadIDString());
+	}
 }
 
-bool Threading::allTransferJobsDone()
+bool Threading::allNonGPUJobsDone()
 {
-	return totalGPUTransferJobsAdded.load() == totalGPUTransferJobsFinished.load();
+	return totalCPUJobsAdded == totalCPUJobsFinished && totalCPUTransferJobsAdded == totalCPUTransferJobsFinished;
+}
+
+bool Threading::allGPUTransferJobsDone()
+{
+	return totalGPUTransferJobsAdded == totalGPUTransferJobsFinished;
 }
 
 bool Threading::allGraphicsJobsDone()
 {
-	return totalGPUJobsAdded.load() == totalGPUJobsFinished.load();
+	return totalGPUJobsAdded == totalGPUJobsFinished;
 }
 
 void Threading::freeJob(JobBase * jobToFree)

@@ -122,10 +122,10 @@ void Renderer::updateGBufferDescriptorSets()
 	{
 		texturesUpdate[i].sampler = textureSampler;
 		texturesUpdate[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		texturesUpdate[i].imageView = Engine::assets.materials.begin()->second.albedoSpec->getView();
+		texturesUpdate[i].imageView = Engine::assets.getTexture("blank")->getView();
 	}
 
-	u32 i = 0;
+	/*u32 i = 0;
 	for (auto& material : Engine::assets.materials)
 	{
 		if (material.second.albedoSpec->getHandle())
@@ -143,7 +143,7 @@ void Renderer::updateGBufferDescriptorSets()
 		else
 			texturesUpdate[i + 1].imageView = Engine::assets.getTexture("black")->getView();
 		i += 2;
-	}
+	}*/
 
 	gBufferDescriptorSet.submitUpdater(updater);
 	gBufferDescriptorSet.destroyUpdater(updater);
