@@ -48,12 +48,12 @@ def startup()
 	}*/
 }
 
-def addBoxes()
+def addBoxes(numBoxes)
 {
 	var materials = ["bamboo", "greasymetal", "marble", "dirt", "mahog", "copper"];
 	var t = Transform();
 
-	for (var i = 0; i < 500; ++i)
+	for (var i = 0; i < numBoxes; ++i)
 	{
 		var instanceName = "box" + to_string(i);
 		var model = world.addModel("box", instanceName);

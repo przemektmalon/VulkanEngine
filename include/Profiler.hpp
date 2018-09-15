@@ -9,6 +9,11 @@
 #define PROFILE_RESET(name) Profiler::getProfile(name).reset();
 
 #define PROFILE_GET(name) Profiler::getProfile(name)
+#define PROFILE_GET_RUNNING_TOTAL(name) Profiler::getProfile(name).getRunningTotal()
+#define PROFILE_GET_RUNNING_AVERAGE(name) Profiler::getProfile(name).getRunningAverage()
+#define PROFILE_GET_RUNNING_MIN(name) Profiler::getProfile(name).getRunningMinimum()
+#define PROFILE_GET_RUNNING_MAX(name) Profiler::getProfile(name).getRunningMaximum()
+
 #define PROFILE_GET_TOTAL(name) Profiler::getProfile(name).getTotal()
 #define PROFILE_GET_AVERAGE(name) Profiler::getProfile(name).getAverage()
 #define PROFILE_GET_MIN(name) Profiler::getProfile(name).getMinimum()
@@ -27,19 +32,22 @@
 ///			Along with this the profiler will need to be exposed to chaiscript
 ///			Also the script shouldnt be responsible for resetting the profiles
 
-/// TODO:	Think about a running average instead of average of intervals
+#define RUNNING_AVERAGE_COUNT 50
 
 class Profiler
 {
 private:
 	struct Profile
 	{
-		Profile() : totalMicroseconds(0), minimumMicroseconds(0), maximumMicroseconds(0), numSamples(0) {}
+		Profile() {}
 
-		std::atomic_char32_t totalMicroseconds;
-		std::atomic_char32_t minimumMicroseconds;
-		std::atomic_char32_t maximumMicroseconds;
+		std::atomic_char32_t totalMicroseconds = 0;
+		std::atomic_char32_t minimumMicroseconds = 0;
+		std::atomic_char32_t maximumMicroseconds = 0;
+		std::atomic_char32_t circBufferHead = 0;
 		std::atomic_char32_t numSamples;
+
+		std::array<u32, RUNNING_AVERAGE_COUNT> circBuffer;
 
 		// Since we need order (> & <) operations we need a lock as they are no atomic exchanges with these
 		std::mutex minMaxMutex;
@@ -52,10 +60,40 @@ private:
 			numSamples = 0;
 		}
 
-		double getTotal() { return static_cast<double>(totalMicroseconds.load()); }
-		double getAverage() { return static_cast<double>(totalMicroseconds.load()) / static_cast<double>(numSamples.load()); }
-		double getMinimum() { return static_cast<double>(minimumMicroseconds.load()); }
-		double getMaximum() { return static_cast<double>(maximumMicroseconds.load()); }
+		double getTotal() { return static_cast<double>(totalMicroseconds); }
+		double getAverage() { return static_cast<double>(totalMicroseconds) / static_cast<double>(numSamples); }
+		double getMinimum() { return static_cast<double>(minimumMicroseconds); }
+		double getMaximum() { return static_cast<double>(maximumMicroseconds); }
+		double getRunningAverage()
+		{
+			u32 total = 0;
+			for (auto time : circBuffer)
+				total += time;
+			return static_cast<double>(total) / static_cast<double>(RUNNING_AVERAGE_COUNT);
+		}
+		double getRunningMaximum()
+		{
+			u32 max = 0;
+			for (auto time : circBuffer)
+				if (time > max)
+					max = time;
+			return static_cast<double>(max);
+		}
+		double getRunningMinimum()
+		{
+			u32 min = std::numeric_limits<u32>::max();
+			for (auto time : circBuffer)
+				if (time < min)
+					min = time;
+			return static_cast<double>(min);
+		}
+		double getRunningTotal()
+		{
+			u32 total = 0;
+			for (auto time : circBuffer)
+				total += time;
+			return total;
+		}
 	};
 
 public:

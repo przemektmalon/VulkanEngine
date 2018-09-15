@@ -27,15 +27,22 @@ void Profiler::end(std::string id)
 {
 	u32 time = Engine::clock.now() - startTimes[std::this_thread::get_id()][id];
 
-	profiles[id].totalMicroseconds += time;
-	profiles[id].numSamples += 1;
+	auto& profile = profiles[id];
 
-	profiles[id].minMaxMutex.lock();
-	if (time > profiles[id].maximumMicroseconds.load())
-		profiles[id].maximumMicroseconds.store(time);
-	if (time < profiles[id].minimumMicroseconds.load())
-		profiles[id].minimumMicroseconds.store(time);
-	profiles[id].minMaxMutex.unlock();
+	char32_t pastEndIndex = RUNNING_AVERAGE_COUNT;
+	profile.circBufferHead++;
+	auto index = profile.circBufferHead.compare_exchange_strong(pastEndIndex, 0);
+	profile.circBuffer[profile.circBufferHead] = time;
+
+	profile.totalMicroseconds += time;
+	profile.numSamples += 1;
+
+	profile.minMaxMutex.lock();
+	if (time > profile.maximumMicroseconds.load())
+		profile.maximumMicroseconds.store(time);
+	if (time < profile.minimumMicroseconds.load())
+		profile.minimumMicroseconds.store(time);
+	profile.minMaxMutex.unlock();
 }
 
 void Profiler::addGPUTime(std::string id, u64 start, u64 end)
@@ -43,15 +50,22 @@ void Profiler::addGPUTime(std::string id, u64 start, u64 end)
 	/// TODO: query GPU for timestamp resolution and change '1000' accordingly
 	u32 time = (end - start) / 1000; // We store microseconds, (my) GPU gives nanosecond timestamps
 	
-	profiles[id].totalMicroseconds += time;
-	profiles[id].numSamples += 1;
+	auto& profile = profiles[id];
 
-	profiles[id].minMaxMutex.lock();
-	if (time > profiles[id].maximumMicroseconds.load())
-		profiles[id].maximumMicroseconds.store(time);
-	if (time < profiles[id].minimumMicroseconds.load())
-		profiles[id].minimumMicroseconds.store(time);
-	profiles[id].minMaxMutex.unlock();
+	char32_t pastEndIndex = RUNNING_AVERAGE_COUNT;
+	profile.circBufferHead++;
+	auto index = profile.circBufferHead.compare_exchange_strong(pastEndIndex, 0);
+	profile.circBuffer[profile.circBufferHead] = time;
+
+	profile.totalMicroseconds += time;
+	profile.numSamples += 1;
+
+	profile.minMaxMutex.lock();
+	if (time > profile.maximumMicroseconds.load())
+		profile.maximumMicroseconds.store(time);
+	if (time < profile.minimumMicroseconds.load())
+		profile.minimumMicroseconds.store(time);
+	profile.minMaxMutex.unlock();
 }
 
 std::unordered_map<std::thread::id, std::unordered_map<std::string, u64>> Profiler::startTimes;
