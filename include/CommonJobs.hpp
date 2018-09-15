@@ -78,9 +78,9 @@ static void initialiseCommonJobs()
 			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
 			//u64 microsecondsBetweenPhysicsUpdates = 0;
 
-			auto nextPhysicsJob = new Job<>(physicsToGPUJobFunc, JobBase::GPU);
+			auto nextPhysicsJob = new Job<>(physicsToGPUJobFunc, JobBase::GPUTransfer);
 			nextPhysicsJob->setScheduledTime(Engine::clock.now() + microsecondsBetweenPhysicsUpdates);
-			Engine::threading->addGPUJob(nextPhysicsJob);
+			Engine::threading->addGPUTransferJob(nextPhysicsJob);
 		}
 	};
 

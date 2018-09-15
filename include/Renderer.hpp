@@ -106,7 +106,7 @@ public:
 
 	// Semaphores
 	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore renderFinishedSemaphore;
+	VkSemaphore gBufferFinishedSemaphore;
 	VkSemaphore screenFinishedSemaphore;
 	VkSemaphore pbrFinishedSemaphore;
 	VkSemaphore shadowFinishedSemaphore;

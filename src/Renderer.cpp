@@ -211,7 +211,7 @@ void Renderer::cleanup()
 	VK_VALIDATE(vkDestroySampler(device, skySampler, nullptr));
 	VK_VALIDATE(vkDestroySampler(device, shadowSampler, nullptr));
 
-	VK_VALIDATE(vkDestroySemaphore(device, renderFinishedSemaphore, 0));
+	VK_VALIDATE(vkDestroySemaphore(device, gBufferFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, imageAvailableSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, pbrFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, screenFinishedSemaphore, 0));
@@ -271,81 +271,49 @@ void Renderer::render()
 
 	//PROFILE_END("qwaitidle");
 
-	/////////////////////////////////////////
-	/*
-		GBUFFER
-	*/
-	/////////////////////////////////////////
+	/// TODO: See if we can group submissions
 
-	vdu::QueueSubmission submission;
-	submission.addCommands(&gBufferCommandBuffer);
-	submission.addSignal(renderFinishedSemaphore);
-	lGraphicsQueue.submit(&submission);
-
-	// From now on we cant update the gBuffer command buffer until the fence is signalled at some point in the future
-	// GBuffer command update will block
-	// Later we want to implement a double(or triple) buffering for command buffers and fences, so we can start updating next frames command buffer without blocking
-
+	std::vector<vdu::QueueSubmission> submissionsGroup1(4);
 
 	/////////////////////////////////////////
 	/*
-		SSAO & SHADOWS
+		GBUFFER & SHADOWS & OVERLAYS
 	*/
 	/////////////////////////////////////////
 
-	submission.clear();
-	submission.addWait(renderFinishedSemaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-	submission.addCommands(&ssaoCommandBuffer);
-	submission.addCommands(&shadowCommandBuffer);
-	submission.addSignal(ssaoFinishedSemaphore);
-	submission.addSignal(shadowFinishedSemaphore);
-	
-	lGraphicsQueue.submit(&submission);
+	submissionsGroup1[0].addCommands(&gBufferCommandBuffer);
+	submissionsGroup1[0].addSignal(gBufferFinishedSemaphore);
 
+	submissionsGroup1[1].addCommands(&shadowCommandBuffer);
+	submissionsGroup1[1].addSignal(shadowFinishedSemaphore);
+
+	submissionsGroup1[2].addCommands(&overlayRenderer.elementCommandBuffer);
+	submissionsGroup1[2].addSignal(overlayFinishedSemaphore);
+
+	submissionsGroup1[3].addWait(overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	submissionsGroup1[3].addCommands(&overlayRenderer.combineCommandBuffer);
+	submissionsGroup1[3].addSignal(overlayCombineFinishedSemaphore);
+
+	lGraphicsQueue.submit(submissionsGroup1);
 
 	/////////////////////////////////////////
 	/*
-		PBR
+		SSAO & PBR
 	*/
 	/////////////////////////////////////////
 
-	submission.clear();
-	submission.addWait(ssaoFinishedSemaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-	submission.addWait(shadowFinishedSemaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-	submission.addCommands(&pbrCommandBuffer);
-	submission.addSignal(pbrFinishedSemaphore);
+	std::vector<vdu::QueueSubmission> submissionsGroup2(2);
+
+	submissionsGroup2[0].addWait(gBufferFinishedSemaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	submissionsGroup2[0].addCommands(&ssaoCommandBuffer);
+	submissionsGroup2[0].addSignal(ssaoFinishedSemaphore);
 	
-	lGraphicsQueue.submit(&submission);
+	submissionsGroup2[1].addWait(ssaoFinishedSemaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	submissionsGroup2[1].addWait(shadowFinishedSemaphore, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	submissionsGroup2[1].addCommands(&pbrCommandBuffer);
+	submissionsGroup2[1].addSignal(pbrFinishedSemaphore);
 
-
-	/////////////////////////////////////////
-	/*
-		OVERLAY
-	*/
-	/////////////////////////////////////////
-
-	submission.clear();
-	submission.addCommands(&overlayRenderer.elementCommandBuffer);
-	submission.addSignal(overlayFinishedSemaphore);
-	
-	lGraphicsQueue.submit(&submission);
-
-	submission.clear();
-	submission.addWait(overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-	submission.addCommands(&overlayRenderer.combineCommandBuffer);
-	submission.addSignal(overlayCombineFinishedSemaphore);
-	
-	lGraphicsQueue.submit(&submission);
-
-	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(device, screenSwapchain.getHandle(), std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-
-	if (result != VK_SUCCESS)
-	{
-		DBG_SEVERE("Could not acquire next image");
-		return;
-	}
-
+	lGraphicsQueue.submit(submissionsGroup2);
 
 	/////////////////////////////////////////
 	/*
@@ -353,19 +321,22 @@ void Renderer::render()
 	*/
 	/////////////////////////////////////////
 
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	VkPipelineStageFlags waitStages3[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	VkSemaphore waitSems[] = { imageAvailableSemaphore, pbrFinishedSemaphore, overlayCombineFinishedSemaphore };
-	submitInfo.pWaitSemaphores = waitSems;
-	submitInfo.waitSemaphoreCount = 3;
-	submitInfo.pWaitDstStageMask = waitStages3;
-	submitInfo.pCommandBuffers = &screenCommandBuffers.getHandle(imageIndex);
-	submitInfo.pSignalSemaphores = &screenFinishedSemaphore;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.signalSemaphoreCount = 1;
+	u32 imageIndex;
+	auto result = screenSwapchain.acquireNextImage(imageIndex, imageAvailableSemaphore);
 
-	lGraphicsQueue.submit(&submitInfo);
+	if (result != VK_SUCCESS) {
+		DBG_SEVERE("Could not acquire next image");
+		return;
+	}
+
+	vdu::QueueSubmission screenSubmission;
+	screenSubmission.addWait(imageAvailableSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	screenSubmission.addWait(pbrFinishedSemaphore, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	screenSubmission.addWait(overlayCombineFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	screenSubmission.addCommands(screenCommandBuffers.getHandle(imageIndex));
+	screenSubmission.addSignal(screenFinishedSemaphore);
+
+	lGraphicsQueue.submit(screenSubmission);
 
 	/////////////////////////////////////////
 	/*
@@ -373,18 +344,13 @@ void Renderer::render()
 	*/
 	/////////////////////////////////////////
 
-	VkSwapchainKHR swapChains[] = { screenSwapchain.getHandle() };
-	VkPresentInfoKHR presentInfo = {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &screenFinishedSemaphore;
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &imageIndex;
+	vdu::QueuePresentation presentation;
+	presentation.addWait(screenFinishedSemaphore);
+	presentation.addSwapchain(screenSwapchain, imageIndex);
 
 	PROFILE_START("submitrender");
 
-	lGraphicsQueue.present(&presentInfo);
+	lGraphicsQueue.present(presentation);
 
 	PROFILE_END("submitrender");
 }
@@ -616,7 +582,7 @@ void Renderer::initialiseQueryPool()
 	vdu::QueueSubmission submit;
 	submit.addCommands(&cmd);
 
-	lGraphicsQueue.submit(&submit);
+	lGraphicsQueue.submit(submit);
 	lGraphicsQueue.waitIdle();
 }
 
@@ -925,7 +891,7 @@ void Renderer::createSemaphores()
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore));
-	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore));
+	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &gBufferFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &pbrFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &screenFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &shadowFinishedSemaphore));
@@ -1056,7 +1022,7 @@ void Renderer::updateTransformBuffer()
 
 	//VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferCommands.fence));
 
-	//ModelInstance::toGPUTransformIndex = tIndex == 0 ? 1 : 0;
+	ModelInstance::toGPUTransformIndex = tIndex == 0 ? 1 : 0;
 
 	//Engine::threading->instanceTransformMutex.unlock();
 }

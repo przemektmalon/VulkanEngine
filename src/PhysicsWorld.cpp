@@ -43,7 +43,7 @@ void PhysicsWorld::updateModels()
 		o->instance->transform[tIndex].updateMatrix();
 	}
 
-	//ModelInstance::toEngineTransformIndex = tIndex == 0 ? 1 : 0;
+	ModelInstance::toEngineTransformIndex = tIndex == 0 ? 1 : 0;
 }
 
 btVector3 PhysicsWorld::getRayTo(int x, int y)
