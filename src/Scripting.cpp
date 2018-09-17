@@ -234,9 +234,10 @@ void ScriptEnv::initChai()
 		ModulePtr m = ModulePtr(new chaiscript::Module());
 		utility::add_class<Console>(*m,
 			"Console",
-			{ },
+			{ constructor<Console()>() },
 			{ { fun(&Console::postMessage), "postMessage" },
-			  { fun(&Console::isActive), "isActive" } }
+			  { fun(&Console::isActive), "isActive" },
+			  { fun(&Console::toggle), "toggle" } }
 		);
 		chai.add(m);
 	}

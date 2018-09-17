@@ -126,7 +126,6 @@ void Console::inputChar(char c)
 		postMessage(command, glm::fvec3(0.9, 0.9, 0.9));
 
 		layer->removeElement(input);
-		//delete input;
 
 		input = new Text();
 

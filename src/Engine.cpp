@@ -137,7 +137,7 @@ void Engine::start()
 	console = new Console();
 	console->create(glm::ivec2(window->resX, 276));
 	renderer->overlayRenderer.addLayer(console->getLayer()); // The console is a UI overlay
-	scriptEnv.chai.add_global(chaiscript::var(std::ref(console)), "console"); // Add console to script environment
+	scriptEnv.chai.add_global(chaiscript::var(std::ref(*console)), "console"); // Add console to script environment
 
 	/*
 		This graphics job will 'loop' (see Console::renderAtStartup) until initialisation is complete
@@ -202,7 +202,7 @@ void Engine::start()
 	statsText->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	statsText->setCharSize(20);
 	statsText->setString("");
-	statsText->setPosition(glm::fvec2(0, 250));
+	statsText->setPosition(glm::fvec2(0, 330));
 
 	uiLayer->addElement(statsText);
 

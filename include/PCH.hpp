@@ -48,7 +48,7 @@
 #include "btBulletDynamicsCommon.h"
 #include "BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h"
 
-//#define CHAISCRIPT_NO_THREADS
+#define CHAISCRIPT_NO_THREADS
 #include "chaiscript/chaiscript.hpp"
 #include <typeinfo>
 

@@ -36,7 +36,9 @@ public:
 	void setUpdated();
 
 	bool doDraw() { return render; }
-	void setDoDraw(bool doDraw) { render = doDraw; needsUpdate = true; }
+	void setDoDraw(bool doDraw) { 
+		render = doDraw;
+		needsUpdate = true; }
 
 private:
 

@@ -8,7 +8,7 @@
 class Console
 {
 public:
-	Console() : active(true), layer(0), timeSinceBlink(0), blinkerPosition(1), oldBlinkerPosition(1), scrollPosition(0) {}
+	Console() : active(true), layer(0), timeSinceBlink(0), blinkerPosition(1), oldBlinkerPosition(1), scrollPosition(0) { }
 
 	void create(glm::ivec2 resolution);
 	void update();

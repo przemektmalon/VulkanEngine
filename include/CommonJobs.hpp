@@ -171,14 +171,12 @@ static void initialiseCommonJobs()
 	scriptsJobFunc = []() -> void {
 		PROFILE_START("scripts");
 		PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
-		if (!Engine::console->isActive()) {
-			try {
-				Engine::scriptEnv.evalString("gameTick()");
-			}
-			catch (chaiscript::exception::eval_error e)
-			{
-				std::cout << e.what() << std::endl;
-			}
+		try {
+			Engine::scriptEnv.evalString("gameTick()");
+		}
+		catch (chaiscript::exception::eval_error e)
+		{
+			std::cout << e.what() << std::endl;
 		}
 		Engine::threading->instanceTransformMutex.unlock();
 		PROFILE_END("scripts");
