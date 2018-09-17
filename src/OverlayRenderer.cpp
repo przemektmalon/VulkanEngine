@@ -114,12 +114,34 @@ OverlayElement * OLayer::getElement(std::string pName)
 void OLayer::removeElement(OverlayElement * el)
 {
 	Engine::threading->layersMutex.lock();
-	for (auto itr = elements.begin(); itr != elements.end(); ++itr)
+	elementsToRemove.push_back(el);
+	el->setDoDraw(false);
+	Engine::threading->layersMutex.unlock();
+}
+
+void OLayer::cleanupElements()
+{
+	Engine::threading->layersMutex.lock();
+
+	for (auto elToRemove : elementsToRemove) // For each element to remove
 	{
-		if (*itr == el)
-			itr = elements.erase(itr);
+		// Find the iterator of the element to remove
+		auto findElement = std::find(elements.begin(), elements.end(), elToRemove); 
+
+		// If the element was found
+		if (findElement != elements.end())
+		{
+			// Get pointer before iterator becamos invalid, so we can call the destructor
+			auto ptr = *findElement;
+			ptr->cleanup();
+			elementLabels.erase((*findElement)->getName());
+			elements.erase(findElement);
+			delete ptr;
+		}
 	}
-	elementLabels.erase(el->getName());
+
+	elementsToRemove.clear();
+
 	Engine::threading->layersMutex.unlock();
 }
 
@@ -189,6 +211,14 @@ void OverlayRenderer::cleanup()
 		layer->cleanup();
 
 	layers.empty();
+}
+
+void OverlayRenderer::cleanupLayerElements()
+{
+	for (auto layer : layers)
+	{
+		layer->cleanupElements();
+	}
 }
 
 void OverlayRenderer::cleanupForReInit()

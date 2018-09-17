@@ -22,6 +22,8 @@ public:
 	OverlayElement* getElement(std::string pName);
 	void removeElement(OverlayElement* el);
 
+	void cleanupElements();
+
 	Texture* getColour() { return &colAttachment; }
 	Texture* getDepth() { return &depAttachment; }
 	const vdu::Framebuffer& getFramebuffer() { return framebuffer; }
@@ -44,6 +46,7 @@ private:
 	}
 
 	std::vector<OverlayElement*> elements;
+	std::vector<OverlayElement*> elementsToRemove;
 	std::unordered_map<std::string, OverlayElement*> elementLabels;
 
 	vdu::Framebuffer framebuffer;
@@ -86,6 +89,7 @@ public:
 	void destroyOverlayCommands();
 
 	void cleanup();
+	void cleanupLayerElements();
 	void cleanupForReInit();
 
 	void addLayer(OLayer* layer);

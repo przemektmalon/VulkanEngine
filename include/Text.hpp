@@ -61,6 +61,8 @@ public:
 	GlyphContainer* getGlyphs() { return glyphs; }
 	glm::fvec2 getCharsPosition(int index);
 
+	vdu::Buffer vertsBuffer;
+
 private:
 
 	void updateDescriptorSet();
@@ -76,7 +78,7 @@ private:
 	GlyphContainer* glyphs;
 
 	std::vector<Vertex2D> verts;
-	vdu::Buffer vertsBuffer;
+	
 
 	std::mutex drawingMutex;
 };

@@ -230,6 +230,16 @@ void ScriptEnv::initChai()
 		);
 		chai.add(m);
 	}
+	{
+		ModulePtr m = ModulePtr(new chaiscript::Module());
+		utility::add_class<Console>(*m,
+			"Console",
+			{ },
+			{ { fun(&Console::postMessage), "postMessage" },
+			  { fun(&Console::isActive), "isActive" } }
+		);
+		chai.add(m);
+	}
 
 	glm::fvec3(*crossFunc)(const glm::fvec3&, const glm::fvec3&) = glm::cross;
 
@@ -251,10 +261,10 @@ void ScriptEnv::initChai()
 	chai.add(fun(isKeyPressedFunc), "isKeyPressed");
 	chai.add(fun([](Event& ev)->bool { return Engine::window->eventQ.pollEvent(ev); }), "pollEvent");
 	chai.add(fun([]()->float { return Engine::frameTime.getSecondsf(); }), "getFrameTime");
+	chai.add(fun([]()->float { return Engine::scriptTickTime.getSecondsf(); }), "getScriptTickTime");
 	chai.add(fun([]()->u64 { return Engine::clock.now(); }), "getCurrentTime");
 	chai.add(fun([]()->Camera& { return Engine::camera; }), "getCamera");
 	chai.add(fun([]()->World& { return Engine::world; }), "getWorld");
-
 
 	{
 		ModulePtr m = ModulePtr(new Module());

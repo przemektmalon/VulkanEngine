@@ -1,9 +1,20 @@
-def updateCamera()
+def gameTick()
+{
+	if (!console.isActive())
+	{
+		updateMovement();
+	}
+}
+
+def updateMovement()
 {
 	auto& camera = getCamera();
 	//auto mv = fvec4(0, 0, 100*getFrameTime(), 1) * camera.getMatYaw();
-	auto dt = 0.01;
-	auto mv = fvec4(0, 0, 100*dt, 1) * camera.getMatYaw();
+	auto dt = getScriptTickTime();
+	auto camSpeed = 1000.0;
+	auto mv = fvec4(0, 0, camSpeed*dt, 1) * camera.getMatYaw();
+
+	
 
 	auto m = fvec3(mv);
 
@@ -27,11 +38,11 @@ def updateCamera()
 	}
 	if (isKeyPressed('R'))
 	{
-		camera.move(fvec3(0, 100 * dt, 0));
+		camera.move(fvec3(0, camSpeed * dt, 0));
 	}
 	if (isKeyPressed('F'))
 	{
-		camera.move(fvec3(0, -100 * dt, 0));
+		camera.move(fvec3(0, -camSpeed * dt, 0));
 	}
 
 	camera.update();

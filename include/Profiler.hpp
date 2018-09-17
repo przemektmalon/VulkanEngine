@@ -19,6 +19,8 @@
 #define PROFILE_GET_MIN(name) Profiler::getProfile(name).getMinimum()
 #define PROFILE_GET_MAX(name) Profiler::getProfile(name).getMaximum()
 
+#define PROFILE_GET_LAST(name) Profiler::getProfile(name).getLastTime()
+
 #define PROFILE_TO_MS(us) (us * 0.001)
 #define PROFILE_TO_S(us) (us * 0.000001)
 
@@ -93,6 +95,10 @@ private:
 			for (auto time : circBuffer)
 				total += time;
 			return total;
+		}
+		double getLastTime()
+		{
+			return circBuffer[circBufferHead];
 		}
 	};
 

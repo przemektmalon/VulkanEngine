@@ -50,5 +50,5 @@ private:
 	int oldBlinkerPosition;
 	float timeSinceBlink;
 	bool active;
-	const int historyLimit = 50;
+	const int historyLimit = 1000;
 };

@@ -137,6 +137,7 @@ void Engine::start()
 	console = new Console();
 	console->create(glm::ivec2(window->resX, 276));
 	renderer->overlayRenderer.addLayer(console->getLayer()); // The console is a UI overlay
+	scriptEnv.chai.add_global(chaiscript::var(std::ref(console)), "console"); // Add console to script environment
 
 	/*
 		This graphics job will 'loop' (see Console::renderAtStartup) until initialisation is complete
@@ -169,18 +170,6 @@ void Engine::start()
 	*/
 	assets.loadAssets("/res/resources.xml");
 	
-	/*
-		Wait for all assets to load and be transferred to GPU
-		We wait here because in the next lines descriptor set updates require textures to be on the GPU
-	*/
-	while (!threading->allGPUTransferJobsDone() || !threading->allNonGPUJobsDone())
-	{
-		// Submit any gpu transfer jobs that were children of DISK load jobs
-		processAllMainThreadJobs();
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
-	}
-
-	/// TODO: more flexible descriptor set updates that dont require all textures to be resident
 	/*
 		Update descriptor sets for all pipelines
 	*/
@@ -445,12 +434,12 @@ bool Engine::processNextMainThreadJob()
 		++threading->threadJobsProcessed[std::this_thread::get_id()];
 		return true;
 	}
-	else if (threading->getCPUJob(job, timeUntilNextJob))
+	/*else if (threading->getCPUJob(job, timeUntilNextJob))
 	{
 		job->run();
 		++threading->threadJobsProcessed[std::this_thread::get_id()];
 		return true;
-	}
+	}*/
 	return false;
 }
 
@@ -720,7 +709,7 @@ void Engine::quit()
 HINSTANCE Engine::win32InstanceHandle;
 #endif
 #ifdef __linux__
-xcb_connection_t * Engine::connection;
+xcb_connection_t * Engine::connectionasd;
 #endif
 EngineConfig Engine::config;
 Clock Engine::clock;
@@ -730,6 +719,7 @@ VkInstance Engine::vkInstance;
 PhysicsWorld Engine::physicsWorld;
 bool Engine::engineRunning = true;
 Time Engine::engineStartTime;
+Time Engine::scriptTickTime;
 Camera Engine::camera;
 World Engine::world;
 AssetStore Engine::assets;

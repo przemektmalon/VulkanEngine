@@ -60,7 +60,8 @@ public:
 	static VkInstance vkInstance;
 	static std::vector<vdu::PhysicalDevice> allPhysicalDevices;
 	static vdu::PhysicalDevice* physicalDevice;
-	
+
+	static Time scriptTickTime;
 	static Time frameTime;
 	static bool engineRunning;
 	static Time engineStartTime;

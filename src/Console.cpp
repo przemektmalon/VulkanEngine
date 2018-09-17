@@ -126,7 +126,7 @@ void Console::inputChar(char c)
 		postMessage(command, glm::fvec3(0.9, 0.9, 0.9));
 
 		layer->removeElement(input);
-		delete input;
+		//delete input;
 
 		input = new Text();
 
@@ -275,9 +275,7 @@ void Console::postMessage(std::string msg, glm::fvec3 colour)
 	if (output.size() == historyLimit)
 	{
 		auto t = output.back();
-		t->cleanup();
 		layer->removeElement(t);
-		delete t;
 		output.pop_back();
 	}
 	

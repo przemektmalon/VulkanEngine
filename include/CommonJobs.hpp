@@ -94,6 +94,7 @@ static void initialiseCommonJobs()
 
 		Engine::threading->addMaterialMutex.lock();
 
+		Engine::renderer->overlayRenderer.cleanupLayerElements();
 		Engine::renderer->executeFenceDelayedActions();
 		Engine::renderer->destroyDelayedBuffers();
 
@@ -170,10 +171,9 @@ static void initialiseCommonJobs()
 	scriptsJobFunc = []() -> void {
 		PROFILE_START("scripts");
 		PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
-		if (!Engine::console->isActive())
-		{
+		if (!Engine::console->isActive()) {
 			try {
-				Engine::scriptEnv.evalString("updateCamera()");
+				Engine::scriptEnv.evalString("gameTick()");
 			}
 			catch (chaiscript::exception::eval_error e)
 			{
@@ -182,6 +182,8 @@ static void initialiseCommonJobs()
 		}
 		Engine::threading->instanceTransformMutex.unlock();
 		PROFILE_END("scripts");
+		Engine::scriptTickTime.setMicroSeconds(PROFILE_GET_LAST("scripts"));
+		//std::cout << PROFILE_GET_LAST("scripts") << std::endl;
 
 		if (Engine::engineRunning)
 		{

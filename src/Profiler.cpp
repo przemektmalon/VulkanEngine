@@ -31,7 +31,7 @@ void Profiler::end(std::string id)
 
 	char32_t pastEndIndex = RUNNING_AVERAGE_COUNT;
 	profile.circBufferHead++;
-	auto index = profile.circBufferHead.compare_exchange_strong(pastEndIndex, 0);
+	profile.circBufferHead.compare_exchange_strong(pastEndIndex, 0);
 	profile.circBuffer[profile.circBufferHead] = time;
 
 	profile.totalMicroseconds += time;
@@ -54,7 +54,7 @@ void Profiler::addGPUTime(std::string id, u64 start, u64 end)
 
 	char32_t pastEndIndex = RUNNING_AVERAGE_COUNT;
 	profile.circBufferHead++;
-	auto index = profile.circBufferHead.compare_exchange_strong(pastEndIndex, 0);
+	profile.circBufferHead.compare_exchange_strong(pastEndIndex, 0);
 	profile.circBuffer[profile.circBufferHead] = time;
 
 	profile.totalMicroseconds += time;
