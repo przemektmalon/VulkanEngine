@@ -247,7 +247,7 @@ void Engine::start()
 	threading->addGPUJob(new Job<>(renderJobFunc, JobBase::GPU));
 	threading->addCPUJob(new Job<>(physicsJobFunc));
 	//threading->addJob(new Job<>(physicsToEngineJobFunc, defaultCPUJobDoneFunc), 1);
-	threading->addCPUJob(new Job<>(scriptsJobFunc));
+	//threading->addCPUJob(new Job<>(scriptsJobFunc));
 	threading->addCPUJob(new Job<>(cleanupJobsJobFunc));
 
 	threading->threadJobsProcessed[std::this_thread::get_id()] = 0;
@@ -283,6 +283,20 @@ void Engine::engineLoop()
 #endif
 
 		eventLoop();
+
+		// Script game tick
+		PROFILE_START("scripts");
+		PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
+		try {
+			Engine::scriptEnv.evalString("gameTick()");
+		}
+		catch (chaiscript::exception::eval_error e)
+		{
+			console->postMessage(e.what(), glm::fvec3(1.0, 0.05, 0.05)); // Report any script evaluation errors to the console
+			console->setActive(true);
+		}
+		Engine::threading->instanceTransformMutex.unlock();
+		PROFILE_END("scripts");
 
 		console->update();
 

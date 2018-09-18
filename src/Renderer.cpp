@@ -246,21 +246,12 @@ void Renderer::cleanup()
 */
 void Renderer::render()
 {
-	//PROFILE_START("qwaitidle");
-
-	lGraphicsQueue.waitIdle();
-
+	/*
+		Query GPU profiling data and add it to our profiler
+	*/
 	auto timestamps = queryPool.query();
 	memcpy(Engine::gpuTimeStamps, timestamps, sizeof(u64) * NUM_GPU_TIMESTAMPS);
-
-	PROFILE_RESET("gbuffer");
-	PROFILE_RESET("shadow");
-	PROFILE_RESET("ssao");
-	PROFILE_RESET("pbr");
-	PROFILE_RESET("overlay");
-	PROFILE_RESET("overlaycombine");
-	PROFILE_RESET("screen");
-
+	
 	PROFILE_GPU_ADD_TIME("gbuffer", Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER], Engine::gpuTimeStamps[Renderer::END_GBUFFER]);
 	PROFILE_GPU_ADD_TIME("shadow", Engine::gpuTimeStamps[Renderer::BEGIN_SHADOW], Engine::gpuTimeStamps[Renderer::END_SHADOW]);
 	PROFILE_GPU_ADD_TIME("ssao", Engine::gpuTimeStamps[Renderer::BEGIN_SSAO], Engine::gpuTimeStamps[Renderer::END_SSAO]);
@@ -269,9 +260,9 @@ void Renderer::render()
 	PROFILE_GPU_ADD_TIME("overlaycombine", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE], Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE]);
 	PROFILE_GPU_ADD_TIME("screen", Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN], Engine::gpuTimeStamps[Renderer::END_SCREEN]);
 
-	//PROFILE_END("qwaitidle");
-
-	/// TODO: See if we can group submissions
+	/*
+		Submit batched vulkan commands
+	*/
 
 	std::vector<vdu::QueueSubmission> submissionsGroup1(4);
 
@@ -626,52 +617,47 @@ void Renderer::populateDrawCmdBuffer()
 	//delete[] cmd;
 }
 
-void Renderer::createVertexIndexBuffers()
-{
-
-}
-
 void Renderer::pushModelDataToGPU(Model & model)
 {
 	for (auto& lodLevel : model.modelLODs)
 	{
-		// Copy vertices through staging buffer
+		// Create staging buffers for this LODs vertices and indices
+		vdu::Buffer* stagingBufferVertex = new vdu::Buffer(vertexIndexBuffer, static_cast<VkDeviceSize>(lodLevel.vertexDataLength * sizeof(Vertex)));
+		memcpy(stagingBufferVertex->getMemory()->map(), lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex));
+		stagingBufferVertex->getMemory()->unmap();
 
-		vdu::Buffer* stagingBuffer = new vdu::Buffer;
-		vertexIndexBuffer.createStaging(*stagingBuffer);
-		memcpy(stagingBuffer->getMemory()->map(), lodLevel.vertexData, lodLevel.vertexDataLength * sizeof(Vertex));
-		stagingBuffer->getMemory()->unmap();
+		auto stagingBufferIndex = new vdu::Buffer(vertexIndexBuffer, static_cast<VkDeviceSize>(lodLevel.indexDataLength * sizeof(u32)));
+		memcpy(stagingBufferIndex->getMemory()->map(), lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32));
+		stagingBufferIndex->getMemory()->unmap();
 
-		auto fe = new vdu::Fence;
-		fe->create(&logicalDevice);
+		// Create the command buffer that will transfer data from the staging buffer to the device local buffer
+		auto cmd = new vdu::CommandBuffer;
+		beginTransferCommands(*cmd);
+		stagingBufferVertex->cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.vertexDataLength * sizeof(Vertex), 0, vertexInputByteOffset);
+		stagingBufferIndex->cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.indexDataLength * sizeof(u32), 0, INDEX_BUFFER_BASE + indexInputByteOffset);
 
-		auto cmd = beginSingleTimeCommands();
-		stagingBuffer->cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.vertexDataLength * sizeof(Vertex), 0, vertexInputByteOffset);
-		endSingleTimeCommands(cmd,fe->getHandle());
+		// Submit the transfer commands
+		vdu::QueueSubmission submission;
+		endTransferCommands(*cmd, submission);
+		auto fence = new vdu::Fence(&logicalDevice);
+		lTransferQueue.submit(submission, *fence);
 
-		addDelayedBufferDesctruction(fe, stagingBuffer);
+		// Delay the fence and buffer destruction until the GPU has finished the transfer operation
+		addFenceDelayedAction(fence, std::bind([](vdu::Buffer* vertexBuffer, vdu::Buffer* indexBuffer, vdu::Fence* fence) -> void {
+			fence->destroy();
+			vertexBuffer->destroy();
+			indexBuffer->destroy();
+			delete fence;
+			delete vertexBuffer;
+			delete indexBuffer;
+		}, stagingBufferVertex, stagingBufferIndex, fence));
 
+		// Let the model know where its first vertex and index are located on the GPU
 		lodLevel.firstVertex = (s32)(vertexInputByteOffset / sizeof(Vertex));
-		vertexInputByteOffset += lodLevel.vertexDataLength * sizeof(Vertex);
-
-
-		// Copy indices through staging buffer
-
-		stagingBuffer = new vdu::Buffer;
-		vertexIndexBuffer.createStaging(*stagingBuffer);
-		memcpy(stagingBuffer->getMemory()->map(), lodLevel.indexData, lodLevel.indexDataLength * sizeof(u32));
-		stagingBuffer->getMemory()->unmap();
-
-		fe = new vdu::Fence;
-		fe->create(&logicalDevice);
-
-		cmd = beginSingleTimeCommands();
-		stagingBuffer->cmdCopyTo(cmd, &vertexIndexBuffer, lodLevel.indexDataLength * sizeof(u32), 0, INDEX_BUFFER_BASE + indexInputByteOffset);
-		endSingleTimeCommands(cmd,fe->getHandle());
-
-		addDelayedBufferDesctruction(fe, stagingBuffer);
-
 		lodLevel.firstIndex = (u32)(indexInputByteOffset / sizeof(u32));
+
+		// Increment the offset of where the next model will be added
+		vertexInputByteOffset += lodLevel.vertexDataLength * sizeof(Vertex);
 		indexInputByteOffset += lodLevel.indexDataLength * sizeof(u32);
 	}
 }
@@ -688,8 +674,6 @@ void Renderer::createDataBuffers()
 	vertexIndexBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	vertexIndexBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 	vertexIndexBuffer.create(&logicalDevice, bufferSize);
-
-
 
 	std::vector<Vertex2D> quad;
 	quad.push_back({ { -1,-1 },{ 0,0 } });
@@ -717,9 +701,59 @@ void Renderer::createDataBuffers()
 	stagingBuffer->cmdCopyTo(cmd, &screenQuadBuffer);
 	endSingleTimeCommands(cmd, fe->getHandle());
 
-	addDelayedBufferDesctruction(fe, stagingBuffer);
+	auto delayedBufferDestruct = std::bind([](vdu::Buffer* buffer) -> void {
+		buffer->destroy();
+		delete buffer;
+	}, stagingBuffer);
+
+	addFenceDelayedAction(fe, delayedBufferDestruct);
 
 	createUBOs();
+}
+
+void Renderer::updateMaterialDescriptors()
+{
+	auto& assets = Engine::assets;
+
+	u32 i = 0;
+	for (auto& material : assets.materials)
+	{
+		if (!material.second.checkAvailability(Asset::AWAITING_DESCRIPTOR_UPDATE))
+		{
+			i += 2;
+			continue;
+		}
+
+		material.second.getAvailability() &= ~Asset::AWAITING_DESCRIPTOR_UPDATE;
+
+		auto updater = gBufferDescriptorSet.makeUpdater();
+		auto texturesUpdate = updater->addImageUpdate("textures", i, 2);
+
+		texturesUpdate[0].sampler = textureSampler;
+		texturesUpdate[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		texturesUpdate[1].sampler = textureSampler;
+		texturesUpdate[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		if (material.second.albedoSpec->getHandle())
+			texturesUpdate[0].imageView = material.second.albedoSpec->getView();
+		else
+			texturesUpdate[0].imageView = assets.getTexture("blank")->getView();
+
+		if (material.second.normalRough)
+		{
+			if (material.second.normalRough->getView())
+				texturesUpdate[1].imageView = material.second.normalRough->getView();
+			else
+				texturesUpdate[1].imageView = assets.getTexture("black")->getView();
+		}
+		else
+			texturesUpdate[1].imageView = assets.getTexture("black")->getView();
+
+		i += 2;
+
+		gBufferDescriptorSet.submitUpdater(updater);
+		gBufferDescriptorSet.destroyUpdater(updater);
+	}
 }
 
 /*
@@ -900,36 +934,16 @@ void Renderer::createSemaphores()
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &ssaoFinishedSemaphore));
 }
 
-VkCommandBuffer Renderer::beginTransferCommands()
+void Renderer::beginTransferCommands(vdu::CommandBuffer& cmd)
 {
-	VkCommandBufferAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = commandPool.getHandle();
-	allocInfo.commandBufferCount = 1;
-
-	VkCommandBuffer commandBuffer;
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer));
-
-	VkCommandBufferBeginInfo beginInfo = {};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo));
-
-	return commandBuffer;
+	cmd.allocate(&logicalDevice, &commandPool);
+	cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 }
 
-VkSubmitInfo Renderer::endTransferCommands(VkCommandBuffer commandBuffer)
+void Renderer::endTransferCommands(vdu::CommandBuffer& cmd, vdu::QueueSubmission& submission)
 {
-	VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
-
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
-
-	return submitInfo;
+	cmd.end();
+	submission.addCommands(&cmd);
 }
 
 void Renderer::submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence)
@@ -968,17 +982,22 @@ VkCommandBuffer Renderer::beginSingleTimeCommands()
 void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fence) {
 	VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
+	//Engine::threading->physToGPUMutex.lock();
+
+	//vdu::QueueSubmission submission;
+	//submission.addCommands(commandBuffer);
+
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
+	submitInfo.commandBufferCount = 1;
 
-	Engine::threading->physToGPUMutex.lock();
+	//vdu::Fence fe; fe.create(&logicalDevice);
 
+	//lTransferQueue.submit(submission, fence);
 	VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
-	//VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue)); /// TODO: non blocking queue submissions !
 
-	Engine::threading->physToGPUMutex.unlock();
+	//Engine::threading->physToGPUMutex.unlock();
 
 	//VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, &commandBuffer));
 }
@@ -1276,6 +1295,11 @@ void Renderer::setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLa
 		0, nullptr,
 		0, nullptr,
 		1, &imageBarrier));
+}
+
+void Renderer::setImageLayout(vdu::CommandBuffer * cmdbuffer, Texture & tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask)
+{
+	setImageLayout(cmdbuffer->getHandle(), tex, oldImageLayout, newImageLayout, srcStageMask, dstStageMask);
 }
 
 

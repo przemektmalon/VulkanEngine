@@ -34,7 +34,7 @@
 ///			Along with this the profiler will need to be exposed to chaiscript
 ///			Also the script shouldnt be responsible for resetting the profiles
 
-#define RUNNING_AVERAGE_COUNT 50
+#define RUNNING_AVERAGE_COUNT 120
 
 class Profiler
 {

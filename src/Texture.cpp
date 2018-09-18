@@ -107,13 +107,12 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 		m_usageFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		create(&r->logicalDevice);
-		r->transitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_numMipLevels, m_layers, m_aspectFlags);
 
-		auto cmd = r->beginSingleTimeCommands();
+		auto cmd = new vdu::CommandBuffer;
+		r->beginTransferCommands(*cmd);
+		r->setImageLayout(cmd->getHandle(), *this, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 		vdu::Buffer* stagingBuffers = new vdu::Buffer[m_layers];
-		vdu::Fence* fe = new vdu::Fence;
-		fe->create(&r->logicalDevice);
 
 		for (int i = 0; i < m_layers; ++i)
 		{
@@ -124,29 +123,33 @@ void Texture::loadToGPU(void * pCreateStruct)
 			stagingBuffers[i].cmdCopyTo(cmd, this, 0, 0, i, 1);
 		}
 
-		r->endSingleTimeCommands(cmd,fe->getHandle());
-
-		auto delayedBufferDestructionFunc = std::bind([](vdu::Fence* fe, vdu::Buffer* buff, u32 layers) -> void {
-			for (u32 i = 0; i < layers; ++i) {
-				buff[i].destroy();
-			}
-			delete[] buff;
-			fe->destroy();
-			delete fe;
-		}, fe, stagingBuffers, m_layers);
-
-		r->addFenceDelayedAction(fe, delayedBufferDestructionFunc);
-
 		if (isMipped)
 		{
-			auto cmd = r->beginSingleTimeCommands();
 			cmdGenerateMipMaps(cmd);
-			r->endSingleTimeCommands(cmd);
 		}
 		else
 		{
-			r->transitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, m_numMipLevels, m_layers, m_aspectFlags);
+			r->setImageLayout(cmd->getHandle(), *this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
+
+		vdu::QueueSubmission submission;
+		r->endTransferCommands(*cmd, submission);
+
+		auto fe = new vdu::Fence(&r->logicalDevice);
+		r->lTransferQueue.submit(submission, *fe);
+
+		auto delayedBufferDestructionFunc = std::bind([](vdu::Fence* fe, vdu::Buffer* buff, u32 layers, vdu::CommandBuffer* cmd) -> void {
+			for (u32 i = 0; i < layers; ++i) {
+				buff[i].destroy();
+			}
+			fe->destroy();
+			cmd->free();
+			delete[] buff;
+			delete fe;
+			delete cmd;
+		}, fe, stagingBuffers, m_layers, cmd);
+
+		r->addFenceDelayedAction(fe, delayedBufferDestructionFunc);
 	}
 	else
 	{
@@ -175,35 +178,88 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 		if (ci->pData)
 		{
-			vdu::Buffer stagingBuffer;
-			
-			auto cmd = r->beginSingleTimeCommands();
+			auto cmd = new vdu::CommandBuffer;
+			r->beginTransferCommands(*cmd);
 
-			stagingBuffer.createStaging(&r->logicalDevice, size);
-			memcpy(stagingBuffer.getMemory()->map(), ci->pData, (size_t)size);
-			stagingBuffer.getMemory()->unmap();
+			auto stagingBuffer = new vdu::Buffer;
+			stagingBuffer->createStaging(&r->logicalDevice, size);
+			memcpy(stagingBuffer->getMemory()->map(), ci->pData, (size_t)size);
+			stagingBuffer->getMemory()->unmap();
 			m_usageFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			r->transitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_numMipLevels, m_layers, m_aspectFlags);
-			stagingBuffer.cmdCopyTo(cmd, this);
-
-			r->endSingleTimeCommands(cmd);
-
-			//stagingBuffer.destroy();
+			stagingBuffer->cmdCopyTo(cmd, this);
 
 			if (isMipped)
 			{
-				auto cmd = r->beginSingleTimeCommands();
 				cmdGenerateMipMaps(cmd);
-				r->endSingleTimeCommands(cmd);
 			}
 			else
 			{
-				r->transitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, m_numMipLevels, m_layers, m_aspectFlags);
+				r->setImageLayout(cmd, *this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 			}
+
+			vdu::QueueSubmission submission;
+			r->endTransferCommands(*cmd, submission);
+
+			auto fe = new vdu::Fence(&r->logicalDevice);
+			r->lTransferQueue.submit(submission, *fe);
+
+			auto delayedBufferDestructionFunc = std::bind([](vdu::Fence* fe, vdu::Buffer* buff, vdu::CommandBuffer* cmd) -> void {
+				buff->destroy();
+				fe->destroy();
+				cmd->free();
+				delete buff;
+				delete fe;
+				delete cmd;
+			}, fe, stagingBuffer, cmd);
+
+			r->addFenceDelayedAction(fe, delayedBufferDestructionFunc);
 		}
 		else
 		{
-			r->transitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_UNDEFINED, m_layout, m_numMipLevels, m_layers, m_aspectFlags);
+			auto cmd = new vdu::CommandBuffer;
+			r->beginTransferCommands(*cmd);
+
+			VkPipelineStageFlagBits dstStage;
+
+			switch (m_layout)
+			{
+			case VK_IMAGE_LAYOUT_GENERAL:
+				dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; 
+				break;
+
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+				dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; 
+				break;
+
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+				dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				break;
+
+			default:
+				dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				break;
+			}
+
+			r->setImageLayout(cmd, *this, VK_IMAGE_LAYOUT_UNDEFINED, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStage);
+
+			vdu::QueueSubmission submission;
+			r->endTransferCommands(*cmd, submission);
+			auto fe = new vdu::Fence(&r->logicalDevice);
+			r->lTransferQueue.submit(submission, *fe);
+
+			auto delayedBufferDestructionFunc = std::bind([](vdu::Fence* fe, vdu::CommandBuffer* cmd) -> void {
+				cmd->free();
+				fe->destroy();
+				delete cmd;
+				delete fe;
+			}, fe, cmd);
+
+			r->addFenceDelayedAction(fe, delayedBufferDestructionFunc);
 		}
 	}
 

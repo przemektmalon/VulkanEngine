@@ -167,9 +167,6 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 	auto stagingBuffer = new vdu::Buffer;
 	stagingBuffer->createStaging(&r->logicalDevice, totalGlyphSetTexSize);
 
-	auto fe = new vdu::Fence;
-	fe->create(&r->logicalDevice);
-
 	VkDeviceSize copyOffset = 0;
 	void* data = stagingBuffer->getMemory()->map(0, totalGlyphSetTexSize);
 	for (int i = 1; i < NO_PRINTABLE_CHARS; ++i)
@@ -181,15 +178,14 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 
 	stagingBuffer->getMemory()->unmap();
 
-	auto cmd = r->beginSingleTimeCommands();
+	auto cmd = new vdu::CommandBuffer;
+	r->beginTransferCommands(*cmd);
 
 	copyOffset = 0;
 	for (int i = 1; i < NO_PRINTABLE_CHARS; ++i)
 	{
 		VkOffset3D offset = { coords[i].x, coords[i].y, 0 };
 		VkExtent3D extent = { sizes[i].x, sizes[i].y, 1 };
-
-		//staging.cmdCopyTo(cmd, glyphs, copyOffset, 0, 0, 1, offset, extent);
 
 		VkBufferImageCopy region = {};
 		region.bufferOffset = copyOffset;
@@ -202,14 +198,26 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 		region.imageOffset = offset;
 		region.imageExtent = extent;
 
-		vkCmdCopyBufferToImage(cmd, stagingBuffer->getHandle(), glyphs->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		vkCmdCopyBufferToImage(cmd->getHandle(), stagingBuffer->getHandle(), glyphs->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 		copyOffset += chars[i].data.size();
 	}
 
-	r->endSingleTimeCommands(cmd, fe->getHandle());
+	auto fence = new vdu::Fence();
+	fence->create(&r->logicalDevice);
 
-	r->addDelayedBufferDesctruction(fe, stagingBuffer);
+	vdu::QueueSubmission submission;
+	r->endTransferCommands(*cmd, submission);
+
+	r->lTransferQueue.submit(submission, *fence);
+
+	// Once the all GPU operations are done, the fence is signalled, and we can free the command and data buffers
+	r->addFenceDelayedAction(fence, std::bind([](vdu::CommandBuffer* cmd, vdu::Buffer* stagingBuffer) -> void {
+		cmd->free();
+		stagingBuffer->destroy();
+		delete cmd;
+		delete stagingBuffer;
+	}, cmd, stagingBuffer));
 
 	height = pFace->size->metrics.height >> 6;
 	ascender = pFace->size->metrics.ascender >> 6;

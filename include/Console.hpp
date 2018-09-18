@@ -17,6 +17,7 @@ public:
 	void scroll(s16 wheelDelta);
 
 	void toggle() { active = !active; layer->setDoDraw(active); }
+	void setActive(bool set) { active = set; layer->setDoDraw(active); }
 	bool isActive() { return active; }
 	OLayer* getLayer() { return layer; }
 

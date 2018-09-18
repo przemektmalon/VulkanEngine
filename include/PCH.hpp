@@ -100,7 +100,8 @@
 		std::cout << __FILE__ << " Line: " << __LINE__ << std::endl; \
 		std::cout << "! Warning -"; \
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0b00001111); \
-		std::cout << " " << ss.str() << std::endl; } 
+		std::cout << " " << ss.str() << std::endl; \
+		DebugBreak(); } 
 
 	#define DBG_INFO(msg) { \
 		std::stringstream ss; \

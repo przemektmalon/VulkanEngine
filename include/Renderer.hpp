@@ -69,36 +69,12 @@ public:
 
 	vdu::VertexInputState defaultVertexInputState;
 
-	// Thread safe command pools and fencing
+	
 
-	// For now just make sure each thread has its own command pool
-	static thread_local vdu::CommandPool commandPool; // [3]
 	std::mutex bufferFreeMutex;
 
-	// The current pool will be toggled when all submissions are done ( after all buffers are created )
-	/*int currentPool;
-
-	struct ThreadSafeCommands
-	{
-		VkCommandPool commandPool;
-
-		// Command buffers will be allocated on each thread from the current pool and added here
-		std::vector<VkCommandBuffer> commandsToSubmit;
-
-		// A pool can be reset when all fences are signalled
-		std::vector<VkFence> fences;
-	};
-
-	static thread_local ThreadSafeCommands threadSafeCommands[3];*/
-
-
-	struct CommandsAndFence
-	{
-		VkCommandBuffer commands;
-		VkFence fence;
-	};
-
-
+	// Thread safe command pools
+	static thread_local vdu::CommandPool commandPool;
 	// Memory pools
 	vdu::DescriptorPool descriptorPool;
 	vdu::DescriptorPool freeableDescriptorPool;
@@ -393,9 +369,10 @@ public:
 	vdu::Buffer vertexIndexBuffer;
 	u64 vertexInputByteOffset;
 	u64 indexInputByteOffset;
-	void createVertexIndexBuffers();
 	void pushModelDataToGPU(Model& model);
 	void createDataBuffers();
+
+	void updateMaterialDescriptors();
 
 	void addFenceDelayedAction(vdu::Fence* fe, std::function<void(void)> action)
 	{
@@ -423,39 +400,7 @@ public:
 	std::mutex fenceDelayedActionMutex;
 	std::unordered_map<vdu::Fence*, std::function<void(void)>> fenceDelayedActions;
 
-	void addDelayedBufferDesctruction(vdu::Fence* fe, vdu::Buffer* buff, uint32_t numBuffers = 1)
-	{
-		delayedBufferDestructionsMutex.lock();
-		delayedBufferDestructions[fe] = std::make_pair(buff, numBuffers);
-		delayedBufferDestructionsMutex.unlock();
-	}
-	void destroyDelayedBuffers()
-	{
-		delayedBufferDestructionsMutex.lock();
-		for (auto itr = delayedBufferDestructions.begin(); itr != delayedBufferDestructions.end();)
-		{
-			if (itr->first->isSignalled())
-			{
-				itr->second.first->destroy();
-				delete itr->second.first;
-
-				itr->first->destroy();
-				delete itr->first;
-
-				itr = delayedBufferDestructions.erase(itr);
-			}
-			else
-			{
-				++itr;
-			}
-		}
-		delayedBufferDestructionsMutex.unlock();
-	}
-	std::mutex delayedBufferDestructionsMutex;
-	std::unordered_map<vdu::Fence*, std::pair<vdu::Buffer*,uint32_t>> delayedBufferDestructions;
-
 	// End GPU mem management
-	
 	void initialiseQueryPool();
 
 	// Draw buffers
@@ -470,9 +415,10 @@ public:
 	
 	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
+	void setImageLayout(vdu::CommandBuffer* cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 
-	VkCommandBuffer beginTransferCommands();
-	VkSubmitInfo endTransferCommands(VkCommandBuffer commandBuffer);
+	void beginTransferCommands(vdu::CommandBuffer& cmd);
+	void endTransferCommands(vdu::CommandBuffer& cmd, vdu::QueueSubmission& submission);
 	void submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence = VK_NULL_HANDLE);
 
 	VkCommandBuffer beginSingleTimeCommands();
