@@ -184,10 +184,11 @@ void Threading::update()
 	while (!readyToTerminate)
 	{
 		PROFILE_START("thread_" + getThisThreadIDString());
+		Engine::renderer->executeFenceDelayedActions(); // Any externally synced vulkan objects created on this thread should be destroyed from this thread
 		if (getCPUJob(job, timeUntilNextJob))
 		{
-			++threadJobsProcessed[std::this_thread::get_id()];
 			job->run();
+			++threadJobsProcessed[std::this_thread::get_id()];
 		}
 		else
 		{
@@ -198,7 +199,7 @@ void Threading::update()
 		PROFILE_END("thread_" + getThisThreadIDString());
 	}
 
-	while (!allGraphicsJobsDone())
+	while (!allGPUJobsDone())
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
@@ -226,8 +227,8 @@ void Threading::updateGraphics()
 		PROFILE_START("thread_" + getThisThreadIDString());
 		if (getGPUJob(job, timeUntilNextJob)) // Graphics submission jobs have priority (they should be very fast)
 		{
-			++threadJobsProcessed[std::this_thread::get_id()];
 			job->run();
+			++threadJobsProcessed[std::this_thread::get_id()];
 		}
 		//else if (getJob(job))
 		//{
@@ -243,7 +244,7 @@ void Threading::updateGraphics()
 		PROFILE_END("thread_" + getThisThreadIDString());
 	}
 
-	while (!allGraphicsJobsDone())
+	while (!allGPUJobsDone())
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
@@ -271,8 +272,8 @@ void Threading::updateCPUTransfers()
 		PROFILE_START("thread_" + getThisThreadIDString());
 		if (getCPUTransferJob(job, timeUntilNextJob))
 		{
-			++threadJobsProcessed[std::this_thread::get_id()];
 			job->run();
+			++threadJobsProcessed[std::this_thread::get_id()];
 		}
 		else
 		{
@@ -294,7 +295,7 @@ bool Threading::allGPUTransferJobsDone()
 	return totalGPUTransferJobsAdded == totalGPUTransferJobsFinished;
 }
 
-bool Threading::allGraphicsJobsDone()
+bool Threading::allGPUJobsDone()
 {
 	return totalGPUJobsAdded == totalGPUJobsFinished;
 }

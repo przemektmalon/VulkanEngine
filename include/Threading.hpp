@@ -177,7 +177,7 @@ public:
 	bool allGPUTransferJobsDone();
 
 	// Are all graphics jobs done
-	bool allGraphicsJobsDone();
+	bool allGPUJobsDone();
 
 	// Mark job for freeing memory
 	void freeJob(JobBase* jobToFree);

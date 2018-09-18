@@ -8,6 +8,7 @@
 #include "Profiler.hpp"
 
 thread_local vdu::CommandPool Renderer::commandPool;
+thread_local std::unordered_map<vdu::Fence*, std::function<void(void)>> Renderer::fenceDelayedActions;
 
 void Renderer::initialiseDevice()
 {
@@ -557,6 +558,27 @@ void Renderer::compileShaders()
 	pointShadowShader.compile();
 	spotShadowShader.compile();
 	sunShadowShader.compile();
+}
+
+void Renderer::addFenceDelayedAction(vdu::Fence * fe, std::function<void(void)> action)
+{
+	fenceDelayedActions[fe] = action;
+}
+
+void Renderer::executeFenceDelayedActions()
+{
+	for (auto itr = fenceDelayedActions.begin(); itr != fenceDelayedActions.end();)
+	{
+		if (itr->first->isSignalled())
+		{
+			itr->second();
+			itr = fenceDelayedActions.erase(itr);
+		}
+		else
+		{
+			++itr;
+		}
+	}
 }
 
 void Renderer::initialiseQueryPool()

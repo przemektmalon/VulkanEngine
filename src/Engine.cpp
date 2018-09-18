@@ -115,7 +115,19 @@ void Engine::start()
 	/*
 		Initialise the rest of the renderer resources (now that threads are initialised we can submit jobs)
 	*/
-	renderer->initialise();
+	auto initRendererJobFunc = []() -> void {
+		renderer->initialise();
+	};
+	threading->addGPUJob(new Job<>(initRendererJobFunc, JobBase::GPU));
+	renderer->createPerThreadCommandPools();
+
+	/*
+		Wait until the renderer is initialised before we start loading assets
+	*/
+	while (!threading->allGPUJobsDone())
+	{
+		std::this_thread::yield();
+	}
 
 	/*
 		Default assets are null assets (blank textures to fall back on when desired not found)
@@ -440,6 +452,7 @@ void Engine::processAllMainThreadJobs()
 
 bool Engine::processNextMainThreadJob()
 {
+	renderer->executeFenceDelayedActions(); // Any externally synced vulkan objects created on this thread should be destroyed from this thread
 	JobBase* job;
 	s64 timeUntilNextJob;
 	if (threading->getGPUTransferJob(job, timeUntilNextJob))

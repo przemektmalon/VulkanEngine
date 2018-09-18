@@ -374,31 +374,9 @@ public:
 
 	void updateMaterialDescriptors();
 
-	void addFenceDelayedAction(vdu::Fence* fe, std::function<void(void)> action)
-	{
-		fenceDelayedActionMutex.lock();
-		fenceDelayedActions[fe] = action;
-		fenceDelayedActionMutex.unlock();
-	}
-	void executeFenceDelayedActions()
-	{
-		fenceDelayedActionMutex.lock();
-		for (auto itr = fenceDelayedActions.begin(); itr != fenceDelayedActions.end();)
-		{
-			if (itr->first->isSignalled())
-			{
-				itr->second();
-				itr = fenceDelayedActions.erase(itr);
-			}
-			else
-			{
-				++itr;
-			}
-		}
-		fenceDelayedActionMutex.unlock();
-	}
-	std::mutex fenceDelayedActionMutex;
-	std::unordered_map<vdu::Fence*, std::function<void(void)>> fenceDelayedActions;
+	void addFenceDelayedAction(vdu::Fence* fe, std::function<void(void)> action);
+	void executeFenceDelayedActions();
+	static thread_local std::unordered_map<vdu::Fence*, std::function<void(void)>> fenceDelayedActions;
 
 	// End GPU mem management
 	void initialiseQueryPool();
