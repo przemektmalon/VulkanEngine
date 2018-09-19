@@ -85,9 +85,9 @@ void Renderer::updateShadowCommands()
 	//vkWaitForFences(device, 1, &shadowFence, true, std::numeric_limits<u64>::max());
 	//PROFILE_END("shadowfence");
 
-	bufferFreeMutex.lock();
-	shadowCommandBuffer.reset();
-	bufferFreeMutex.unlock();
+	//bufferFreeMutex.lock();
+	//shadowCommandBuffer.reset();
+	//bufferFreeMutex.unlock();
 	
 	//createShadowCommands();
 	

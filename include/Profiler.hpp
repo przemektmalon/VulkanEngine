@@ -6,18 +6,10 @@
 #define PROFILE_START(name) Profiler::start(name);
 #define PROFILE_END(name) Profiler::end(name);
 
-#define PROFILE_RESET(name) Profiler::getProfile(name).reset();
-
-#define PROFILE_GET(name) Profiler::getProfile(name)
 #define PROFILE_GET_RUNNING_TOTAL(name) Profiler::getProfile(name).getRunningTotal()
 #define PROFILE_GET_RUNNING_AVERAGE(name) Profiler::getProfile(name).getRunningAverage()
 #define PROFILE_GET_RUNNING_MIN(name) Profiler::getProfile(name).getRunningMinimum()
 #define PROFILE_GET_RUNNING_MAX(name) Profiler::getProfile(name).getRunningMaximum()
-
-#define PROFILE_GET_TOTAL(name) Profiler::getProfile(name).getTotal()
-#define PROFILE_GET_AVERAGE(name) Profiler::getProfile(name).getAverage()
-#define PROFILE_GET_MIN(name) Profiler::getProfile(name).getMinimum()
-#define PROFILE_GET_MAX(name) Profiler::getProfile(name).getMaximum()
 
 #define PROFILE_GET_LAST(name) Profiler::getProfile(name).getLastTime()
 
@@ -41,7 +33,7 @@ class Profiler
 private:
 	struct Profile
 	{
-		Profile() {}
+		Profile() { memset(circBuffer.data(), 0, RUNNING_AVERAGE_COUNT * sizeof(u32)); }
 
 		std::atomic_char32_t totalMicroseconds = 0;
 		std::atomic_char32_t minimumMicroseconds = 0;
@@ -54,18 +46,6 @@ private:
 		// Since we need order (> & <) operations we need a lock as they are no atomic exchanges with these
 		std::mutex minMaxMutex;
 
-		void reset()
-		{
-			totalMicroseconds = 0;
-			minimumMicroseconds = std::numeric_limits<u32>::max();
-			maximumMicroseconds = 0;
-			numSamples = 0;
-		}
-
-		double getTotal() { return static_cast<double>(totalMicroseconds); }
-		double getAverage() { return static_cast<double>(totalMicroseconds) / static_cast<double>(numSamples); }
-		double getMinimum() { return static_cast<double>(minimumMicroseconds); }
-		double getMaximum() { return static_cast<double>(maximumMicroseconds); }
 		double getRunningAverage()
 		{
 			u32 total = 0;

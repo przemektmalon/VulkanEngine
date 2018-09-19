@@ -756,6 +756,9 @@ void Renderer::createDataBuffers()
 
 void Renderer::updateMaterialDescriptors()
 {
+	gBufferCmdsNeedUpdate = true;
+	Engine::threading->addMaterialMutex.lock();
+
 	auto& assets = Engine::assets;
 
 	u32 i = 0;
@@ -797,6 +800,8 @@ void Renderer::updateMaterialDescriptors()
 		gBufferDescriptorSet.submitUpdater(updater);
 		gBufferDescriptorSet.destroyUpdater(updater);
 	}
+
+	Engine::threading->addMaterialMutex.unlock();
 }
 
 /*
@@ -958,7 +963,7 @@ void Renderer::createSynchroObjects()
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayCombineFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &ssaoFinishedSemaphore));
 
-	gBufferGroupFence.create(&logicalDevice);
+	gBufferGroupFence.create(&logicalDevice, true);
 }
 
 void Renderer::beginTransferCommands(vdu::CommandBuffer& cmd)

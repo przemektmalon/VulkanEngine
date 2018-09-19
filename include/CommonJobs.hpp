@@ -84,42 +84,38 @@ static void initialiseCommonJobs()
 		auto& threading = Engine::threading;
 		auto& world = Engine::world;
 
+
+		PROFILE_START("commands");
+		renderer->gBufferGroupFence.wait();
+		renderer->updateMaterialDescriptors();
+		renderer->updateGBufferCommands();
+		renderer->updateShadowCommands(); // Mutex with engine model transform update
+		PROFILE_END("commands");
+
+		renderer->lightManager.sunLight.calcProjs();
+		world.frustumCulling(&Engine::camera);
+
 		PROFILE_START("qwaitidle");
 		renderer->lGraphicsQueue.waitIdle();
 		PROFILE_END("qwaitidle");
 
 		PROFILE_START("cullingdrawbuffer");
 
-		renderer->lightManager.sunLight.calcProjs();
 		renderer->lightManager.updateSunLight();
-
-		threading->addMaterialMutex.lock();
-
 		renderer->overlayRenderer.cleanupLayerElements();
 		renderer->executeFenceDelayedActions();
-
-		renderer->updateMaterialDescriptors();
-
-		threading->addMaterialMutex.unlock();
-
-		PROFILE_MUTEX("phystoenginemutex", threading->physToEngineMutex.lock());
 		
-		world.frustumCulling(&Engine::camera);
 		renderer->populateDrawCmdBuffer(); // Mutex with engine model transform update
-		threading->physToEngineMutex.unlock();
 		renderer->updateCameraBuffer();
+
 		PROFILE_END("cullingdrawbuffer");
 
 		PROFILE_START("setuprender");
-		PROFILE_START("commands");
+		
 		renderer->updateConfigs();
-		renderer->updateGBufferCommands();
-		renderer->updateShadowCommands(); // Mutex with engine model transform update
 		renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
 		PROFILE_MUTEX("transformmutex", threading->instanceTransformMutex.lock());
 		threading->instanceTransformMutex.unlock();
-		PROFILE_END("commands");
-
 		PROFILE_MUTEX("phystogpumutex", threading->physToGPUMutex.lock());
 		renderer->render();
 		threading->physToGPUMutex.unlock();

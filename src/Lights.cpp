@@ -2,6 +2,7 @@
 #include "Lights.hpp"
 #include "Engine.hpp"
 #include "Renderer.hpp"
+#include "Profiler.hpp"
 
 void PointLight::initTexture(int resolution)
 {
@@ -152,6 +153,16 @@ SpotLight & LightManager::addSpotLight(SpotLight::GPUData& data)
 	light.gpuData = &spotLightsGPUData.back();
 
 	return light;
+}
+
+void LightManager::updateSunLight()
+{
+	SunLight::GPUData* d = (SunLight::GPUData*)sunLightBuffer.getMemory()->map();
+	d->colour.separate.colour = sunLight.getColour();
+	d->direction.separate.direction = sunLight.getDirection();
+	memcpy(&d->projView[0], sunLight.getProjView(), sizeof(glm::fmat4) * 3);
+	memcpy(&d->cascadeEnds[0], sunLight.getCascadeEnds(), sizeof(float) * 4);
+	sunLightBuffer.getMemory()->unmap();
 }
 
 void SunLight::destroy()

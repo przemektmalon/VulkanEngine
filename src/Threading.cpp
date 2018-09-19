@@ -4,7 +4,7 @@
 #include "Renderer.hpp"
 #include "Profiler.hpp"
 
-Threading::Threading(int pNumThreads) : workers(pNumThreads)
+Threading::Threading(int pNumThreads)
 {
 	totalCPUJobsAdded = 0;
 	totalCPUJobsFinished = 0;
@@ -14,12 +14,21 @@ Threading::Threading(int pNumThreads) : workers(pNumThreads)
 	totalCPUTransferJobsFinished = 0;
 	totalGPUJobsAdded = 0;
 	totalGPUJobsFinished = 0;
-	for (int i = 0; i < pNumThreads - 2; ++i)
+
+	// We already have a main thread
+	// We need 2 for GPU and CPU transfers
+
+	// pNumThreads is how many we want on top of that for other CPU work (like physics, particle systems, entity systems, etc)
+	
+	workers.resize(2 + pNumThreads);
+
+	workers[0] = new std::thread(&Threading::updateGraphics, this);
+	workers[1] = new std::thread(&Threading::updateCPUTransfers, this);
+
+	for (int i = 2; i < pNumThreads + 2; ++i)
 	{
 		workers[i] = new std::thread(&Threading::update, this);
 	}
-	workers[pNumThreads - 1] = new std::thread(&Threading::updateGraphics, this);
-	workers[pNumThreads - 2] = new std::thread(&Threading::updateCPUTransfers, this);
 }
 
 Threading::~Threading()
@@ -180,23 +189,24 @@ void Threading::update()
 	Engine::renderer->createPerThreadCommandPools();
 	JobBase* job;
 	bool readyToTerminate = false;
-	s64 timeUntilNextJob;
+	s64 timeUntilNextJob = std::numeric_limits<s64>::max();
 	while (!readyToTerminate)
 	{
-		PROFILE_START("thread_" + getThisThreadIDString());
-		Engine::renderer->executeFenceDelayedActions(); // Any externally synced vulkan objects created on this thread should be destroyed from this thread
 		if (getCPUJob(job, timeUntilNextJob))
 		{
+			PROFILE_START("thread_" + getThisThreadIDString());
+			Engine::renderer->executeFenceDelayedActions(); // Any externally synced vulkan objects created on this thread should be destroyed from this thread
 			job->run();
 			++threadJobsProcessed[std::this_thread::get_id()];
+			PROFILE_END("thread_" + getThisThreadIDString());
 		}
 		else
 		{
 			readyToTerminate = !Engine::engineRunning;
 			if (timeUntilNextJob > 10'000)
-				std::this_thread::yield();
-		}
-		PROFILE_END("thread_" + getThisThreadIDString());
+				std::this_thread::sleep_for(std::chrono::milliseconds(15));
+				//std::this_thread::yield();
+		}	
 	}
 
 	while (!allGPUJobsDone())
@@ -221,14 +231,16 @@ void Threading::updateGraphics()
 	Engine::renderer->createPerThreadCommandPools();
 	JobBase* job;
 	bool readyToTerminate = false;
-	s64 timeUntilNextJob;
+	s64 timeUntilNextJob = std::numeric_limits<s64>::max();
 	while (!readyToTerminate)
 	{
-		PROFILE_START("thread_" + getThisThreadIDString());
+		
 		if (getGPUJob(job, timeUntilNextJob)) // Graphics submission jobs have priority (they should be very fast)
 		{
+			PROFILE_START("thread_" + getThisThreadIDString());
 			job->run();
 			++threadJobsProcessed[std::this_thread::get_id()];
+			PROFILE_END("thread_" + getThisThreadIDString());
 		}
 		//else if (getJob(job))
 		//{
@@ -241,7 +253,7 @@ void Threading::updateGraphics()
 			if (timeUntilNextJob > 10'000)
 				std::this_thread::yield();
 		}
-		PROFILE_END("thread_" + getThisThreadIDString());
+		
 	}
 
 	while (!allGPUJobsDone())
@@ -266,22 +278,30 @@ void Threading::updateCPUTransfers()
 
 	JobBase* job;
 	bool readyToTerminate = false;
-	s64 timeUntilNextJob;
+	s64 timeUntilNextJob = std::numeric_limits<s64>::max();
 	while (!readyToTerminate)
 	{
-		PROFILE_START("thread_" + getThisThreadIDString());
 		if (getCPUTransferJob(job, timeUntilNextJob))
 		{
+			PROFILE_START("thread_" + getThisThreadIDString());
 			job->run();
 			++threadJobsProcessed[std::this_thread::get_id()];
+			PROFILE_END("thread_" + getThisThreadIDString());
 		}
-		else
+		else if (getCPUJob(job, timeUntilNextJob))
+		{
+			PROFILE_START("thread_" + getThisThreadIDString());
+			Engine::renderer->executeFenceDelayedActions(); // Any externally synced vulkan objects created on this thread should be destroyed from this thread
+			job->run();
+			++threadJobsProcessed[std::this_thread::get_id()];
+			PROFILE_END("thread_" + getThisThreadIDString());
+		}
 		{
 			readyToTerminate = !Engine::engineRunning;
 			if (timeUntilNextJob > 10'000)
-				std::this_thread::yield();
-		}
-		PROFILE_END("thread_" + getThisThreadIDString());
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				//std::this_thread::yield();
+		}	
 	}
 }
 

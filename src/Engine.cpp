@@ -73,7 +73,7 @@ void Engine::start()
 	/*
 		Initialise worker threads (each one needs vulkan logical device before initialising its command pool)
 	*/
-	int numThreads = 3;
+	int numThreads = 0; // Extra threads to the 3 compulsory ones (MAIN thread, GPU render thread, DISK loading thread)
 	waitForProfilerInitMutex.lock();
 	threading = new Threading(numThreads);
 
@@ -91,14 +91,15 @@ void Engine::start()
 	};
 
 	int i = 0;
-	std::vector<std::thread::id> threadIDs(numThreads+1);
+	std::vector<std::thread::id> threadIDs(numThreads+3);
+	threadIDs[i] = std::this_thread::get_id(); // Main thread can use profiler
+	++i;
 	for (auto& thread : threading->workers) {
 		threadIDs[i] = thread->get_id();
-		threading->threadIDAssociations.insert(std::make_pair(i + 1, thread->get_id()));
+		threading->threadIDAssociations.insert(std::make_pair(i, thread->get_id()));
 		++i;
 	}
-	threadIDs[i] = std::this_thread::get_id(); // Main thread can also use profiler
-
+	
 	Profiler::prealloc(threadIDs, profilerTags);
 	waitForProfilerInitMutex.unlock();
 
@@ -505,7 +506,6 @@ void Engine::updatePerformanceStatsDisplay()
 	auto msgTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("msgevent"));
 	auto cullTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("cullingdrawbuffer"));
 	auto cmdsTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("commands"));
-	//auto cmdsTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("setuprender"));
 	auto submitTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("submitrender"));
 	auto qWaitTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("qwaitidle"));
 	auto physicsTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("physics"));
@@ -514,7 +514,6 @@ void Engine::updatePerformanceStatsDisplay()
 	auto msgTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("msgevent"));
 	auto cullTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("cullingdrawbuffer"));
 	auto cmdsTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("commands"));
-	//auto cmdsTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("setuprender"));
 	auto submitTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("submitrender"));
 	auto qWaitTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("qwaitidle"));
 	auto physicsTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("physics"));
@@ -523,7 +522,6 @@ void Engine::updatePerformanceStatsDisplay()
 	auto msgTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("msgevent"));
 	auto cullTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("cullingdrawbuffer"));
 	auto cmdsTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("commands"));
-	//auto cmdsTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("setuprender"));
 	auto submitTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("submitrender"));
 	auto qWaitTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("qwaitidle"));
 	auto physicsTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("physics"));
@@ -546,8 +544,8 @@ void Engine::updatePerformanceStatsDisplay()
 
 		"---------------------------------------------------\n" +
 		"User input     : " + std::to_string(msgTime) + "ms ( " + std::to_string(msgTimeMin) + " \\ " + std::to_string(msgTimeMax) + " )\n" +
-		"Culling & draw : " + std::to_string(cullTime) + "ms ( " + std::to_string(cullTimeMin) + " \\ " + std::to_string(cullTimeMax) + " )\n" +
 		"Commands       : " + std::to_string(cmdsTime) + "ms ( " + std::to_string(cmdsTimeMin) + " \\ " + std::to_string(cmdsTimeMax) + " )\n" +
+		"Culling & draw : " + std::to_string(cullTime) + "ms ( " + std::to_string(cullTimeMin) + " \\ " + std::to_string(cullTimeMax) + " )\n" +
 		"Queue submit   : " + std::to_string(submitTime) + "ms ( " + std::to_string(submitTimeMin) + " \\ " + std::to_string(submitTimeMax) + " )\n" +
 		"Queue idle     : " + std::to_string(qWaitTime) + "ms ( " + std::to_string(qWaitTimeMin) + " \\ " + std::to_string(qWaitTimeMax) + " )\n" +
 		"Physics        : " + std::to_string(physicsTime) + "ms ( " + std::to_string(physicsTimeMin) + " \\ " + std::to_string(physicsTimeMax) + " )\n" +
@@ -556,30 +554,6 @@ void Engine::updatePerformanceStatsDisplay()
 		//"Avg frame time : " + std::to_string((timeSinceLastStatsUpdate * 1000) / double(frames)) + "ms\n" +
 		//"FPS            : " + std::to_string((int)(double(frames) / timeSinceLastStatsUpdate))
 	);
-
-	/*stats->setString(
-		"---------------------------\n"
-		"GBuffer pass   : " + std::to_string(gBufferTime) + "ms\n" +
-		"Shadow pass    : " + std::to_string(shadowTime) + "ms\n" +
-		"SSAO pass      : " + std::to_string(ssaoTime) + "ms\n" +
-		"PBR pass       : " + std::to_string(pbrTime) + "ms\n" +
-		"Overlay pass   : " + std::to_string(overlayTime) + "ms\n" +
-		"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms\n" +
-		"Screen pass    : " + std::to_string(screenTime) + "ms\n" +
-
-		"Total GPU time : " + std::to_string(totalGPUTime) + "ms\n" +
-		"GPU FPS        : " + std::to_string((int)gpuFPS) + "\n\n" +
-
-		"---------------------------\n" +
-		"User input     : " + std::to_string(msgTime) + "ms\n" +
-		"Culling & draw : " + std::to_string(cullTime) + "ms\n" +
-		"Commands       : " + std::to_string(cmdsTime) + "ms\n" +
-		"Queue submit   : " + std::to_string(submitTime) + "ms\n" +
-		"Queue idle     : " + std::to_string(qWaitTime) + "ms\n" +
-		"Physics        : " + std::to_string(physicsTime) + "ms\n" +
-		"Scripts        : " + std::to_string(scriptsTime) + "ms\n\n\n" +
-		"Position       : " + std::to_string(camera.pos.x) + " , " + std::to_string(camera.pos.y) + " , " + std::to_string(camera.pos.z)
-	);*/
 
 	auto mutexStats = (Text*)uiLayer->getElement("mutexstats");
 
@@ -596,62 +570,26 @@ void Engine::updatePerformanceStatsDisplay()
 
 	std::string threadStatsString;
 
-	/*threadStatsString = "----THREADS-------------------\n------------------------------\n"
-		"Thread_1 (main)   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + "ms ( " + std::to_string(threading->threadJobsProcessed[std::this_thread::get_id()]) + " jobs done )\n";
-
-	int i = 2;
-	for (auto t : threading->workers)
-	{
-		if (t == threading->workers.back()) // last thread is render thread so add that label
-		{
-			threadStatsString += std::string("Thread_") + std::to_string(i) + " (render) : " +
-				std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1])))) + "ms ( " + std::to_string(threading->threadJobsProcessed[threading->threadIDAssociations[i - 1]]) + " jobs done )\n";
-		}
-		else
-		{
-			threadStatsString += std::string("Thread_") + std::to_string(i) + "          : " +
-				std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1])))) + "ms ( " + std::to_string(threading->threadJobsProcessed[threading->threadIDAssociations[i - 1]]) + " jobs done )\n";
-		}
-	}*/
-
 	threadStatsString = "----THREADS-------------------\n------------------------------\n"
-		"Thread_1 (main)   : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + " )\n";
+		"Thread_1 (main)    : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + " )\n";
 
-	PROFILE_RESET("thread_" + Threading::getThreadIDString(std::this_thread::get_id()));
+	threadStatsString += std::string("Thread_2 (render)  : " +
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[1])))) + "ms ( " + 
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[1]))))) + " )\n";
 
-	int i = 2;
-	for (auto t : threading->workers)
+	threadStatsString += std::string("Thread_3 (disk)    : " +
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[2])))) + "ms ( " + 
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[2]))))) + " )\n";
+
+	for (int i = 2; i < threading->workers.size(); ++i)
 	{
-		if (t == threading->workers.back()) // last thread is render thread so add that label
-		{
-			threadStatsString += std::string("Thread_") + std::to_string(i) + " (render) : " +
-				std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1])))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i - 1])))) + " )\n";
-		}
-		else
-		{
-			threadStatsString += std::string("Thread_") + std::to_string(i) + "          : " +
-				std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1])))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i - 1])))) + " )\n";
-		}
-		PROFILE_RESET("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i-1]));
+		threadStatsString += std::string("Thread_") + std::to_string(i+2) + " (generic) : " +
+			std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i + 1])))) + "ms ( " + 
+			std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i + 1])))) + " )\n";
 		++i;
 	}
 
 	threadStats->setString(threadStatsString);
-
-	// Reset profiling infoa
-	PROFILE_RESET("msgevent");
-	PROFILE_RESET("setuprender");
-	PROFILE_RESET("submitrender");
-	PROFILE_RESET("qwaitidle");
-	PROFILE_RESET("physics");
-	PROFILE_RESET("scripts");
-	PROFILE_RESET("cullingdrawbuffer");
-	PROFILE_RESET("commands");
-
-	PROFILE_RESET("physmutex");
-	PROFILE_RESET("phystoenginemutex");
-	PROFILE_RESET("phystogpumutex");
-	PROFILE_RESET("transformmutex");
 }
 
 /*

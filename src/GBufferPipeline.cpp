@@ -99,6 +99,7 @@ void Renderer::updateGBufferDescriptorSets()
 		return;
 
 	gBufferDescriptorSetNeedsUpdate = false;
+	gBufferCmdsNeedUpdate = true;
 
 	Engine::console->postMessage("Updating gBuffer descriptor set!", glm::fvec3(0.1, 0.1, 0.9));
 
@@ -125,26 +126,6 @@ void Renderer::updateGBufferDescriptorSets()
 		texturesUpdate[i].imageView = Engine::assets.getTexture("blank")->getView();
 	}
 
-	/*u32 i = 0;
-	for (auto& material : Engine::assets.materials)
-	{
-		if (material.second.albedoSpec->getHandle())
-			texturesUpdate[i].imageView = material.second.albedoSpec->getView();
-		else
-			texturesUpdate[i].imageView = Engine::assets.getTexture("blank")->getView();
-
-		if (material.second.normalRough)
-		{
-			if (material.second.normalRough->getView())
-				texturesUpdate[i + 1].imageView = material.second.normalRough->getView();
-			else
-				texturesUpdate[i + 1].imageView = Engine::assets.getTexture("black")->getView();
-		}
-		else
-			texturesUpdate[i + 1].imageView = Engine::assets.getTexture("black")->getView();
-		i += 2;
-	}*/
-
 	gBufferDescriptorSet.submitUpdater(updater);
 	gBufferDescriptorSet.destroyUpdater(updater);
 }
@@ -156,24 +137,22 @@ void Renderer::createGBufferCommands()
 
 void Renderer::updateGBufferCommands()
 {
-	//if (!gBufferCmdsNeedUpdate)
-	//	return;
+	// We need to update gBuffer commands when:
+	//	A new model instance was added
+	//	A gBuffer descriptor set was updated
 
-	//gBufferCmdsNeedUpdate = false;
+	if (!gBufferCmdsNeedUpdate)
+		return;
 
-	//PROFILE_START("gbufferfence");
-	//VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, true, std::numeric_limits<u64>::max()));
-	//PROFILE_END("gbufferfence");
+	gBufferCmdsNeedUpdate = false;
 
-	bufferFreeMutex.lock();
-	gBufferCommandBuffer.reset();
-	bufferFreeMutex.unlock();
+	//bufferFreeMutex.lock();
+	//gBufferCommandBuffer.reset();
+	//bufferFreeMutex.unlock();
 
 	//createGBufferCommands();
 
 	auto cmd = gBufferCommandBuffer.getHandle();
-
-	// From now on until we reset the gbuffer fence at the end of this function we cant submit a gBuffer command buffer
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -217,8 +196,6 @@ void Renderer::updateGBufferCommands()
 	queryPool.cmdTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, END_GBUFFER);
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(cmd));
-
-	//VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferCommands.fence));
 }
 
 void Renderer::destroyGBufferAttachments()
