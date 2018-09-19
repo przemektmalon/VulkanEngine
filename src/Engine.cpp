@@ -239,10 +239,9 @@ void Engine::start()
 
 	uiLayer->addElement(threadStatsText);
 
-	renderer->updateScreenCommands();
-	
 	// GPU commands
 	{
+		renderer->updateScreenCommands();
 		renderer->updatePBRCommands();
 		renderer->updateGBufferCommands();
 		renderer->updateShadowCommands(); // Mutex with engine model transform update
@@ -257,8 +256,6 @@ void Engine::start()
 	//threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultCPUJobDoneFunc), 1);
 	threading->addGPUJob(new Job<>(renderJobFunc, JobBase::GPU));
 	threading->addCPUJob(new Job<>(physicsJobFunc));
-	//threading->addJob(new Job<>(physicsToEngineJobFunc, defaultCPUJobDoneFunc), 1);
-	//threading->addCPUJob(new Job<>(scriptsJobFunc));
 	threading->addCPUJob(new Job<>(cleanupJobsJobFunc));
 
 	threading->threadJobsProcessed[std::this_thread::get_id()] = 0;

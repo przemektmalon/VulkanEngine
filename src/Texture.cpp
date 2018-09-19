@@ -186,7 +186,7 @@ void Texture::loadToGPU(void * pCreateStruct)
 			memcpy(stagingBuffer->getMemory()->map(), ci->pData, (size_t)size);
 			stagingBuffer->getMemory()->unmap();
 			m_usageFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-			r->transitionImageLayout(m_image, m_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_numMipLevels, m_layers, m_aspectFlags);
+			r->setImageLayout(cmd, *this, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 			stagingBuffer->cmdCopyTo(cmd, this);
 
 			if (isMipped)

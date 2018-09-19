@@ -45,7 +45,7 @@ static void initialiseCommonJobs()
 
 		if (Engine::engineRunning)
 		{
-			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 120;
+			u64 microsecondsBetweenPhysicsUpdates = 1000000 / 60;
 
 			auto nextPhysicsJob = new Job<>(physicsJobFunc);
 			nextPhysicsJob->setScheduledTime(endTime + microsecondsBetweenPhysicsUpdates);

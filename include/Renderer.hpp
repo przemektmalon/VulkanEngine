@@ -391,16 +391,13 @@ public:
 	vdu::Buffer transformUBO;
 	LightManager lightManager;
 	
-	void transitionImageLayout(VkImage image, VkFormat format,VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount = 1, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 	void setImageLayout(vdu::CommandBuffer* cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 
 	void beginTransferCommands(vdu::CommandBuffer& cmd);
 	void endTransferCommands(vdu::CommandBuffer& cmd, vdu::QueueSubmission& submission);
-	void submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence = VK_NULL_HANDLE);
+	void submitTransferCommands(vdu::QueueSubmission& submission, vdu::Fence fence = vdu::Fence());
 
-	VkCommandBuffer beginSingleTimeCommands();
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fence = VK_NULL_HANDLE);
 	void updateCameraBuffer();
 	void updateTransformBuffer();
 	void updateSSAOConfigBuffer();

@@ -305,8 +305,6 @@ void Console::renderAtStartup()
 
 	window->processMessages();
 
-	threading->physToGPUMutex.lock();
-
 	overlayRenderer.updateOverlayCommands();
 
 	std::vector<vdu::QueueSubmission> submissions(3);
@@ -336,8 +334,6 @@ void Console::renderAtStartup()
 	renderer->lGraphicsQueue.present(presentation);
 
 	renderer->lGraphicsQueue.waitIdle();
-
-	threading->physToGPUMutex.unlock();
 
 	if (!Engine::initialised)
 	{

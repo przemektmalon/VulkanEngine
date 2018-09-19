@@ -710,9 +710,13 @@ void Renderer::createDataBuffers()
 	memcpy(data, quad.data(), quad.size() * sizeof(Vertex2D));
 	stagingBuffer->getMemory()->unmap();
 
-	auto cmd = beginSingleTimeCommands();
+	auto cmd = new vdu::CommandBuffer;
+	beginTransferCommands(*cmd);
 	stagingBuffer->cmdCopyTo(cmd, &screenQuadBuffer);
-	endSingleTimeCommands(cmd, fe->getHandle());
+	vdu::QueueSubmission submission;
+	endTransferCommands(*cmd, submission);
+
+	lGraphicsQueue.submit(submission, *fe);
 
 	auto delayedBufferDestruct = std::bind([](vdu::Buffer* buffer, vdu::Fence* fe) -> void {
 		buffer->destroy();
@@ -943,60 +947,17 @@ void Renderer::endTransferCommands(vdu::CommandBuffer& cmd, vdu::QueueSubmission
 	submission.addCommands(&cmd);
 }
 
-void Renderer::submitTransferCommands(VkSubmitInfo submitInfo, VkFence fence)
+void Renderer::submitTransferCommands(vdu::QueueSubmission& submission, vdu::Fence fence)
 {
-	auto submitJobFunc = [&]() -> void
+	/*auto submitJobFunc = [&]() -> void
 	{
-		VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
-		VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue)); /// TODO: non blocking queue submissions !
-		VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, submitInfo.pCommandBuffers));
-		// To free command buffer for non blocking jobs we will need to know when the gpu finished it !
+		lTransferQueue.submit(submission, fence);
+		//VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, submitInfo.pCommandBuffers));
 	};
 	auto submitJob = new Job<>(submitJobFunc);
-	Engine::threading->addGPUTransferJob(submitJob); /// TODO: make asynchronous
-}
-
-VkCommandBuffer Renderer::beginSingleTimeCommands()
-{
-	VkCommandBufferAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = commandPool.getHandle();
-	allocInfo.commandBufferCount = 1;
-
-	VkCommandBuffer commandBuffer;
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer));
-
-	VkCommandBufferBeginInfo beginInfo = {};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo));
-
-	return commandBuffer;
-}
-
-void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkFence fence) {
-	VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
-
-	//Engine::threading->physToGPUMutex.lock();
-
-	//vdu::QueueSubmission submission;
-	//submission.addCommands(commandBuffer);
-
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.pCommandBuffers = &commandBuffer;
-	submitInfo.commandBufferCount = 1;
-
-	//vdu::Fence fe; fe.create(&logicalDevice);
+	Engine::threading->addGPUTransferJob(submitJob);*/
 
 	//lTransferQueue.submit(submission, fence);
-	VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &submitInfo, fence));
-
-	//Engine::threading->physToGPUMutex.unlock();
-
-	//VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, &commandBuffer));
 }
 
 /*
@@ -1067,94 +1028,6 @@ void Renderer::updateSSAOConfigBuffer()
 	void* data = ssaoConfigBuffer.getMemory()->map();
 	memcpy(data, &ssaoConfigData, sizeof(ssaoConfigData));
 	ssaoConfigBuffer.getMemory()->unmap();
-}
-
-void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, int mipLevels, int layerCount, VkImageAspectFlags aspect)
-{
-	VkImageMemoryBarrier barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.oldLayout = oldLayout;
-	barrier.newLayout = newLayout;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.image = image;
-	barrier.subresourceRange.aspectMask = aspect;
-	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = mipLevels;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = layerCount;
-
-	VkPipelineStageFlags sourceStage;
-	VkPipelineStageFlags destinationStage;
-
-	if (oldLayout == newLayout)
-		return;
-
-	if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-	}
-	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-		sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-	}
-	else if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	}
-	else if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	}
-	else if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-	}
-	else if ((oldLayout == VK_IMAGE_LAYOUT_UNDEFINED || oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL || newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-	}
-	else {
-		DBG_SEVERE("unsupported layout transition!");
-	}
-
-	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-	}
-	else {
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	}
-
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
-	VK_VALIDATE(vkCmdPipelineBarrier(
-		commandBuffer,
-		sourceStage, destinationStage,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &barrier
-	));
-
-	endSingleTimeCommands(commandBuffer);
 }
 
 void Renderer::setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask)
