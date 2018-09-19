@@ -188,7 +188,7 @@ void Engine::start()
 	renderer->updateGBufferDescriptorSets();
 	renderer->updateShadowDescriptorSets();
 	renderer->updatePBRDescriptorSets();
-	renderer->updatePBRCommands();
+	//renderer->updatePBRCommands();
 	renderer->updateSSAODescriptorSets();
 
 	initialised = 1;

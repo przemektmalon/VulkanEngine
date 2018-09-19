@@ -62,6 +62,7 @@ void Renderer::createScreenCommands()
 {
 	// We need a command buffer for each framebuffer
 	screenCommandBuffers.allocate(&logicalDevice, &commandPool, screenSwapchain.getImageCount());
+	screenCommandBuffersForConsole.allocate(&logicalDevice, &commandPool, screenSwapchain.getImageCount());
 }
 
 void Renderer::updateScreenCommands()
@@ -112,15 +113,15 @@ void Renderer::updateScreenCommands()
 
 void Renderer::updateScreenCommandsForConsole()
 {
-	for (size_t i = 0; i < screenCommandBuffers.size(); i++)
+	for (size_t i = 0; i < screenCommandBuffersForConsole.size(); i++)
 	{
 		VkCommandBufferBeginInfo beginInfo = {};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-		VK_CHECK_RESULT(vkBeginCommandBuffer(screenCommandBuffers.getHandle(i), &beginInfo));
+		VK_CHECK_RESULT(vkBeginCommandBuffer(screenCommandBuffersForConsole.getHandle(i), &beginInfo));
 
-		queryPool.cmdTimestamp(screenCommandBuffers.getHandle(i), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, BEGIN_SCREEN);
+		queryPool.cmdTimestamp(screenCommandBuffersForConsole.getHandle(i), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, BEGIN_SCREEN);
 
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -134,23 +135,23 @@ void Renderer::updateScreenCommandsForConsole()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		VK_VALIDATE(vkCmdBeginRenderPass(screenCommandBuffers.getHandle(i), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+		VK_VALIDATE(vkCmdBeginRenderPass(screenCommandBuffersForConsole.getHandle(i), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
 
-		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline.getHandle()));
+		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffersForConsole.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline.getHandle()));
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout.getHandle(), 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
+		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffersForConsole.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout.getHandle(), 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
 
 		VkBuffer vertexBuffers[] = { screenQuadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
-		VK_VALIDATE(vkCmdBindVertexBuffers(screenCommandBuffers.getHandle(i), 0, 1, vertexBuffers, offsets));
+		VK_VALIDATE(vkCmdBindVertexBuffers(screenCommandBuffersForConsole.getHandle(i), 0, 1, vertexBuffers, offsets));
 
-		VK_VALIDATE(vkCmdDraw(screenCommandBuffers.getHandle(i), 6, 1, 0, 0));
+		VK_VALIDATE(vkCmdDraw(screenCommandBuffersForConsole.getHandle(i), 6, 1, 0, 0));
 
-		VK_VALIDATE(vkCmdEndRenderPass(screenCommandBuffers.getHandle(i)));
+		VK_VALIDATE(vkCmdEndRenderPass(screenCommandBuffersForConsole.getHandle(i)));
 
-		queryPool.cmdTimestamp(screenCommandBuffers.getHandle(i), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, END_SCREEN);
+		queryPool.cmdTimestamp(screenCommandBuffersForConsole.getHandle(i), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, END_SCREEN);
 
-		VK_CHECK_RESULT(vkEndCommandBuffer(screenCommandBuffers.getHandle(i)));
+		VK_CHECK_RESULT(vkEndCommandBuffer(screenCommandBuffersForConsole.getHandle(i)));
 	}
 }
 

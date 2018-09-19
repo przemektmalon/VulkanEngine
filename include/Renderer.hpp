@@ -349,6 +349,7 @@ public:
 	// Command buffers
 	//std::vector<vdu::CommandBuffer> screenCommandBuffers;
 	vdu::CommandBufferArray screenCommandBuffers;
+	vdu::CommandBufferArray screenCommandBuffersForConsole;
 
 	/// ------------------------
 	/// Scene combine pipeline

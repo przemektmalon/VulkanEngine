@@ -298,79 +298,53 @@ void Console::postMessage(std::string msg, glm::fvec3 colour)
 
 void Console::renderAtStartup()
 {
-	Engine::window->processMessages();
+	auto& window = Engine::window;
+	auto& renderer = Engine::renderer;
+	auto& overlayRenderer = renderer->overlayRenderer;
+	auto& threading = Engine::threading;
 
-	Engine::threading->physToGPUMutex.lock();
+	window->processMessages();
 
-	Engine::renderer->overlayRenderer.updateOverlayCommands();
+	threading->physToGPUMutex.lock();
 
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	overlayRenderer.updateOverlayCommands();
 
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.waitSemaphoreCount = 0;
-	submitInfo.pWaitDstStageMask = 0;
-	submitInfo.pCommandBuffers = &Engine::renderer->overlayRenderer.elementCommandBuffer.getHandle();
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pSignalSemaphores = &Engine::renderer->overlayFinishedSemaphore;
-	submitInfo.signalSemaphoreCount = 1;
+	std::vector<vdu::QueueSubmission> submissions(3);
+	
+	submissions[0].addCommands(&overlayRenderer.elementCommandBuffer);
+	submissions[0].addSignal(renderer->overlayFinishedSemaphore);
 
-	VK_CHECK_RESULT(vkQueueSubmit(Engine::renderer->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
-
-
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &Engine::renderer->overlayFinishedSemaphore;
-	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.pCommandBuffers = &Engine::renderer->overlayRenderer.combineCommandBuffer.getHandle();
-	submitInfo.pSignalSemaphores = &Engine::renderer->overlayCombineFinishedSemaphore;
-	submitInfo.signalSemaphoreCount = 1;
-
-	VK_CHECK_RESULT(vkQueueSubmit(Engine::renderer->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	submissions[1].addWait(renderer->overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	submissions[1].addCommands(&overlayRenderer.combineCommandBuffer);
+	submissions[1].addSignal(renderer->overlayCombineFinishedSemaphore);
 
 	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(Engine::renderer->device, Engine::renderer->screenSwapchain.getHandle(), std::numeric_limits<uint64_t>::max(), Engine::renderer->imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	renderer->screenSwapchain.acquireNextImage(imageIndex, renderer->imageAvailableSemaphore);
+	
+	submissions[2].addWait(renderer->imageAvailableSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	submissions[2].addWait(renderer->overlayCombineFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	submissions[2].addCommands(renderer->screenCommandBuffersForConsole.getHandle(imageIndex));
+	submissions[2].addSignal(renderer->screenFinishedSemaphore);
 
-	if (result != VK_SUCCESS)
-	{
-		DBG_SEVERE("Could not acquire next image");
-		return;
-	}
+	renderer->lGraphicsQueue.submit(submissions);
 
-	VkPipelineStageFlags waitStages2[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	VkSemaphore waitSems[] = { Engine::renderer->imageAvailableSemaphore, Engine::renderer->overlayCombineFinishedSemaphore };
-	submitInfo.pWaitSemaphores = waitSems;
-	submitInfo.waitSemaphoreCount = 2;
-	submitInfo.pWaitDstStageMask = waitStages2;
-	submitInfo.pCommandBuffers = &Engine::renderer->screenCommandBuffers.getHandle(imageIndex);
-	submitInfo.pSignalSemaphores = &Engine::renderer->screenFinishedSemaphore;
+	vdu::QueuePresentation presentation;
 
-	VK_CHECK_RESULT(vkQueueSubmit(Engine::renderer->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+	presentation.addWait(renderer->screenFinishedSemaphore);
+	presentation.addSwapchain(renderer->screenSwapchain, imageIndex);
 
+	renderer->lGraphicsQueue.present(presentation);
 
-	VkPresentInfoKHR presentInfo = {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	renderer->lGraphicsQueue.waitIdle();
 
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &Engine::renderer->screenFinishedSemaphore;
+	threading->physToGPUMutex.unlock();
 
-	VkSwapchainKHR swapChains[] = { Engine::renderer->screenSwapchain.getHandle() };
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = swapChains;
-
-	presentInfo.pImageIndices = &imageIndex;
-
-	VK_CHECK_RESULT(vkQueuePresentKHR(Engine::renderer->presentQueue, &presentInfo));
-
-	VK_CHECK_RESULT(vkQueueWaitIdle(Engine::renderer->presentQueue));
-
-	Engine::threading->physToGPUMutex.unlock();
-
-	if (!Engine::initialised.load())
+	if (!Engine::initialised)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(15));
 		auto renderAgainFunc = std::bind(&Console::renderAtStartup, this);
 		auto renderAgainJob = new Job<decltype(renderAgainFunc)>(renderAgainFunc, JobBase::GPU);
-		Engine::threading->addGPUJob(renderAgainJob);
+		threading->addGPUJob(renderAgainJob);
 	}
 }
 
