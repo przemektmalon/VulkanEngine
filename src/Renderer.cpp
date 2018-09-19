@@ -252,6 +252,8 @@ void Renderer::render()
 	PROFILE_GPU_ADD_TIME("overlaycombine", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE], Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE]);
 	PROFILE_GPU_ADD_TIME("screen", Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN], Engine::gpuTimeStamps[Renderer::END_SCREEN]);
 
+	PROFILE_START("submitrender");
+
 	/*
 		Submit batched vulkan commands
 	*/
@@ -261,6 +263,19 @@ void Renderer::render()
 	/////////////////////////////////////////
 	/*
 		GBUFFER & SHADOWS & OVERLAYS
+
+		Completing this submission allows:
+			Re-recording gBuffers commands
+			Re-recording shadow commands
+			Re-recording overlay commands
+			Updating transforms buffer
+			Updating draw commands buffer
+			Updating material descriptors
+			Updating camera buffer (If PBR is also done)
+
+		We dont need to wait to:
+			Perform frustum culling for the next frame
+
 	*/
 	/////////////////////////////////////////
 
@@ -282,6 +297,13 @@ void Renderer::render()
 	/////////////////////////////////////////
 	/*
 		SSAO & PBR
+
+		Completing this submission allows:
+			Re-recording pbr commands
+			Updating light buffers
+			Updating skybox descriptor
+			Updating camera buffer (If gBuffer is also done)
+
 	*/
 	/////////////////////////////////////////
 
@@ -330,8 +352,6 @@ void Renderer::render()
 	vdu::QueuePresentation presentation;
 	presentation.addWait(screenFinishedSemaphore);
 	presentation.addSwapchain(screenSwapchain, imageIndex);
-
-	PROFILE_START("submitrender");
 
 	lGraphicsQueue.present(presentation);
 

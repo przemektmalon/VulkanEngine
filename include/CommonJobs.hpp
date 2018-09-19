@@ -60,7 +60,7 @@ static void initialiseCommonJobs()
 		auto& renderer = Engine::renderer;
 		auto& clock = Engine::clock;
 
-		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
+		PROFILE_MUTEX("phystoenginemutex", threading->physToEngineMutex.lock());
 		PROFILE_START("physics");
 		renderer->updateTransformBuffer();
 		PROFILE_END("physics");
@@ -88,6 +88,8 @@ static void initialiseCommonJobs()
 		renderer->lGraphicsQueue.waitIdle();
 		PROFILE_END("qwaitidle");
 
+		PROFILE_START("cullingdrawbuffer");
+
 		renderer->lightManager.sunLight.calcProjs();
 		renderer->lightManager.updateSunLight();
 
@@ -100,11 +102,12 @@ static void initialiseCommonJobs()
 
 		threading->addMaterialMutex.unlock();
 
-		PROFILE_MUTEX("phystoenginemutex", Engine::threading->physToEngineMutex.lock());
-		PROFILE_START("cullingdrawbuffer");
+		PROFILE_MUTEX("phystoenginemutex", threading->physToEngineMutex.lock());
+		
 		world.frustumCulling(&Engine::camera);
 		renderer->populateDrawCmdBuffer(); // Mutex with engine model transform update
 		threading->physToEngineMutex.unlock();
+		renderer->updateCameraBuffer();
 		PROFILE_END("cullingdrawbuffer");
 
 		PROFILE_START("setuprender");
@@ -113,12 +116,11 @@ static void initialiseCommonJobs()
 		renderer->updateGBufferCommands();
 		renderer->updateShadowCommands(); // Mutex with engine model transform update
 		renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
-		PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
-		renderer->updateCameraBuffer();
+		PROFILE_MUTEX("transformmutex", threading->instanceTransformMutex.lock());
 		threading->instanceTransformMutex.unlock();
 		PROFILE_END("commands");
 
-		PROFILE_MUTEX("phystogpumutex", Engine::threading->physToGPUMutex.lock());
+		PROFILE_MUTEX("phystogpumutex", threading->physToGPUMutex.lock());
 		renderer->render();
 		threading->physToGPUMutex.unlock();
 

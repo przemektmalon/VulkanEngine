@@ -89,7 +89,7 @@ void Renderer::updateShadowCommands()
 	shadowCommandBuffer.reset();
 	bufferFreeMutex.unlock();
 	
-	createShadowCommands();
+	//createShadowCommands();
 	
 	auto cmd = shadowCommandBuffer.getHandle();
 

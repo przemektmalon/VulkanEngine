@@ -241,6 +241,7 @@ void Engine::start()
 
 	// GPU commands
 	{
+		console->getStartupRenderFence().wait();
 		renderer->updateScreenCommands();
 		renderer->updatePBRCommands();
 		renderer->updateGBufferCommands();
@@ -637,7 +638,6 @@ void Engine::updatePerformanceStatsDisplay()
 	threadStats->setString(threadStatsString);
 
 	// Reset profiling info
-	/// TODO: running average/min/max for last X frames
 	PROFILE_RESET("msgevent");
 	PROFILE_RESET("setuprender");
 	PROFILE_RESET("submitrender");
@@ -719,6 +719,7 @@ void Engine::quit()
 {
 	DBG_INFO("Exiting");
 	assets.cleanup();
+	console->cleanup();
 	renderer->cleanup();
 	window->destroy();
 	instance.destroy();

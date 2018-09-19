@@ -12,6 +12,7 @@ public:
 
 	void create(glm::ivec2 resolution);
 	void update();
+	void cleanup();
 	void inputChar(char c);
 	void moveBlinker(Key k);
 	void scroll(s16 wheelDelta);
@@ -27,12 +28,15 @@ public:
 
 	void setResolution(glm::ivec2 res);
 
+	const vdu::Fence& getStartupRenderFence() { return finishedStartupRenderFence; }
+
 private:
 
 	void updatePositions();
 	void updateBacks();
 
 	OLayer* layer;
+	vdu::Fence finishedStartupRenderFence;
 
 	Text* input;
 	std::list<Text*> output;

@@ -58,6 +58,8 @@ void Console::create(glm::ivec2 resolution)
 	layer->setDoDraw(active);
 	
 	updateBacks();
+
+	finishedStartupRenderFence.create(&Engine::renderer->logicalDevice);
 }
 
 void Console::update()
@@ -92,6 +94,11 @@ void Console::update()
 		timeSinceBlink = 0;
 	}
 	messagePostMutex.unlock();
+}
+
+void Console::cleanup()
+{
+	finishedStartupRenderFence.destroy();
 }
 
 void Console::inputChar(char c)
@@ -303,6 +310,8 @@ void Console::renderAtStartup()
 	auto& overlayRenderer = renderer->overlayRenderer;
 	auto& threading = Engine::threading;
 
+	finishedStartupRenderFence.reset();
+
 	window->processMessages();
 
 	overlayRenderer.updateOverlayCommands();
@@ -324,7 +333,7 @@ void Console::renderAtStartup()
 	submissions[2].addCommands(renderer->screenCommandBuffersForConsole.getHandle(imageIndex));
 	submissions[2].addSignal(renderer->screenFinishedSemaphore);
 
-	renderer->lGraphicsQueue.submit(submissions);
+	renderer->lGraphicsQueue.submit(submissions, finishedStartupRenderFence);
 
 	vdu::QueuePresentation presentation;
 
