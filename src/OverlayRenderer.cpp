@@ -203,7 +203,9 @@ void OLayer::setUpdated()
 
 void OverlayRenderer::cleanup()
 {
-	cleanupForReInit();
+	destroyOverlayRenderPass();
+	destroyOverlayPipeline();
+	destroyOverlayAttachmentsFramebuffers();
 	destroyOverlayDescriptorSetLayouts();
 	combineProjUBO.destroy();
 

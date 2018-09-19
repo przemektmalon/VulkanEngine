@@ -86,7 +86,7 @@ void Renderer::updateShadowCommands()
 	//PROFILE_END("shadowfence");
 
 	bufferFreeMutex.lock();
-	shadowCommandBuffer.free();
+	shadowCommandBuffer.reset();
 	bufferFreeMutex.unlock();
 	
 	createShadowCommands();

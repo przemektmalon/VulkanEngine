@@ -168,7 +168,7 @@ void Renderer::updateGBufferCommands()
 	//PROFILE_END("gbufferfence");
 
 	bufferFreeMutex.lock();
-	gBufferCommandBuffer.free();
+	gBufferCommandBuffer.reset();
 	bufferFreeMutex.unlock();
 
 	createGBufferCommands();

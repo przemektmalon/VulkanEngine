@@ -188,7 +188,6 @@ void Engine::start()
 	renderer->updateGBufferDescriptorSets();
 	renderer->updateShadowDescriptorSets();
 	renderer->updatePBRDescriptorSets();
-	//renderer->updatePBRCommands();
 	renderer->updateSSAODescriptorSets();
 
 	initialised = 1;
@@ -722,7 +721,6 @@ void Engine::queryVulkanPhysicalDeviceDetails()
 void Engine::quit()
 {
 	DBG_INFO("Exiting");
-
 	assets.cleanup();
 	renderer->cleanup();
 	window->destroy();

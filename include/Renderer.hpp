@@ -97,7 +97,6 @@ public:
 
 	void createLogicalDevice();
 	void createDescriptorPool();
-	void createCommandPool();
 	static void createPerThreadCommandPools();
 	void createQueryPool();
 	void createTextureSampler();

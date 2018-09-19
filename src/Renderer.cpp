@@ -22,7 +22,6 @@ void Renderer::initialise()
 {
 	// Memory pools, samplers, and semaphores
 	createDescriptorPool();
-	createCommandPool();
 	createQueryPool();
 	createTextureSampler();
 	createSemaphores();
@@ -160,8 +159,6 @@ void Renderer::cleanup()
 		destroyGBufferDescriptorSetLayouts();
 		destroyGBufferPipeline();
 		destroyGBufferFramebuffers();
-		//destroyGBufferDescriptorSets();
-		//destroyGBufferCommands();
 	}
 
 	// Shadow pipeline
@@ -169,7 +166,6 @@ void Renderer::cleanup()
 		destroyShadowRenderPass();
 		destroyShadowDescriptorSetLayouts();
 		destroyShadowPipeline();
-		//destroyShadowCommands();
 	}
 
 	// SSAO pipeline
@@ -179,8 +175,6 @@ void Renderer::cleanup()
 		destroySSAODescriptorSetLayouts();
 		destroySSAOPipeline();
 		destroySSAOFramebuffer();
-		//destroySSAODescriptorSets();
-		//destroySSAOCommands();
 	}
 
 	// PBR pipeline
@@ -188,16 +182,12 @@ void Renderer::cleanup()
 		destroyPBRAttachments();
 		destroyPBRDescriptorSetLayouts();
 		destroyPBRPipeline();
-		//destroyPBRDescriptorSets();
-		//destroyPBRCommands();
 	}
 
 	// Screen pipeline
 	{
 		destroyScreenDescriptorSetLayouts();
 		destroyScreenPipeline();
-		//destroyScreenDescriptorSets();
-		//destroyScreenCommands();
 		destroyScreenSwapchain();
 	}
 
@@ -219,6 +209,7 @@ void Renderer::cleanup()
 	VK_VALIDATE(vkDestroySemaphore(device, shadowFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, overlayFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, overlayCombineFinishedSemaphore, 0));
+	VK_VALIDATE(vkDestroySemaphore(device, ssaoFinishedSemaphore, 0));
 
 	cameraUBO.destroy();
 	transformUBO.destroy();
@@ -723,10 +714,12 @@ void Renderer::createDataBuffers()
 	stagingBuffer->cmdCopyTo(cmd, &screenQuadBuffer);
 	endSingleTimeCommands(cmd, fe->getHandle());
 
-	auto delayedBufferDestruct = std::bind([](vdu::Buffer* buffer) -> void {
+	auto delayedBufferDestruct = std::bind([](vdu::Buffer* buffer, vdu::Fence* fe) -> void {
 		buffer->destroy();
+		fe->destroy();
 		delete buffer;
-	}, stagingBuffer);
+		delete fe;
+	}, stagingBuffer, fe);
 
 	addFenceDelayedAction(fe, delayedBufferDestruct);
 
@@ -809,24 +802,6 @@ void Renderer::createLogicalDevice()
 	transferQueue = lTransferQueue.getHandle();
 
 	device = logicalDevice.getHandle();
-}
-
-/*
-@brief	Create Vulkan command pool for submitting commands to a particular queue
-*/
-void Renderer::createCommandPool()
-{
-	commandPool.setFlags(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-	commandPool.setQueueFamily(&Engine::physicalDevice->getQueueFamilies().front());
-	commandPool.create(&logicalDevice);
-
-	//VkFenceCreateInfo fci = {};
-	//fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	//fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	//fci.pNext = 0;
-
-	//VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &gBufferCommands.fence));
-	//VK_CHECK_RESULT(vkCreateFence(device, &fci, nullptr, &shadowFence));
 }
 
 void Renderer::createPerThreadCommandPools()

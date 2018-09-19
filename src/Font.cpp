@@ -212,12 +212,14 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 	r->lTransferQueue.submit(submission, *fence);
 
 	// Once the all GPU operations are done, the fence is signalled, and we can free the command and data buffers
-	r->addFenceDelayedAction(fence, std::bind([](vdu::CommandBuffer* cmd, vdu::Buffer* stagingBuffer) -> void {
+	r->addFenceDelayedAction(fence, std::bind([](vdu::CommandBuffer* cmd, vdu::Buffer* stagingBuffer, vdu::Fence* fe) -> void {
 		cmd->free();
 		stagingBuffer->destroy();
+		fe->destroy();
 		delete cmd;
 		delete stagingBuffer;
-	}, cmd, stagingBuffer));
+		delete fe;
+	}, cmd, stagingBuffer, fence));
 
 	height = pFace->size->metrics.height >> 6;
 	ascender = pFace->size->metrics.ascender >> 6;
