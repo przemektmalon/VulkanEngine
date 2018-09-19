@@ -109,11 +109,11 @@ void Renderer::createSSAOFramebuffer()
 
 void Renderer::createSSAODescriptorSets()
 {
-	ssaoDescriptorSet.allocate(&logicalDevice, &ssaoDescriptorSetLayout, &descriptorPool);
+	ssaoDescriptorSet.allocate(&logicalDevice, &ssaoDescriptorSetLayout, &freeableDescriptorPool);
 
-	ssaoBlurDescriptorSet.allocate(&logicalDevice, &ssaoBlurDescriptorSetLayout, &descriptorPool);
+	ssaoBlurDescriptorSet.allocate(&logicalDevice, &ssaoBlurDescriptorSetLayout, &freeableDescriptorPool);
 
-	ssaoFinalDescriptorSet.allocate(&logicalDevice, &ssaoFinalDescriptorSetLayout, &descriptorPool);
+	ssaoFinalDescriptorSet.allocate(&logicalDevice, &ssaoFinalDescriptorSetLayout, &freeableDescriptorPool);
 }
 
 void Renderer::createSSAOCommands()

@@ -344,6 +344,7 @@ void Engine::eventLoop()
 		case(Event::WindowResized):
 		{
 			auto consoleSizeUpdateJobFunc = std::bind([](Console* cons) -> void {
+				renderer->gBufferGroupFence.wait();
 				console->setResolution(glm::ivec2(Engine::window->resX, 276));
 				console->postMessage("Window resized", glm::fvec3(0.2, 0.9, 0.2));
 			}, console);
@@ -637,7 +638,7 @@ void Engine::updatePerformanceStatsDisplay()
 
 	threadStats->setString(threadStatsString);
 
-	// Reset profiling info
+	// Reset profiling infoa
 	PROFILE_RESET("msgevent");
 	PROFILE_RESET("setuprender");
 	PROFILE_RESET("submitrender");

@@ -90,6 +90,9 @@ public:
 	VkSemaphore overlayCombineFinishedSemaphore;
 	VkSemaphore ssaoFinishedSemaphore;
 
+	// Fences
+	vdu::Fence gBufferGroupFence;
+
 	// Samplers
 	VkSampler textureSampler;
 	VkSampler skySampler;
@@ -100,7 +103,7 @@ public:
 	static void createPerThreadCommandPools();
 	void createQueryPool();
 	void createTextureSampler();
-	void createSemaphores();
+	void createSynchroObjects();
 	void createUBOs();
 
 	// Shaders
@@ -115,6 +118,7 @@ public:
 	CombineSceneShader combineSceneShader;
 	SSAOShader ssaoShader;
 	SSAOBlurShader ssaoBlurShader;
+
 
 	/// --------------------
 	/// GBuffer pipeline

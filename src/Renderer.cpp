@@ -24,7 +24,7 @@ void Renderer::initialise()
 	createDescriptorPool();
 	createQueryPool();
 	createTextureSampler();
-	createSemaphores();
+	createSynchroObjects();
 
 	lightManager.init();
 
@@ -211,6 +211,8 @@ void Renderer::cleanup()
 	VK_VALIDATE(vkDestroySemaphore(device, overlayCombineFinishedSemaphore, 0));
 	VK_VALIDATE(vkDestroySemaphore(device, ssaoFinishedSemaphore, 0));
 
+	gBufferGroupFence.destroy();
+
 	cameraUBO.destroy();
 	transformUBO.destroy();
 	vertexIndexBuffer.destroy();
@@ -292,7 +294,8 @@ void Renderer::render()
 	submissionsGroup1[3].addCommands(&overlayRenderer.combineCommandBuffer);
 	submissionsGroup1[3].addSignal(overlayCombineFinishedSemaphore);
 
-	lGraphicsQueue.submit(submissionsGroup1);
+	gBufferGroupFence.reset();
+	lGraphicsQueue.submit(submissionsGroup1, gBufferGroupFence);
 
 	/////////////////////////////////////////
 	/*
@@ -488,7 +491,6 @@ void Renderer::updateConfigs()
 				createPBRCommands();
 
 				updatePBRDescriptorSets();
-				updatePBRCommands();
 				
 				// We dont need to update all descriptors, just resolution dependant ones
 				auto updater = pbrDescriptorSet.makeUpdater();
@@ -513,6 +515,8 @@ void Renderer::updateConfigs()
 
 				pbrDescriptorSet.submitUpdater(updater);
 				pbrDescriptorSet.destroyUpdater(updater);
+
+				updatePBRCommands();
 			}
 
 			// Recreate the overlay pipeline and resolution dependant components
@@ -930,6 +934,7 @@ void Renderer::createDescriptorPool()
 	descriptorPool.create(&logicalDevice);
 
 	freeableDescriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 200);
+	freeableDescriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3);
 	freeableDescriptorPool.addSetCount(200);
 	freeableDescriptorPool.setFreeable(true);
 
@@ -939,9 +944,8 @@ void Renderer::createDescriptorPool()
 /*
 @brief	Create Vulkan semaphores
 */
-void Renderer::createSemaphores()
+void Renderer::createSynchroObjects()
 {
-	DBG_INFO("Creating Vulkan semaphores");
 	VkSemaphoreCreateInfo semaphoreInfo = {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -953,6 +957,8 @@ void Renderer::createSemaphores()
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayCombineFinishedSemaphore));
 	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &ssaoFinishedSemaphore));
+
+	gBufferGroupFence.create(&logicalDevice);
 }
 
 void Renderer::beginTransferCommands(vdu::CommandBuffer& cmd)
