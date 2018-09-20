@@ -27,6 +27,7 @@ layout(location = 0) out vec2 fragTexCoord;
 layout(location = 1) out vec3 fragNormal;
 layout(location = 2) flat out uint textureIndex;
 layout(location = 3) out vec3 viewVec;
+layout(location = 4) out vec3 fragPos;
 
 void main() {
 
@@ -39,6 +40,7 @@ void main() {
 
     viewVec = camera.position - worldPos.xyz;
     gl_Position = camera.proj * camera.view * worldPos;
+    fragPos = gl_Position.xyz;
     fragNormal = transpose(inverse(mat3(transform))) * inNormal;
     fragTexCoord = inTexCoord;
 }
@@ -52,6 +54,7 @@ layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec3 fragNormal;
 layout(location = 2) flat in uint textureIndex;
 layout(location = 3) in vec3 viewVec;
+layout(location = 4) in vec3 fragPos;
 
 layout(location = 0) out vec4 colour;
 layout(location = 1) out vec2 normal;
@@ -102,6 +105,11 @@ void main()
     normal = encodeNormal(normalize(perturbNormal(normalize(fragNormal), normalize(viewVec), fragTexCoord, normalRough.xyz)));
 
     pbr.x = normalRough.w; // Roughness
+
+	const float C = 1.0;
+	const float far = 1000000.0;
+	const float offset = 1.0;
+	gl_FragDepth = (log(C * fragPos.z + offset) / log(C * far + offset));
 }
 
 #endif

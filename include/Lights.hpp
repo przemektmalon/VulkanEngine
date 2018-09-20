@@ -345,7 +345,9 @@ public:
 				+0.0f, 0.0f, 0.5f, 0.0f,
 				+0.0f, 0.0f, 0.5f, 1.0f);
 			proj = clip * proj;
-			auto view = glm::lookAt(getPosition(), getPosition() + getDirection(), glm::fvec3(0, 1, 0));
+			auto pos = getPosition();
+			auto dir = getDirection();
+			glm::fmat4 view = glm::lookAt(pos, pos + dir, glm::fvec3(0, 1, 0));
 			projView = proj * view;
 		}
 	};

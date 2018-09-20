@@ -209,15 +209,14 @@ void main()
 	const float farZMinf = uintBitsToFloat(farZMin);
 	const float nearZMaxf = uintBitsToFloat(nearZMax);
 
-	const float zNear = 0.1;
-	const float zFar = 10000.f;
+	const float zFar = 1000000.f;
 
-    const float realDepth = calcRealDepth(depth, zNear, zFar);
+    const float realDepth = exp2(depth * log2(zFar + 1.0)) - 1.f;
 
-    const float minZView = calcRealDepth(minZf, zNear, zFar);
-    const float maxZView = calcRealDepth(maxZf, zNear, zFar);
-    const float farZMinView = calcRealDepth(farZMinf, zNear, zFar);
-    const float nearZMaxView = calcRealDepth(nearZMaxf, zNear, zFar);
+	const float minZView = exp2(minZf * log2(zFar + 1.0)) - 1.f;
+    const float maxZView = exp2(maxZf * log2(zFar + 1.0)) - 1.f;
+    const float farZMinView = exp2(farZMinf * log2(zFar + 1.0)) - 1.f;
+    const float nearZMaxView = exp2(nearZMaxf * log2(zFar + 1.0)) - 1.f;
 
 	const vec4 viewRays = camera.viewRays;
 
@@ -226,7 +225,7 @@ void main()
 	viewRay.y = mix(viewRays.w, viewRays.y, float(pixel.y) / renderSize.y);
 	viewRay.z = 1.f;
 
-	const mat3 m3View = transpose(mat3(camera.view));
+	const mat3 m3View = inverse(mat3(camera.view));
 
 	viewRay = m3View * viewRay;
 
@@ -483,13 +482,14 @@ void main()
 
 			vec4 fragPosLightSpace = spotLights.data[i].pv * vec4(worldPos,1.f);
 
-			vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;;
+			vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+			
 			projCoords.x *= 0.5f; projCoords.x += 0.5f;
 			projCoords.y *= 0.5f; projCoords.y += 0.5f;
 
 			float currentDepth = projCoords.z;
 		    
-		    float bias = max(0.01f * (1.0 - dot(normal, lightDir)), 0.01f);
+		    float bias = max(0.0001f * (1.0 - dot(normal, lightDir)), 0.0001f);
 
 	    	const int pres = 2;
 

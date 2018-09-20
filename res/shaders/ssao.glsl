@@ -78,8 +78,8 @@ layout (binding = 2) uniform sampler2D depthBuffer;
 
 /** Used for preventing AO computation on the sky (at infinite depth) and defining the CS Z to bilateral depth key scaling. 
     This need not match the real far plane*/
-#define FAR 10000.f // projection matrix's far plane
-#define FAR_PLANE_Z (-10000.0)
+#define FAR 1000000.f // projection matrix's far plane
+#define FAR_PLANE_Z (-1000000.0)
 
 /** Reconstruct camera-space P.xyz from screen-space S = (x, y) in
     pixels and camera-space z < 0.  Assumes that the upper-left pixel center
@@ -98,7 +98,7 @@ vec3 reconstructCSFaceNormal(vec3 C) {
     return normalize(cross(dFdx(C), dFdy(C)));
 }
 
-const float NEAR = 0.1f; // projection matrix's near plane
+const float NEAR = 1.0f; // projection matrix's near plane
 
 float LinearizeDepth(float depth)
 {    

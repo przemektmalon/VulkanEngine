@@ -109,12 +109,14 @@ void Renderer::initialise()
 
 	for (int i = 0; i < 1; ++i)
 	{
-		auto& pl = lightManager.addPointLight();
+		auto& pl = lightManager.addSpotLight();
 		auto& r = Engine::rand;
 		int s = 300;
 		int sh = s / 2;
-		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 50, s64(r() % s) - sh));
-		pl.setColour(glm::fvec3(2.5, 1.5, 0.5));
+		//pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 50, s64(r() % s) - sh));
+		pl.setPosition(glm::fvec3(10,100,0));
+		pl.setDirection(glm::normalize(-pl.getPosition()));
+		pl.setColour(glm::fvec3(20.5, 10.5, 10.5));
 		switch (i)
 		{
 		case 0:
@@ -127,10 +129,12 @@ void Renderer::initialise()
 			pl.setColour(glm::fvec3(0.5, 1.5, 2.5));
 			break;
 		}
-		pl.setLinear(0.00001);
-		pl.setQuadratic(0.00001);
+		pl.setLinear(0.0001);
+		pl.setQuadratic(0.0001);
 		pl.setFadeStart(10000);
 		pl.setFadeLength(500);
+		pl.setInnerSpread(45);
+		pl.setOuterSpread(45.01);
 	}
 
 	lightManager.updateLightCounts();

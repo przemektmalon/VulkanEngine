@@ -57,10 +57,10 @@ void Engine::start()
 	} */
 
 	/// TODO: temporary, we need a configurations manager
-	maxDepth = 10000.f;
+	maxDepth = 1000000.f;
 
 	/// TODO: cameras should be objects in the world
-	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(120.f), 0.1, maxDepth);
+	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(120.f), 1.0, maxDepth);
 	camera.setPosition(glm::fvec3(50, 50, 50));
 	camera.update();
 
