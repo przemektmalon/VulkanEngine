@@ -273,9 +273,10 @@ public:
 private:
 	bool matNeedsUpdate;
 	GPUData* gpuData;
+	vdu::Buffer* drawCommandsBuffer;
 
 public:
-	SpotLight() : matNeedsUpdate(true), gpuData(nullptr) 
+	SpotLight() : matNeedsUpdate(true), gpuData(nullptr), drawCommandsBuffer(nullptr)
 	{
 		initTexture();
 	}
@@ -365,6 +366,7 @@ public:
 	s64 getShadowIndex() { return gpuData->getShadowIndex(); }
 	Texture* getShadowTexture() { return shadowTex; }
 	glm::fmat4& getProjView() { return gpuData->projView; }
+	vdu::Buffer* getDrawCommandsBuffer() { return drawCommandsBuffer; }
 
 	void setPosition(glm::fvec3 set)
 	{
@@ -429,6 +431,7 @@ public:
 	}
 
 	void initTexture(int resolution = 512);
+	void updateDrawCommands(u32 gpuIndex);
 
 	void updateRadius();
 	inline static float calculateRadius(float linear, float quad);
@@ -524,6 +527,16 @@ public: ///TODO: Max light count is 150, add setters etc
 
 	void updateSunLight();
 
+	void updateShadowDrawCommands()
+	{
+		int i = 0;
+		for (auto& sl : spotLights)
+		{
+			sl.updateDrawCommands(i);
+			++i;
+		}
+	}
+
 	vdu::Buffer lightCountsBuffer;
 
 	std::vector<PointLight> pointLights;
@@ -536,6 +549,8 @@ public: ///TODO: Max light count is 150, add setters etc
 
 	SunLight sunLight;
 	vdu::Buffer sunLightBuffer;
+
+	std::vector<vdu::Buffer> spotShadowDrawCommandsBuffers;
 
 	//std::vector<SpotLight::GPUData> staticSpotLights;
 	//std::vector<PointLight::GPUData> staticPointLightsGPUData;

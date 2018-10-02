@@ -426,14 +426,14 @@ void OverlayRenderer::updateOverlayCommands()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+		vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipeline.getHandle()));
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipeline.getHandle());
 
 		auto& elements = layer->elements;
 
 		VkRect2D scissor = { 0, 0, layer->resolution.x, layer->resolution.y };
-		VK_VALIDATE(vkCmdSetScissor(cmd, 0, 1, &scissor));
+		vkCmdSetScissor(cmd, 0, 1, &scissor);
 
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
@@ -442,7 +442,7 @@ void OverlayRenderer::updateOverlayCommands()
 		viewport.height = (float)layer->resolution.y;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
-		VK_VALIDATE(vkCmdSetViewport(cmd, 0, 1, &viewport));
+		vkCmdSetViewport(cmd, 0, 1, &viewport);
 
 		for (auto element : elements)
 		{
@@ -454,22 +454,22 @@ void OverlayRenderer::updateOverlayCommands()
 			memcpy(push, &proj[0][0], sizeof(glm::fmat4));
 			float depth = element->getDepth();
 			memcpy(push + 16, &depth, sizeof(float));
-			VK_VALIDATE(vkCmdPushConstants(cmd, elementPipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4), push));
+			vkCmdPushConstants(cmd, elementPipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4), push);
 
 			float push2[5];
 			glm::fvec4 c = *(glm::fvec4*)element->getPushConstData();
 			memcpy(push2, &c[0], sizeof(glm::fvec4));
 			int t = element->getType();
 			memcpy(push2 + 4, &t, sizeof(int));
-			VK_VALIDATE(vkCmdPushConstants(cmd, elementPipelineLayout.getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::fmat4) + sizeof(glm::fvec4), sizeof(glm::fvec4) + sizeof(int), push2));
+			vkCmdPushConstants(cmd, elementPipelineLayout.getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::fmat4) + sizeof(glm::fvec4), sizeof(glm::fvec4) + sizeof(int), push2);
 
 			VkDescriptorSet descSet = element->getDescriptorSet();
-			VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipelineLayout.getHandle(), 0, 1, &descSet, 0, nullptr));
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, elementPipelineLayout.getHandle(), 0, 1, &descSet, 0, nullptr);
 
 			element->render(cmd);
 		}
 
-		VK_VALIDATE(vkCmdEndRenderPass(cmd));
+		vkCmdEndRenderPass(cmd);
 	}
 
 	Engine::renderer->queryPool.cmdTimestamp(elementCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Renderer::END_OVERLAY);
@@ -497,9 +497,9 @@ void OverlayRenderer::updateOverlayCommands()
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
-	VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+	vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipeline.getHandle()));
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipeline.getHandle());
 
 	glm::fmat4 proj = glm::ortho<float>(0, Engine::window->resX, Engine::window->resY, 0, -10, 10);
 	glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f,
@@ -507,23 +507,23 @@ void OverlayRenderer::updateOverlayCommands()
 		+0.0f, 0.0f, 0.5f, 0.0f,
 		+0.0f, 0.0f, 0.5f, 1.0f);
 	proj = clip * proj;
-	VK_VALIDATE(vkCmdPushConstants(cmd, combinePipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4), &proj));
+	vkCmdPushConstants(cmd, combinePipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::fmat4), &proj);
 
 	for (auto layer : layers)
 	{
 		if (!layer->doDraw())
 			continue;
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipelineLayout.getHandle(), 0, 1, &layer->imageDescriptor.getHandle(), 0, nullptr));
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, combinePipelineLayout.getHandle(), 0, 1, &layer->imageDescriptor.getHandle(), 0, nullptr);
 
 		VkBuffer vertexBuffers[] = { layer->quadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
-		VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets));
+		vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets);
 
-		VK_VALIDATE(vkCmdDraw(cmd, 6, 1, 0, 0));
+		vkCmdDraw(cmd, 6, 1, 0, 0);
 	}
 
-	VK_VALIDATE(vkCmdEndRenderPass(cmd));
+	vkCmdEndRenderPass(cmd);
 
 	Engine::renderer->queryPool.cmdTimestamp(combineCommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Renderer::END_OVERLAY_COMBINE);
 

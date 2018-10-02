@@ -209,7 +209,7 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 	vdu::QueueSubmission submission;
 	r->endTransferCommands(*cmd, submission);
 
-	r->lTransferQueue.submit(submission, *fence);
+	VK_CHECK_RESULT(r->lTransferQueue.submit(submission, *fence));
 
 	// Once the all GPU operations are done, the fence is signalled, and we can free the command and data buffers
 	r->addFenceDelayedAction(fence, std::bind([](vdu::CommandBuffer* cmd, vdu::Buffer* stagingBuffer, vdu::Fence* fe) -> void {

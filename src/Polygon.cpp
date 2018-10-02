@@ -16,8 +16,8 @@ void UIPolygon::render(VkCommandBuffer cmd)
 	{
 		VkDeviceSize offsets[] = { 0 };
 		VkBuffer buffer[] = { vertsBuffer.getHandle() };
-		VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, buffer, offsets));
-		VK_VALIDATE(vkCmdDraw(cmd, verts.size(), 1, 0, 0));
+		vkCmdBindVertexBuffers(cmd, 0, 1, buffer, offsets);
+		vkCmdDraw(cmd, verts.size(), 1, 0, 0);
 	}
 }
 
@@ -62,5 +62,5 @@ void UIPolygon::updateDescriptorSet()
 	descriptorWrites[0].descriptorCount = 1;
 	descriptorWrites[0].pImageInfo = &fontInfo;
 
-	VK_VALIDATE(vkUpdateDescriptorSets(Engine::renderer->device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr));
+	vkUpdateDescriptorSets(Engine::renderer->device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

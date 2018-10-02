@@ -64,11 +64,14 @@ void Engine::start()
 	camera.setPosition(glm::fvec3(50, 50, 50));
 	camera.update();
 
+
 	/*
 		Initialise vulkan logical device
 	*/
 	renderer = new Renderer();
 	renderer->initialiseDevice();
+	renderer->logicalDevice.setVkErrorCallback(&vduVkErrorCallback);
+	renderer->logicalDevice.setVduDebugCallback(&vduDebugCallback);
 
 	/*
 		Initialise worker threads (each one needs vulkan logical device before initialising its command pool)
@@ -325,13 +328,6 @@ void Engine::engineLoop()
 		PROFILE_END("thread_" + Threading::getThisThreadIDString());
 	}
 
-	for (auto t : threading->workers)
-	{
-		t->join();
-	}
-	threading->cleanupJobs(); // Cleanup memory of finished jobs
-	renderer->lGraphicsQueue.waitIdle();
-	renderer->lTransferQueue.waitIdle();
 	quit();
 }
 
@@ -592,6 +588,40 @@ void Engine::updatePerformanceStatsDisplay()
 	threadStats->setString(threadStatsString);
 }
 
+void Engine::vduVkDebugCallback(vdu::Instance::DebugReportLevel level, vdu::Instance::DebugObjectType objectType, uint64_t objectHandle, const std::string & objectName, const std::string & message)
+{
+	std::string levelMsg;
+	switch (level) {
+	case vdu::Instance::DebugReportLevel::Warning:
+		levelMsg = "Warning - ";
+		break;
+	case vdu::Instance::DebugReportLevel::Error:
+		levelMsg = "Error   - ";
+		break;
+	}
+	std::cout << levelMsg << "Object [" << objectName << "]\n" << message << "\n\n";
+}
+
+void Engine::vduVkErrorCallback(VkResult result, const std::string & message)
+{
+	DBG_SEVERE(message);
+}
+
+void Engine::vduDebugCallback(vdu::LogicalDevice::VduDebugLevel level, const std::string & message)
+{
+	switch (level) {
+	case vdu::LogicalDevice::VduDebugLevel::Error:
+		DBG_SEVERE(message);
+		break;
+	case vdu::LogicalDevice::VduDebugLevel::Warning:
+		DBG_WARNING(message);
+		break;
+	case vdu::LogicalDevice::VduDebugLevel::Info:
+		DBG_INFO(message);
+		break;
+	}
+}
+
 /*
 	@brief	Create a window for drawing to
 */
@@ -633,11 +663,12 @@ void Engine::createVulkanInstance()
 #ifdef ENABLE_VULKAN_VALIDATION
 	instance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Warning);
 	instance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Error);
+	instance.setDebugCallback(&vduVkDebugCallback);
 	instance.addLayer("VK_LAYER_LUNARG_standard_validation");
 #endif
 
-	instance.create();
-
+	VK_CHECK_RESULT(instance.create());
+	
 	vkInstance = instance.getInstanceHandle();
 }
 
@@ -646,9 +677,9 @@ void Engine::createVulkanInstance()
 */
 void Engine::queryVulkanPhysicalDeviceDetails()
 {
-	vdu::enumeratePhysicalDevices(instance, allPhysicalDevices);
+	VK_CHECK_RESULT(vdu::enumeratePhysicalDevices(instance, allPhysicalDevices));
 	physicalDevice = &allPhysicalDevices.front();
-	physicalDevice->querySurfaceCapabilities(window->vkSurface);
+	VK_CHECK_RESULT(physicalDevice->querySurfaceCapabilities(window->vkSurface));
 }
 
 /*
@@ -657,6 +688,14 @@ void Engine::queryVulkanPhysicalDeviceDetails()
 void Engine::quit()
 {
 	DBG_INFO("Exiting");
+	for (auto t : threading->workers)
+	{
+		t->join();
+	}
+
+	threading->cleanupJobs(); // Cleanup memory of finished jobs
+	renderer->lGraphicsQueue.waitIdle();
+	renderer->lTransferQueue.waitIdle();
 	assets.cleanup();
 	console->cleanup();
 	renderer->cleanup();

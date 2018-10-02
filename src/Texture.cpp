@@ -136,7 +136,7 @@ void Texture::loadToGPU(void * pCreateStruct)
 		r->endTransferCommands(*cmd, submission);
 
 		auto fe = new vdu::Fence(&r->logicalDevice);
-		r->lTransferQueue.submit(submission, *fe);
+		VK_CHECK_RESULT(r->lTransferQueue.submit(submission, *fe));
 
 		auto delayedBufferDestructionFunc = std::bind([](vdu::Fence* fe, vdu::Buffer* buff, u32 layers, vdu::CommandBuffer* cmd) -> void {
 			for (u32 i = 0; i < layers; ++i) {
@@ -202,7 +202,7 @@ void Texture::loadToGPU(void * pCreateStruct)
 			r->endTransferCommands(*cmd, submission);
 
 			auto fe = new vdu::Fence(&r->logicalDevice);
-			r->lTransferQueue.submit(submission, *fe);
+			VK_CHECK_RESULT(r->lTransferQueue.submit(submission, *fe));
 
 			auto delayedBufferDestructionFunc = std::bind([](vdu::Fence* fe, vdu::Buffer* buff, vdu::CommandBuffer* cmd) -> void {
 				buff->destroy();
@@ -250,7 +250,7 @@ void Texture::loadToGPU(void * pCreateStruct)
 			vdu::QueueSubmission submission;
 			r->endTransferCommands(*cmd, submission);
 			auto fe = new vdu::Fence(&r->logicalDevice);
-			r->lTransferQueue.submit(submission, *fe);
+			VK_CHECK_RESULT(r->lTransferQueue.submit(submission, *fe));
 
 			auto delayedBufferDestructionFunc = std::bind([](vdu::Fence* fe, vdu::CommandBuffer* cmd) -> void {
 				cmd->free();

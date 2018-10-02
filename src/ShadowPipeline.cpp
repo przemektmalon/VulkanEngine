@@ -17,6 +17,12 @@ void Renderer::createShadowDescriptorSetLayouts()
 
 	dsl.addBinding("transforms", vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex);
 	dsl.create(&logicalDevice);
+
+	auto& sdsl = spotShadowDescriptorSetLayout;
+
+	sdsl.addBinding("transforms", vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex);
+	sdsl.addBinding("spot_lights", vdu::DescriptorType::UniformBuffer, 1, 1, vdu::ShaderStage::Vertex);
+	sdsl.create(&logicalDevice);
 }
 
 void Renderer::createShadowPipeline()
@@ -32,8 +38,7 @@ void Renderer::createShadowPipeline()
 	pointShadowPipeline.setRenderPass(&shadowRenderPass);
 	pointShadowPipeline.create(&logicalDevice);
 
-	spotShadowPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(glm::fvec4) * 2 });
-	spotShadowPipelineLayout.addDescriptorSetLayout(&shadowDescriptorSetLayout);
+	spotShadowPipelineLayout.addDescriptorSetLayout(&spotShadowDescriptorSetLayout);
 	spotShadowPipelineLayout.create(&logicalDevice);
 	spotShadowPipeline.setShaderProgram(&spotShadowShader);
 	spotShadowPipeline.setPipelineLayout(&spotShadowPipelineLayout);
@@ -58,6 +63,7 @@ void Renderer::createShadowPipeline()
 void Renderer::createShadowDescriptorSets()
 {
 	shadowDescriptorSet.allocate(&logicalDevice, &shadowDescriptorSetLayout, &descriptorPool);
+	spotShadowDescriptorSet.allocate(&logicalDevice, &spotShadowDescriptorSetLayout, &descriptorPool);
 }
 
 void Renderer::updateShadowDescriptorSets()
@@ -69,6 +75,23 @@ void Renderer::updateShadowDescriptorSets()
 	transformsUpdate->buffer = transformUBO.getHandle();
 	transformsUpdate->offset = 0;
 	transformsUpdate->range = sizeof(glm::fmat4) * 1000;
+
+	shadowDescriptorSet.submitUpdater(updater);
+	shadowDescriptorSet.destroyUpdater(updater);
+
+	updater = spotShadowDescriptorSet.makeUpdater();
+
+	transformsUpdate = updater->addBufferUpdate("transforms");
+
+	transformsUpdate->buffer = transformUBO.getHandle();
+	transformsUpdate->offset = 0;
+	transformsUpdate->range = sizeof(glm::fmat4) * 1000;
+
+	auto spotLightsUpdate = updater->addBufferUpdate("spot_lights");
+
+	spotLightsUpdate->buffer = lightManager.spotLightsBuffer.getHandle();
+	spotLightsUpdate->offset = 0;
+	spotLightsUpdate->range = sizeof(SpotLight::GPUData) * 150;
 
 	shadowDescriptorSet.submitUpdater(updater);
 	shadowDescriptorSet.destroyUpdater(updater);
@@ -115,24 +138,24 @@ void Renderer::updateShadowCommands()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+		vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipeline.getHandle()));
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipeline.getHandle());
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipelineLayout.getHandle(), 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pointShadowPipelineLayout.getHandle(), 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr);
 
 		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
-		VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets));
-		VK_VALIDATE(vkCmdBindIndexBuffer(cmd, vertexIndexBuffer.getHandle(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
+		vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets);
+		vkCmdBindIndexBuffer(cmd, vertexIndexBuffer.getHandle(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
 
 		auto pos = l.getPosition();
 		glm::fvec4 push(pos.x, pos.y, pos.z, l.getRadius());
 
-		VK_VALIDATE(vkCmdPushConstants(cmd, pointShadowPipelineLayout.getHandle(), VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fvec4), &push));
-		VK_VALIDATE(vkCmdDrawIndexedIndirect(cmd, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
+		vkCmdPushConstants(cmd, pointShadowPipelineLayout.getHandle(), VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fvec4), &push);
+		vkCmdDrawIndexedIndirect(cmd, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand));
 
-		VK_VALIDATE(vkCmdEndRenderPass(cmd));
+		vkCmdEndRenderPass(cmd);
 	}
 
 	for (auto& l : lightManager.spotLights)
@@ -150,31 +173,20 @@ void Renderer::updateShadowCommands()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+		vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipeline.getHandle()));
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipeline.getHandle());
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipelineLayout.getHandle(), 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spotShadowPipelineLayout.getHandle(), 0, 1, &spotShadowDescriptorSet.getHandle(), 0, nullptr);
 
 		VkBuffer vertexBuffers[] = { vertexIndexBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
-		VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets));
-		VK_VALIDATE(vkCmdBindIndexBuffer(cmd, vertexIndexBuffer.getHandle(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
+		vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets);
+		vkCmdBindIndexBuffer(cmd, vertexIndexBuffer.getHandle(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
 
-		float push[(4*4)+4+1];
-		glm::fmat4 pv = l.getProjView();
-		memcpy(push, &pv, sizeof(glm::fmat4));
-		auto p = l.getPosition();
-		push[16] = p.x;
-		push[17] = p.y;
-		push[18] = p.z;
-		push[19] = 0;
-		push[20] = l.getRadius() * 2.f;
+		vkCmdDrawIndexedIndirect(cmd, l.getDrawCommandsBuffer()->getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand));
 
-		VK_VALIDATE(vkCmdPushConstants(cmd, spotShadowPipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4) + sizeof(float) + sizeof(glm::fvec3), &push));
-		VK_VALIDATE(vkCmdDrawIndexedIndirect(cmd, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
-
-		VK_VALIDATE(vkCmdEndRenderPass(cmd));
+		vkCmdEndRenderPass(cmd);
 	}
 
 	{
@@ -195,25 +207,25 @@ void Renderer::updateShadowCommands()
 			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 			renderPassInfo.pClearValues = clearValues.data();
 
-			VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+			vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipeline.getHandle()));
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipeline.getHandle());
 
-			VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipelineLayout.getHandle(), 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr));
+			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sunShadowPipelineLayout.getHandle(), 0, 1, &shadowDescriptorSet.getHandle(), 0, nullptr);
 
 			VkBuffer vertexBuffers[] = { vertexIndexBuffer.getHandle() };
 			VkDeviceSize offsets[] = { 0 };
-			VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets));
-			VK_VALIDATE(vkCmdBindIndexBuffer(cmd, vertexIndexBuffer.getHandle(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32));
+			vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets);
+			vkCmdBindIndexBuffer(cmd, vertexIndexBuffer.getHandle(), INDEX_BUFFER_BASE, VK_INDEX_TYPE_UINT32);
 
 			float push[(4 * 4)];
 			glm::fmat4 pv = *l.getProjView();
 			memcpy(push, &pv, sizeof(glm::fmat4));
 
-			VK_VALIDATE(vkCmdPushConstants(cmd, sunShadowPipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4), &push));
-			VK_VALIDATE(vkCmdDrawIndexedIndirect(cmd, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand)));
+			vkCmdPushConstants(cmd, sunShadowPipelineLayout.getHandle(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::fmat4), &push);
+			vkCmdDrawIndexedIndirect(cmd, drawCmdBuffer.getHandle(), 0, Engine::world.instancesToDraw.size(), sizeof(VkDrawIndexedIndirectCommand));
 
-			VK_VALIDATE(vkCmdEndRenderPass(cmd));
+			vkCmdEndRenderPass(cmd);
 		}
 	}
 
@@ -230,6 +242,7 @@ void Renderer::destroyShadowRenderPass()
 void Renderer::destroyShadowDescriptorSetLayouts()
 {
 	shadowDescriptorSetLayout.destroy();
+	spotShadowDescriptorSetLayout.destroy();
 }
 
 void Renderer::destroyShadowPipeline()
@@ -241,8 +254,6 @@ void Renderer::destroyShadowPipeline()
 	pointShadowPipeline.destroy();
 	spotShadowPipeline.destroy();
 	sunShadowPipeline.destroy();
-
-	
 }
 
 void Renderer::destroyShadowDescriptorSets()

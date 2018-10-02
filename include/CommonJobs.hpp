@@ -106,6 +106,7 @@ static void initialiseCommonJobs()
 		renderer->executeFenceDelayedActions();
 		
 		renderer->populateDrawCmdBuffer(); // Mutex with engine model transform update
+		renderer->lightManager.updateShadowDrawCommands();
 		renderer->updateCameraBuffer();
 
 		PROFILE_END("cullingdrawbuffer");

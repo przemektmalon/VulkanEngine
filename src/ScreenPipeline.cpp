@@ -89,19 +89,19 @@ void Renderer::updateScreenCommands()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		VK_VALIDATE(vkCmdBeginRenderPass(screenCommandBuffers.getHandle(i), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+		vkCmdBeginRenderPass(screenCommandBuffers.getHandle(i), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline.getHandle()));
+		vkCmdBindPipeline(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline.getHandle());
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout.getHandle(), 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
+		vkCmdBindDescriptorSets(screenCommandBuffers.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout.getHandle(), 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr);
 
 		VkBuffer vertexBuffers[] = { screenQuadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
-		VK_VALIDATE(vkCmdBindVertexBuffers(screenCommandBuffers.getHandle(i), 0, 1, vertexBuffers, offsets));
+		vkCmdBindVertexBuffers(screenCommandBuffers.getHandle(i), 0, 1, vertexBuffers, offsets);
 
-		VK_VALIDATE(vkCmdDraw(screenCommandBuffers.getHandle(i), 6, 1, 0, 0));
+		vkCmdDraw(screenCommandBuffers.getHandle(i), 6, 1, 0, 0);
 
-		VK_VALIDATE(vkCmdEndRenderPass(screenCommandBuffers.getHandle(i)));
+		vkCmdEndRenderPass(screenCommandBuffers.getHandle(i));
 
 		setImageLayout(screenCommandBuffers.getHandle(i), pbrOutput, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
@@ -135,19 +135,19 @@ void Renderer::updateScreenCommandsForConsole()
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		VK_VALIDATE(vkCmdBeginRenderPass(screenCommandBuffersForConsole.getHandle(i), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+		vkCmdBeginRenderPass(screenCommandBuffersForConsole.getHandle(i), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		VK_VALIDATE(vkCmdBindPipeline(screenCommandBuffersForConsole.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline.getHandle()));
+		vkCmdBindPipeline(screenCommandBuffersForConsole.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipeline.getHandle());
 
-		VK_VALIDATE(vkCmdBindDescriptorSets(screenCommandBuffersForConsole.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout.getHandle(), 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr));
+		vkCmdBindDescriptorSets(screenCommandBuffersForConsole.getHandle(i), VK_PIPELINE_BIND_POINT_GRAPHICS, screenPipelineLayout.getHandle(), 0, 1, &screenDescriptorSet.getHandle(), 0, nullptr);
 
 		VkBuffer vertexBuffers[] = { screenQuadBuffer.getHandle() };
 		VkDeviceSize offsets[] = { 0 };
-		VK_VALIDATE(vkCmdBindVertexBuffers(screenCommandBuffersForConsole.getHandle(i), 0, 1, vertexBuffers, offsets));
+		vkCmdBindVertexBuffers(screenCommandBuffersForConsole.getHandle(i), 0, 1, vertexBuffers, offsets);
 
-		VK_VALIDATE(vkCmdDraw(screenCommandBuffersForConsole.getHandle(i), 6, 1, 0, 0));
+		vkCmdDraw(screenCommandBuffersForConsole.getHandle(i), 6, 1, 0, 0);
 
-		VK_VALIDATE(vkCmdEndRenderPass(screenCommandBuffersForConsole.getHandle(i)));
+		vkCmdEndRenderPass(screenCommandBuffersForConsole.getHandle(i));
 
 		queryPool.cmdTimestamp(screenCommandBuffersForConsole.getHandle(i), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, END_SCREEN);
 

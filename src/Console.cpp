@@ -333,7 +333,7 @@ void Console::renderAtStartup()
 	submissions[2].addCommands(renderer->screenCommandBuffersForConsole.getHandle(imageIndex));
 	submissions[2].addSignal(renderer->screenFinishedSemaphore);
 
-	renderer->lGraphicsQueue.submit(submissions, finishedStartupRenderFence);
+	VK_CHECK_RESULT(renderer->lGraphicsQueue.submit(submissions, finishedStartupRenderFence));
 
 	vdu::QueuePresentation presentation;
 

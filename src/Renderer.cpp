@@ -202,18 +202,18 @@ void Renderer::cleanup()
 	commandPool.destroy();
 	queryPool.destroy();
 
-	VK_VALIDATE(vkDestroySampler(device, textureSampler, nullptr));
-	VK_VALIDATE(vkDestroySampler(device, skySampler, nullptr));
-	VK_VALIDATE(vkDestroySampler(device, shadowSampler, nullptr));
+	vkDestroySampler(device, textureSampler, nullptr);
+	vkDestroySampler(device, skySampler, nullptr);
+	vkDestroySampler(device, shadowSampler, nullptr);
 
-	VK_VALIDATE(vkDestroySemaphore(device, gBufferFinishedSemaphore, 0));
-	VK_VALIDATE(vkDestroySemaphore(device, imageAvailableSemaphore, 0));
-	VK_VALIDATE(vkDestroySemaphore(device, pbrFinishedSemaphore, 0));
-	VK_VALIDATE(vkDestroySemaphore(device, screenFinishedSemaphore, 0));
-	VK_VALIDATE(vkDestroySemaphore(device, shadowFinishedSemaphore, 0));
-	VK_VALIDATE(vkDestroySemaphore(device, overlayFinishedSemaphore, 0));
-	VK_VALIDATE(vkDestroySemaphore(device, overlayCombineFinishedSemaphore, 0));
-	VK_VALIDATE(vkDestroySemaphore(device, ssaoFinishedSemaphore, 0));
+	vkDestroySemaphore(device, gBufferFinishedSemaphore, 0);
+	vkDestroySemaphore(device, imageAvailableSemaphore, 0);
+	vkDestroySemaphore(device, pbrFinishedSemaphore, 0);
+	vkDestroySemaphore(device, screenFinishedSemaphore, 0);
+	vkDestroySemaphore(device, shadowFinishedSemaphore, 0);
+	vkDestroySemaphore(device, overlayFinishedSemaphore, 0);
+	vkDestroySemaphore(device, overlayCombineFinishedSemaphore, 0);
+	vkDestroySemaphore(device, ssaoFinishedSemaphore, 0);
 
 	gBufferGroupFence.destroy();
 
@@ -299,7 +299,7 @@ void Renderer::render()
 	submissionsGroup1[3].addSignal(overlayCombineFinishedSemaphore);
 
 	gBufferGroupFence.reset();
-	lGraphicsQueue.submit(submissionsGroup1, gBufferGroupFence);
+	VK_CHECK_RESULT(lGraphicsQueue.submit(submissionsGroup1, gBufferGroupFence));
 
 	/////////////////////////////////////////
 	/*
@@ -325,7 +325,7 @@ void Renderer::render()
 	submissionsGroup2[1].addCommands(&pbrCommandBuffer);
 	submissionsGroup2[1].addSignal(pbrFinishedSemaphore);
 
-	lGraphicsQueue.submit(submissionsGroup2);
+	VK_CHECK_RESULT(lGraphicsQueue.submit(submissionsGroup2));
 
 	/////////////////////////////////////////
 	/*
@@ -348,7 +348,7 @@ void Renderer::render()
 	screenSubmission.addCommands(screenCommandBuffers.getHandle(imageIndex));
 	screenSubmission.addSignal(screenFinishedSemaphore);
 
-	lGraphicsQueue.submit(screenSubmission);
+	VK_CHECK_RESULT(lGraphicsQueue.submit(screenSubmission));
 
 	/////////////////////////////////////////
 	/*
@@ -360,7 +360,7 @@ void Renderer::render()
 	presentation.addWait(screenFinishedSemaphore);
 	presentation.addSwapchain(screenSwapchain, imageIndex);
 
-	lGraphicsQueue.present(presentation);
+	VK_CHECK_RESULT(lGraphicsQueue.present(presentation));
 
 	PROFILE_END("submitrender");
 }
@@ -614,8 +614,8 @@ void Renderer::initialiseQueryPool()
 	vdu::QueueSubmission submit;
 	submit.addCommands(&cmd);
 
-	lGraphicsQueue.submit(submit);
-	lGraphicsQueue.waitIdle();
+	VK_CHECK_RESULT(lGraphicsQueue.submit(submit));
+	VK_CHECK_RESULT(lGraphicsQueue.waitIdle());
 }
 
 void Renderer::populateDrawCmdBuffer()
@@ -681,7 +681,7 @@ void Renderer::pushModelDataToGPU(Model & model)
 		vdu::QueueSubmission submission;
 		endTransferCommands(*cmd, submission);
 		auto fence = new vdu::Fence(&logicalDevice);
-		lTransferQueue.submit(submission, *fence);
+		VK_CHECK_RESULT(lTransferQueue.submit(submission, *fence));
 
 		// Delay the fence and buffer destruction until the GPU has finished the transfer operation
 		addFenceDelayedAction(fence, std::bind([](vdu::Buffer* vertexBuffer, vdu::Buffer* indexBuffer, vdu::Fence* fence) -> void {
@@ -744,7 +744,7 @@ void Renderer::createDataBuffers()
 	vdu::QueueSubmission submission;
 	endTransferCommands(*cmd, submission);
 
-	lGraphicsQueue.submit(submission, *fe);
+	VK_CHECK_RESULT(lGraphicsQueue.submit(submission, *fe));
 
 	auto delayedBufferDestruct = std::bind([](vdu::Buffer* buffer, vdu::Fence* fe) -> void {
 		buffer->destroy();
@@ -935,7 +935,7 @@ void Renderer::createUBOs()
 */
 void Renderer::createDescriptorPool()
 {
-	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10);
+	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 20);
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1430);
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 13);
 	descriptorPool.addSetCount(20);
@@ -987,7 +987,7 @@ void Renderer::submitTransferCommands(vdu::QueueSubmission& submission, vdu::Fen
 	/*auto submitJobFunc = [&]() -> void
 	{
 		lTransferQueue.submit(submission, fence);
-		//VK_VALIDATE(vkFreeCommandBuffers(device, commandPool.getHandle(), 1, submitInfo.pCommandBuffers));
+		//vkFreeCommandBuffers(device, commandPool.getHandle(), 1, submitInfo.pCommandBuffers);
 	};
 	auto submitJob = new Job<>(submitJobFunc);
 	Engine::threading->addGPUTransferJob(submitJob);*/
@@ -1192,14 +1192,14 @@ void Renderer::setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLa
 	}
 
 	// Put barrier inside setup command buffer
-	VK_VALIDATE(vkCmdPipelineBarrier(
+	vkCmdPipelineBarrier(
 		cmdbuffer,
 		srcStageMask,
 		dstStageMask,
 		0,
 		0, nullptr,
 		0, nullptr,
-		1, &imageBarrier));
+		1, &imageBarrier);
 }
 
 void Renderer::setImageLayout(vdu::CommandBuffer * cmdbuffer, Texture & tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask)

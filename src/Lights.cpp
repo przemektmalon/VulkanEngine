@@ -96,6 +96,41 @@ void SpotLight::initTexture(int resolution)
 	VK_CHECK_RESULT(vkCreateFramebuffer(Engine::renderer->device, &framebufferInfo, nullptr, shadowFBO));
 }
 
+void SpotLight::updateDrawCommands(u32 gpuIndex)
+{
+	VkDrawIndexedIndirectCommand* cmd = (VkDrawIndexedIndirectCommand*)drawCommandsBuffer->getMemory()->map();
+
+	int i = 0;
+
+	auto tIndex = ModelInstance::toGPUTransformIndex;
+
+	for (auto& m : Engine::world.instancesToDraw) /// TODO: invisible (to the player) objects will cast shadows. We need a different culling
+	{
+		glm::fvec3 modelPos = m->transform[tIndex].getTranslation();
+		float distanceToCam = glm::length(Engine::camera.getPosition() - modelPos);
+
+		/// TODO: will models have special shadow LODs ?
+		int lodIndex = 0;
+		for (auto lim : m->model->lodLimits) /// TODO: monitor for LOD/culling/world changes, dont re-populate this when not needed
+		{
+			if (distanceToCam >= lim)
+				break;
+			++lodIndex;
+		}
+
+		auto& lodMesh = m->model->modelLODs[lodIndex];
+
+		cmd[i].firstIndex = lodMesh.firstIndex;
+		cmd[i].indexCount = lodMesh.indexDataLength;
+		cmd[i].vertexOffset = lodMesh.firstVertex;
+		cmd[i].firstInstance = (gpuIndex << 20) | (m->transformIndex);
+		cmd[i].instanceCount = 1; /// TODO: do we want/need a different class for real instanced drawing ?
+		++i;
+	}
+
+	drawCommandsBuffer->getMemory()->unmap();
+}
+
 void SpotLight::updateRadius()
 {
 	matNeedsUpdate = true;
@@ -133,6 +168,8 @@ void LightManager::init()
 
 	spotLightsGPUData.reserve(150);
 	pointLightsGPUData.reserve(150);
+
+	spotShadowDrawCommandsBuffers.reserve(150);
 }
 
 PointLight & LightManager::addPointLight(PointLight::GPUData& data)
@@ -151,6 +188,13 @@ SpotLight & LightManager::addSpotLight(SpotLight::GPUData& data)
 	auto& light = spotLights.back();
 	spotLightsGPUData.push_back(data);
 	light.gpuData = &spotLightsGPUData.back();
+
+	spotShadowDrawCommandsBuffers.emplace_back();
+	auto& drawBuffer = spotShadowDrawCommandsBuffers.back();
+	drawBuffer.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	drawBuffer.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	drawBuffer.create(&Engine::renderer->logicalDevice, sizeof(VkDrawIndexedIndirectCommand) * 1000); /// TODO: max model count, make resizable
+	light.drawCommandsBuffer = &drawBuffer;
 
 	return light;
 }
@@ -289,8 +333,6 @@ void SunLight::calcProjs()
 		orthoData[3] = maxY;
 		orthoData[4] = maxZ;
 		orthoData[5] = minZ;*/
-
-
 
 		gpuData->projView[i] = clip * glm::ortho<float>(left, right, bot, top, -farp, -nearp) * lightView;
 	}

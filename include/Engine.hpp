@@ -37,6 +37,10 @@ public:
 
 	static void updatePerformanceStatsDisplay();
 
+	static void vduVkDebugCallback(vdu::Instance::DebugReportLevel level, vdu::Instance::DebugObjectType objectType, uint64_t objectHandle, const std::string& objectName, const std::string& message);
+	static void vduVkErrorCallback(VkResult result, const std::string& message);
+	static void vduDebugCallback(vdu::LogicalDevice::VduDebugLevel level, const std::string& message);
+
 #ifdef _WIN32
 	static HINSTANCE win32InstanceHandle;
 #endif

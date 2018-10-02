@@ -197,12 +197,15 @@ public:
 	vdu::GraphicsPipeline sunShadowPipeline;
 	vdu::PipelineLayout sunShadowPipelineLayout;
 
+	// Render pass
+	vdu::RenderPass shadowRenderPass;
+
 	// Descriptors
 	vdu::DescriptorSetLayout shadowDescriptorSetLayout;
 	vdu::DescriptorSet shadowDescriptorSet;
 
-	// Render pass
-	vdu::RenderPass shadowRenderPass;
+	vdu::DescriptorSetLayout spotShadowDescriptorSetLayout;
+	vdu::DescriptorSet spotShadowDescriptorSet;
 
 	// Command buffer
 	vdu::CommandBuffer shadowCommandBuffer;

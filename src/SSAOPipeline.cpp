@@ -194,54 +194,54 @@ void Renderer::updateSSAOCommands()
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
-	VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+	vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoPipeline.getHandle()));
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoPipeline.getHandle());
 
-	VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoPipelineLayout.getHandle(), 0, 1, &ssaoDescriptorSet.getHandle(), 0, nullptr));
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoPipelineLayout.getHandle(), 0, 1, &ssaoDescriptorSet.getHandle(), 0, nullptr);
 
 	VkBuffer vertexBuffers[] = { screenQuadBuffer.getHandle() };
 	VkDeviceSize offsets[] = { 0 };
-	VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets));
+	vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets);
 
-	VK_VALIDATE(vkCmdDraw(cmd, 6, 1, 0, 0));
+	vkCmdDraw(cmd, 6, 1, 0, 0);
 
-	VK_VALIDATE(vkCmdEndRenderPass(cmd));
+	vkCmdEndRenderPass(cmd);
 
 	renderPassInfo.renderPass = ssaoBlurRenderPass.getHandle();
 	renderPassInfo.framebuffer = ssaoBlurFramebuffer.getHandle();
 
-	VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+	vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipeline.getHandle()));
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipeline.getHandle());
 
-	VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipelineLayout.getHandle(), 0, 1, &ssaoBlurDescriptorSet.getHandle(), 0, nullptr));
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipelineLayout.getHandle(), 0, 1, &ssaoBlurDescriptorSet.getHandle(), 0, nullptr);
 
 	glm::ivec2 axis = { 1,0 };
-	VK_VALIDATE(vkCmdPushConstants(cmd, ssaoBlurPipelineLayout.getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::ivec2), &axis));
+	vkCmdPushConstants(cmd, ssaoBlurPipelineLayout.getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::ivec2), &axis);
 
-	VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets));
+	vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets);
 
-	VK_VALIDATE(vkCmdDraw(cmd, 6, 1, 0, 0));
+	vkCmdDraw(cmd, 6, 1, 0, 0);
 
-	VK_VALIDATE(vkCmdEndRenderPass(cmd));
+	vkCmdEndRenderPass(cmd);
 
 	renderPassInfo.framebuffer = ssaoFinalFramebuffer.getHandle();
 
-	VK_VALIDATE(vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE));
+	vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipeline.getHandle()));
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipeline.getHandle());
 
-	VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipelineLayout.getHandle(), 0, 1, &ssaoFinalDescriptorSet.getHandle(), 0, nullptr));
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipelineLayout.getHandle(), 0, 1, &ssaoFinalDescriptorSet.getHandle(), 0, nullptr);
 
 	axis = { 0,1 };
-	VK_VALIDATE(vkCmdPushConstants(cmd, ssaoBlurPipelineLayout.getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::ivec2), &axis));
+	vkCmdPushConstants(cmd, ssaoBlurPipelineLayout.getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::ivec2), &axis);
 
-	VK_VALIDATE(vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets));
+	vkCmdBindVertexBuffers(cmd, 0, 1, vertexBuffers, offsets);
 
-	VK_VALIDATE(vkCmdDraw(cmd, 6, 1, 0, 0));
+	vkCmdDraw(cmd, 6, 1, 0, 0);
 
-	VK_VALIDATE(vkCmdEndRenderPass(cmd));
+	vkCmdEndRenderPass(cmd);
 
 	queryPool.cmdTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, END_SSAO);
 

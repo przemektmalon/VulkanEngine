@@ -181,10 +181,10 @@ void Renderer::updatePBRCommands()
 
 	queryPool.cmdTimestamp(pbrCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, BEGIN_PBR);
 
-	VK_VALIDATE(vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipeline.getHandle()));
-	VK_VALIDATE(vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipelineLayout.getHandle(), 0, 1, &pbrDescriptorSet.getHandle(), 0, 0));
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipeline.getHandle());
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pbrPipelineLayout.getHandle(), 0, 1, &pbrDescriptorSet.getHandle(), 0, 0);
 
-	VK_VALIDATE(vkCmdDispatch(cmd, renderResolution.width / 16, renderResolution.height / 16, 1));
+	vkCmdDispatch(cmd, renderResolution.width / 16, renderResolution.height / 16, 1);
 
 	setImageLayout(cmd, gBufferColourAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 	setImageLayout(cmd, gBufferNormalAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
