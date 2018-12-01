@@ -34,4 +34,5 @@ Some features that still need to be implemented include:
 * FreeType
 * rapidxml
 * GLM
+* stb image (load and write)
 * libshaderc (as distributed with the LunarG Vulkan SDK)
