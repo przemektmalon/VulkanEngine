@@ -99,6 +99,8 @@ static void initialiseCommonJobs()
 		renderer->lGraphicsQueue.waitIdle();
 		PROFILE_END("qwaitidle");
 
+		renderer->updateSkyboxDescriptor();
+
 		PROFILE_START("cullingdrawbuffer");
 
 		renderer->lightManager.updateSunLight();

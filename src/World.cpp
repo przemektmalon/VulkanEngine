@@ -109,6 +109,36 @@ ModelInstance * World::getModelInstance(std::string instanceName)
 		return find->second;
 }
 
+void World::setSkybox(const std::string & skyboxName)
+{
+	skybox = Engine::assets.getTexture(skyboxName);
+
+	TextureCreateInfo tci;
+	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+	tci.format = VK_FORMAT_R8G8B8A8_UNORM;
+	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
+	tci.name = "skybox";
+	tci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	tci.layers = 6;
+	tci.genMipMaps = false;
+
+	auto texToRAMFunc = std::bind([](Texture* t, TextureCreateInfo tci) -> void {
+		t->loadToRAM(&tci);
+	}, skybox, tci);
+
+	auto texToGPUFunc = std::bind([](Texture* t) -> void {
+		t->loadToGPU();
+		t->getAvailability() |= Asset::AWAITING_DESCRIPTOR_UPDATE;
+	}, skybox);
+
+	skybox->getAvailability() |= Asset::LOADING_TO_RAM;
+	skybox->getAvailability() |= Asset::LOADING_TO_GPU;
+
+	auto job = new Job<decltype(texToRAMFunc)>(texToRAMFunc, JobBase::CPUTransfer);
+	job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, JobBase::GPUTransfer));
+	Engine::threading->addCPUTransferJob(job);
+}
+
 void World::frustumCulling(Camera * cam)
 {
 	/// TODO: actual culling, for now we draw everything thats available on the GPU

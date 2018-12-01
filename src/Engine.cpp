@@ -44,7 +44,7 @@ void Engine::start()
 	rand.seed(0);
 
 	/// TODO: A more convenient utility for this \/ \/ \/
-	/// This code joins separate albedo/spec and normal/rough images into a single image
+	/// This code joins separate albedo(3 byte)/spec(1 byte) and normal(3 byte)/rough(1 byte) images into single(4 byte) images
 	/* std::array<std::string, 7> tn = { "bamboo", "copper", "dirt", "greasymetal", "mahog", "marble", "rustediron" };
 
 	std::string td = "res/textures/";
@@ -59,7 +59,7 @@ void Engine::start()
 	/// TODO: temporary, we need a configurations manager
 	maxDepth = 1000000.f;
 
-	/// TODO: cameras should be objects in the world
+	/// TODO: cameras should be objects in the world, need an entity component system
 	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(120.f), 1.0, maxDepth);
 	camera.setPosition(glm::fvec3(50, 50, 50));
 	camera.update();
@@ -108,7 +108,7 @@ void Engine::start()
 
 	/*
 		Initialise scripting environment and initialise configs from script 'config.chai'
-		For example camera movement is done within the script right now
+		Camera movement is done within a script right now
 	*/
 	scriptEnv.initChai();
 	scriptEnv.chai.add_global(chaiscript::var(std::ref(world)), "world");
@@ -264,6 +264,8 @@ void Engine::start()
 	threading->addCPUJob(new Job<>(cleanupJobsJobFunc));
 
 	threading->threadJobsProcessed[std::this_thread::get_id()] = 0;
+
+	world.setSkybox("skybox");
 
 	engineLoop();
 }

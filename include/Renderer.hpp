@@ -380,6 +380,7 @@ public:
 	void createDataBuffers();
 
 	void updateMaterialDescriptors();
+	void updateSkyboxDescriptor();
 
 	void addFenceDelayedAction(vdu::Fence* fe, std::function<void(void)> action);
 	void executeFenceDelayedActions();

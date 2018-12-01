@@ -114,7 +114,7 @@ void Renderer::initialise()
 		int s = 300;
 		int sh = s / 2;
 		//pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 50, s64(r() % s) - sh));
-		pl.setPosition(glm::fvec3(10,100,0));
+		pl.setPosition(glm::fvec3(0,100,0));
 		pl.setDirection(glm::normalize(-pl.getPosition()));
 		pl.setColour(glm::fvec3(20.5, 10.5, 10.5));
 		switch (i)
@@ -806,6 +806,27 @@ void Renderer::updateMaterialDescriptors()
 	}
 
 	Engine::threading->addMaterialMutex.unlock();
+}
+
+void Renderer::updateSkyboxDescriptor()
+{
+	if (Engine::world.skybox->checkAvailability(Asset::AWAITING_DESCRIPTOR_UPDATE)) {
+
+		auto updater = pbrDescriptorSet.makeUpdater();
+		auto skyboxUpdater = updater->addImageUpdate("skybox");
+		*skyboxUpdater = { 
+			skySampler, 
+			Engine::assets.getTexture(Engine::world.skybox->getName())->getView(), 
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL 
+		};
+
+		pbrDescriptorSet.submitUpdater(updater);
+		pbrDescriptorSet.destroyUpdater(updater);
+
+		Engine::world.skybox->getAvailability() &= ~Asset::LOADING_TO_GPU;
+
+		updatePBRCommands();
+	}
 }
 
 /*

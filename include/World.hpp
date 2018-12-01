@@ -11,6 +11,8 @@ public:
 	void removeModelInstance(std::string instanceName);
 	ModelInstance* getModelInstance(std::string instanceName);
 
+	void setSkybox(const std::string& skyboxName);
+
 	void frustumCulling(Camera* cam);
 
 	std::unordered_map<std::string, ModelInstance*> modelNames; /// TODO: better hashing for big worlds
@@ -20,6 +22,8 @@ public:
 
 	// Culled instances to draw (from allInstances)
 	std::vector<ModelInstance*> instancesToDraw;
+
+	Texture* skybox;
 
 	// Instances waiting to be added. Might be waiting for load from DISK. Add to allInstances when ready
 	//std::vector<ModelInstance> instancesToAdd;
