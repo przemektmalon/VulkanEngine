@@ -21,7 +21,7 @@ Once the core rendering and game specific features are implemented I plan to cre
 
 Some features that still need to be implemented include:
 * Entity-Component-System
-* Globabl illumination
+* Global illumination
 * Skeletal animation
 * Particle system
 * Custom memory allocators
