@@ -1,6 +1,5 @@
 #pragma once
 #include "PCH.hpp"
-#include "VulkanWrappers.hpp"
 #include "Clock.hpp"
 #include "Time.hpp"
 #include "Camera.hpp"
@@ -10,6 +9,7 @@
 #include "Console.hpp"
 #include "Scripting.hpp"
 #include "EngineConfig.hpp"
+#include "vdu/Instance.hpp"
 
 class Threading;
 class OLayer;

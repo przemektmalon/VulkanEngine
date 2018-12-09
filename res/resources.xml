@@ -181,4 +181,11 @@
 		<physics></physics>
 	</model>
 
+	<model>
+		<path>_wall.obj</path>
+		<name>wall</name>
+		<material>marble</material>
+		<physics></physics>
+	</model>
+
 </resources>

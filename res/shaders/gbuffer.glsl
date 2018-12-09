@@ -59,6 +59,7 @@ layout(location = 4) in vec3 fragPos;
 layout(location = 0) out vec4 colour;
 layout(location = 1) out vec2 normal;
 layout(location = 2) out vec4 pbr;
+//layout(location = 3) out float depthLinear;
 
 
 vec2 encodeNormal(vec3 n)
@@ -109,7 +110,9 @@ void main()
 	const float C = 1.0;
 	const float far = 1000000.0;
 	const float offset = 1.0;
-	gl_FragDepth = (log(C * fragPos.z + offset) / log(C * far + offset));
+	//gl_FragDepth = (log(C * fragPos.z + offset) / log(C * far + offset));
+	gl_FragDepth = (log2(fragPos.z + offset) / log2(far + offset));
+	//depthLinear = fragPos.z;
 }
 
 #endif

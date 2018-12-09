@@ -128,7 +128,6 @@ void main() {
     float totalWeight = BASE;
     sum *= totalWeight;
 
-   
     for (int r = -R; r <= R; ++r) {
         // We already handled the zero case above.  This loop should be unrolled and the static branch optimized out,
         // so the IF statement has no runtime cost

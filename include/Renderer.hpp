@@ -81,14 +81,14 @@ public:
 	vdu::QueryPool queryPool;
 
 	// Semaphores
-	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore gBufferFinishedSemaphore;
-	VkSemaphore screenFinishedSemaphore;
-	VkSemaphore pbrFinishedSemaphore;
-	VkSemaphore shadowFinishedSemaphore;
-	VkSemaphore overlayFinishedSemaphore;
-	VkSemaphore overlayCombineFinishedSemaphore;
-	VkSemaphore ssaoFinishedSemaphore;
+	vdu::Semaphore imageAvailableSemaphore;
+	vdu::Semaphore gBufferFinishedSemaphore;
+	vdu::Semaphore screenFinishedSemaphore;
+	vdu::Semaphore pbrFinishedSemaphore;
+	vdu::Semaphore shadowFinishedSemaphore;
+	vdu::Semaphore overlayFinishedSemaphore;
+	vdu::Semaphore overlayCombineFinishedSemaphore;
+	vdu::Semaphore ssaoFinishedSemaphore;
 
 	// Fences
 	vdu::Fence gBufferGroupFence;
@@ -159,6 +159,7 @@ public:
 	Texture gBufferNormalAttachment;
 	Texture gBufferPBRAttachment;
 	Texture gBufferDepthAttachment;
+	Texture gBufferDepthLinearAttachment;
 
 	// Render pass
 	vdu::RenderPass gBufferRenderPass;

@@ -1,6 +1,8 @@
 # VulkanEngine
 Rendering &amp; Game Engine Using Modern Vulkan API
 
+![Engine Image](https://github.com/przemektmalon/VulkanEngine/blob/master/engineimg.png)
+
 # Major features
 * Deferred HDR renderer using half-z tiled light culling
 * PBR lighting model

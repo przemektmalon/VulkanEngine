@@ -1,36 +1,47 @@
+
+
 def startup()
 {
-	var materials = ["bamboo", "greasymetal", "marble", "dirt", "mahog", "copper"];
-
-	// Boxes
-
 	var t = Transform();
+	var defaultScale = fvec3(200,200,200);
 
-	/*
 	// PBR Sphere
 	{
 		var model = world.addModel("pbrsphere", "pbrsphere");
 
 		t.setTranslation(fvec3(4,0,0));
-		t.setScale(fvec3(10,10,10));
+		t.setScale(fvec3(100,100,100));
 		t.updateMatrix();
 
 		model.setTransform(t);
 		model.setMaterial(assets.getMaterial("marble"));
 		model.makePhysical();
-	}*/
+	}
+
+	t.setScale(defaultScale);
 
 	// Ground Plane
 	{
 		var model = world.addModel("ground", "ground");
 
 		t.setTranslation(fvec3(0, 0, 0));
-		t.setScale(fvec3(10,10,10));
+		t.updateMatrix();
+
+		model.setTransform(t);
+		model.setMaterial(assets.getMaterial("dirt"));
+		model.makePhysical();
+	}
+
+	// Wall
+	{
+		var model = world.addModel("wall", "wall");
+
+		t.setTranslation(fvec3(0, 0, 0));
+		t.setScale(fvec3(600,600,600));
 		t.updateMatrix();
 
 		model.setTransform(t);
 		model.setMaterial(assets.getMaterial("marble"));
-		model.makePhysical();
 	}
 
 	// 3D Text
@@ -52,19 +63,42 @@ def addBoxes(numBoxes)
 {
 	var materials = ["bamboo", "greasymetal", "marble", "dirt", "mahog", "copper"];
 	var t = Transform();
+	var defaultScale = fvec3(200,200,200);
+	t.setScale(defaultScale);
 
 	for (var i = 0; i < numBoxes; ++i)
 	{
 		var instanceName = "box" + to_string(i);
-		var model = world.addModel("box", instanceName);
+		var model = world.addModel("hollowbox", instanceName);
 
 		
-		t.setTranslation(fvec3(30,i*30 + 30,10));
-		t.setScale(fvec3(10,10,10));
+		t.setTranslation(fvec3(30,i*1000 + 1000,10));
 		t.updateMatrix();
 
 		model.setTransform(t);
-		model.setMaterial(assets.getMaterial(materials[i%6]));
+		model.setMaterial(assets.getMaterial(materials[i%5]));
+		model.makePhysical();
+	}	
+}
+
+def addSpheres(num)
+{
+	var materials = ["bamboo", "greasymetal", "marble", "dirt", "mahog"];
+	var t = Transform();
+	var defaultScale = fvec3(150,150,150);
+	t.setScale(defaultScale);
+
+	for (var i = 0; i < num; ++i)
+	{
+		var instanceName = "sphere" + to_string(i);
+		var model = world.addModel("pbrsphere", instanceName);
+
+		
+		t.setTranslation(fvec3(-30,i*300 + 30,10));
+		t.updateMatrix();
+
+		model.setTransform(t);
+		model.setMaterial(assets.getMaterial(materials[i%5]));
 		model.makePhysical();
 	}	
 }

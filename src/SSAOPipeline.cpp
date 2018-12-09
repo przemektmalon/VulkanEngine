@@ -82,7 +82,7 @@ void Renderer::createSSAOPipeline()
 	ssaoPipeline.create(&logicalDevice);
 
 	ssaoBlurPipelineLayout.addDescriptorSetLayout(&ssaoBlurDescriptorSetLayout);
-	ssaoBlurPipelineLayout.addPushConstantRange({ VK_SHADER_STAGE_FRAGMENT_BIT,0,sizeof(glm::ivec2) });
+	ssaoBlurPipelineLayout.addPushConstantRange( { VK_SHADER_STAGE_FRAGMENT_BIT,0,sizeof(glm::ivec2) });
 	ssaoBlurPipelineLayout.create(&logicalDevice);
 
 	ssaoBlurPipeline.addViewport({ 0.f, 0.f, (float)renderResolution.width, (float)renderResolution.height, 0.f, 1.f }, { 0, 0, renderResolution.width, renderResolution.height });
@@ -140,9 +140,9 @@ void Renderer::updateSSAODescriptorSets()
 	cameraUpdate->range = VK_WHOLE_SIZE;
 
 	auto depthUpdate = updater->addImageUpdate("depth");
-	depthUpdate->imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+	depthUpdate->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	depthUpdate->imageView = gBufferDepthAttachment.getView();
-	depthUpdate->sampler = shadowSampler;
+	depthUpdate->sampler = textureSampler;
 
 	ssaoDescriptorSet.submitUpdater(updater);
 	ssaoDescriptorSet.destroyUpdater(updater);
@@ -242,6 +242,8 @@ void Renderer::updateSSAOCommands()
 	vkCmdDraw(cmd, 6, 1, 0, 0);
 
 	vkCmdEndRenderPass(cmd);
+
+	//gBufferDepthLinearAttachment.cmdTransitionLayout(ssaoCommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
 	queryPool.cmdTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, END_SSAO);
 

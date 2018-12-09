@@ -60,7 +60,7 @@ void Engine::start()
 	maxDepth = 1000000.f;
 
 	/// TODO: cameras should be objects in the world, need an entity component system
-	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(120.f), 1.0, maxDepth);
+	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(90.f), 1.0, maxDepth);
 	camera.setPosition(glm::fvec3(50, 50, 50));
 	camera.update();
 
@@ -201,7 +201,7 @@ void Engine::start()
 
 	PROFILE_END("init");
 
-	console->postMessage("Initialisation time : " + std::to_string(PROFILE_TO_S(PROFILE_GET_RUNNING_AVERAGE("init"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
+	//console->postMessage("Initialisation time : " + std::to_string(PROFILE_TO_S(PROFILE_GET_RUNNING_AVERAGE("init"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
 
 	/*
 		Creating UI layer for displaying profiling stats
@@ -553,6 +553,8 @@ void Engine::updatePerformanceStatsDisplay()
 		//"FPS            : " + std::to_string((int)(double(frames) / timeSinceLastStatsUpdate))
 	);
 
+	stats->setString("");
+
 	auto mutexStats = (Text*)uiLayer->getElement("mutexstats");
 
 	mutexStats->setString(
@@ -563,6 +565,8 @@ void Engine::updatePerformanceStatsDisplay()
 		"Phys->GPU      : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("phystogpumutex"))) + "ms\n" +
 		"Transform      : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("transformmutex"))) + "ms\n"
 	);
+
+	mutexStats->setString("");
 
 	auto threadStats = (Text*)uiLayer->getElement("threadstats");
 
@@ -588,6 +592,7 @@ void Engine::updatePerformanceStatsDisplay()
 	}
 
 	threadStats->setString(threadStatsString);
+	threadStats->setString("");
 }
 
 void Engine::vduVkDebugCallback(vdu::Instance::DebugReportLevel level, vdu::Instance::DebugObjectType objectType, uint64_t objectHandle, const std::string & objectName, const std::string & message)
@@ -638,8 +643,8 @@ void Engine::createWindow()
 #ifdef __linux__
 	wci.connection = connection;
 #endif
-	wci.width = 1280;
-	wci.height = 720;
+	wci.width = 1919;
+	wci.height = 1079;
 	wci.posX = 0;
 	wci.posY = 0;
 	wci.title = "Vulkan Engine";
@@ -679,8 +684,7 @@ void Engine::createVulkanInstance()
 */
 void Engine::queryVulkanPhysicalDeviceDetails()
 {
-	VK_CHECK_RESULT(vdu::enumeratePhysicalDevices(instance, allPhysicalDevices));
-	physicalDevice = &allPhysicalDevices.front();
+	physicalDevice = &instance.enumratePhysicalDevices().front();
 	VK_CHECK_RESULT(physicalDevice->querySurfaceCapabilities(window->vkSurface));
 }
 

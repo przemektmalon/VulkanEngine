@@ -29,7 +29,7 @@ public:
 
 		dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
 
-		dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
+		dynamicsWorld->setGravity(btVector3(0, -40.f, 0));
 	}
 
 	void addRigidBody(PhysicsObject* body);

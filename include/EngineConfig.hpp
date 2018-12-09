@@ -58,6 +58,7 @@ struct EngineConfig
 					return;
 				}
 				radius = set;
+				intensityInternal = intensity / std::pow(radius, 6);
 				changedGroups.insert(SSAO_Group);
 			}
 			float getRadius() const { return radius; }
@@ -78,9 +79,12 @@ struct EngineConfig
 					return;
 				}
 				intensity = set;
+				intensityInternal = intensity / std::pow(radius, 6);
 				changedGroups.insert(SSAO_Group);
 			}
 			float getIntensity() const { return intensity; }
+
+			float getIntensityInternal() const { return intensityInternal; }
 
 		private:
 			int samples;
@@ -89,6 +93,7 @@ struct EngineConfig
 			float radius;
 			float bias;
 			float intensity;
+			float intensityInternal;
 
 			std::set<Group>& changedGroups;
 			std::set<Special>& changedSpecials;

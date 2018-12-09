@@ -78,7 +78,7 @@ layout (binding = 2) uniform sampler2D depthBuffer;
 
 /** Used for preventing AO computation on the sky (at infinite depth) and defining the CS Z to bilateral depth key scaling. 
     This need not match the real far plane*/
-#define FAR 1000000.f // projection matrix's far plane
+#define FAR 1000000.0 // projection matrix's far plane
 #define FAR_PLANE_Z (-1000000.0)
 
 /** Reconstruct camera-space P.xyz from screen-space S = (x, y) in
@@ -124,12 +124,19 @@ vec2 tapLocation(int sampleNumber, float spinAngle, out float ssR){
 float CSZToKey(float z) {
     return clamp(z * (1.0 / FAR_PLANE_Z), 0.0, 1.0);
 }
- 
+
 /** Read the camera-space position of the point at screen-space pixel ssP */
 vec3 getPosition(ivec2 ssP) {
     vec3 P;
-    P.z = LinearizeDepth(texelFetch(depthBuffer, ssP, 0).r);
-    //float depth = -(exp2(P.z * log2(FAR + 1.0)) - 1.f);
+
+    const float far = 1000000.0;
+    const float offset = 1.0;
+    float depth = texelFetch(depthBuffer, ssP, 0).r;
+    P.z = exp2(depth * log2(far + offset));
+
+    //P.z = LinearizeDepth(texelFetch(depthBuffer, ssP, 0).r);
+    //P.z = -texelFetch(depthBuffer, ssP, 0).r;
+    //float depth = (exp2(P.z * log2(FAR + 1.0)) - 1.f);
     //float depth = P.z;
     P = reconstructCSPosition(vec2(ssP) + vec2(0.5), P.z);
 
@@ -144,9 +151,16 @@ vec3 getOffsetPosition(ivec2 ssC, vec2 unitOffset, float ssR) {
     
     vec3 P;
 
-    ivec2 mipP = clamp(ssP, ivec2(0), textureSize(depthBuffer, 0) - ivec2(1));
-    P.z = LinearizeDepth(texelFetch(depthBuffer, mipP, 0).r);
-    
+    const float far = 1000000.0;
+    const float offset = 1.0;
+    float depth = texelFetch(depthBuffer, ssP, 0).r;
+    P.z = exp2(depth * log2(far + offset));
+
+    //ivec2 mipP = clamp(ssP, ivec2(0), textureSize(depthBuffer, 0) - ivec2(1));
+    //P.z = LinearizeDepth(texelFetch(depthBuffer, mipP, 0).r);
+    //P.z = -texelFetch(depthBuffer, mipP, 0).r;
+    //float depth = (exp2(P.z * log2(FAR + 1.0)) - 1.f);
+
     P = reconstructCSPosition(vec2(ssP) + vec2(0.5), P.z);
 
     return P;

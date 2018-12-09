@@ -110,7 +110,8 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 		auto cmd = new vdu::CommandBuffer;
 		r->beginTransferCommands(*cmd);
-		r->setImageLayout(cmd->getHandle(), *this, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+		//r->setImageLayout(cmd->getHandle(), *this, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+		cmdTransitionLayout(*cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 		vdu::Buffer* stagingBuffers = new vdu::Buffer[m_layers];
 
@@ -129,7 +130,8 @@ void Texture::loadToGPU(void * pCreateStruct)
 		}
 		else
 		{
-			r->setImageLayout(cmd->getHandle(), *this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			cmdTransitionLayout(*cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			//r->setImageLayout(cmd->getHandle(), *this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
 
 		vdu::QueueSubmission submission;
@@ -186,7 +188,8 @@ void Texture::loadToGPU(void * pCreateStruct)
 			memcpy(stagingBuffer->getMemory()->map(), ci->pData, (size_t)size);
 			stagingBuffer->getMemory()->unmap();
 			m_usageFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-			r->setImageLayout(cmd, *this, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+			cmdTransitionLayout(*cmd, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+			//r->setImageLayout(cmd, *this, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 			stagingBuffer->cmdCopyTo(cmd, this);
 
 			if (isMipped)
@@ -195,7 +198,8 @@ void Texture::loadToGPU(void * pCreateStruct)
 			}
 			else
 			{
-				r->setImageLayout(cmd, *this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+				cmdTransitionLayout(*cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+				//r->setImageLayout(cmd, *this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 			}
 
 			vdu::QueueSubmission submission;
@@ -245,7 +249,8 @@ void Texture::loadToGPU(void * pCreateStruct)
 				break;
 			}
 
-			r->setImageLayout(cmd, *this, VK_IMAGE_LAYOUT_UNDEFINED, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStage);
+			cmdTransitionLayout(*cmd, VK_IMAGE_LAYOUT_UNDEFINED, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStage);
+			//r->setImageLayout(cmd, *this, VK_IMAGE_LAYOUT_UNDEFINED, m_layout, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStage);
 
 			vdu::QueueSubmission submission;
 			r->endTransferCommands(*cmd, submission);

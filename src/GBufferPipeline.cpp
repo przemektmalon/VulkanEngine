@@ -25,6 +25,13 @@ void Renderer::createGBufferAttachments()
 	tci.usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	gBufferDepthAttachment.loadToGPU(&tci);
+	
+	/*tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+	tci.format = VK_FORMAT_R32_SFLOAT;
+	tci.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	tci.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+
+	gBufferDepthLinearAttachment.loadToGPU(&tci);*/
 }
 
 void Renderer::createGBufferRenderPass()
@@ -43,6 +50,11 @@ void Renderer::createGBufferRenderPass()
 	pbrInfo->setInitialLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	pbrInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	pbrInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+	/*auto depthLinearInfo = gBufferRenderPass.addColourAttachment(&gBufferDepthLinearAttachment, "depthLinear");
+	depthLinearInfo->setInitialLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	depthLinearInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	depthLinearInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);*/
 
 	auto depthInfo = gBufferRenderPass.setDepthAttachment(&gBufferDepthAttachment);
 	depthInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
@@ -83,6 +95,7 @@ void Renderer::createGBufferFramebuffers()
 	gBufferFramebuffer.addAttachment(&gBufferColourAttachment, "gBuffer");
 	gBufferFramebuffer.addAttachment(&gBufferNormalAttachment, "normal");
 	gBufferFramebuffer.addAttachment(&gBufferPBRAttachment, "pbr");
+	//gBufferFramebuffer.addAttachment(&gBufferDepthLinearAttachment, "depthLinear");
 	gBufferFramebuffer.addAttachment(&gBufferDepthAttachment, "depth");
 
 	gBufferFramebuffer.create(&logicalDevice, &gBufferRenderPass);
@@ -174,6 +187,7 @@ void Renderer::updateGBufferCommands()
 	clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
 	clearValues[1].color = { 0.0f, 0.0f, 0.0f, 0.0f };
 	clearValues[2].color = { 0.0f, 0.0f, 0.0f, 0.0f };
+	//clearValues[3].color = { 0.0f, 0.0f, 0.0f, 0.0f };
 	clearValues[3].depthStencil = { 1.0f, 0 };
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
@@ -203,6 +217,7 @@ void Renderer::destroyGBufferAttachments()
 	gBufferColourAttachment.destroy();
 	gBufferNormalAttachment.destroy();
 	gBufferPBRAttachment.destroy();
+	gBufferDepthLinearAttachment.destroy();
 	gBufferDepthAttachment.destroy();
 }
 

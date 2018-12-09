@@ -43,7 +43,7 @@ ModelInstance* World::addModelInstance(std::string modelName, std::string instan
 		insertPosition = &allInstances.front().front();
 	}
 
-	auto m = Engine::assets.getModel(modelName);
+	auto m = Engine::assets.getModel(modelName); /// TODO: error if model doesnt exist !
 	insertPosition->name = instanceName;
 	insertPosition->setModel(m);
 	insertPosition->transformIndex = transformIndex;

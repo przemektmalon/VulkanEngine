@@ -2,12 +2,13 @@ def initConfig()
 {
 	// Render configs
 
-	config.render.ssao.setRadius(10.0);
+	config.render.ssao.setRadius(200.0);
 	config.render.ssao.setSamples(22);
-	config.render.ssao.setProjScale(500.0);
+	config.render.ssao.setProjScale(100.0);
 	config.render.ssao.setSpiralTurns(30);
 	config.render.ssao.setBias(0.01);
-	config.render.ssao.setIntensity(0.00001);
+	//config.render.ssao.setIntensity(0.000000000001);
+	config.render.ssao.setIntensity(100.0);
 }
 
 initConfig();

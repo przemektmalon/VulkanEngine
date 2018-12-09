@@ -111,13 +111,13 @@ void Renderer::initialise()
 	{
 		auto& pl = lightManager.addSpotLight();
 		auto& r = Engine::rand;
-		int s = 300;
+		int s = 15000;
 		int sh = s / 2;
-		//pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 50, s64(r() % s) - sh));
-		pl.setPosition(glm::fvec3(0,100,0));
+		//pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 5000, s64(r() % s) - sh));
+		pl.setPosition(glm::fvec3(10000,4000,-10000));
 		pl.setDirection(glm::normalize(-pl.getPosition()));
-		pl.setColour(glm::fvec3(20.5, 10.5, 10.5));
-		switch (i)
+		pl.setColour(glm::fvec3(2.55, 2.42, 2.26));
+		/*switch (i)
 		{
 		case 0:
 			pl.setColour(glm::fvec3(2.5, 1.5, 0.5));
@@ -128,13 +128,27 @@ void Renderer::initialise()
 		case 2:
 			pl.setColour(glm::fvec3(0.5, 1.5, 2.5));
 			break;
-		}
-		pl.setLinear(0.0001);
-		pl.setQuadratic(0.0001);
-		pl.setFadeStart(10000);
+		}*/
+		pl.setLinear(0.000000000001);
+		pl.setQuadratic(0.000000000001);
+		pl.setFadeStart(1000000000000);
 		pl.setFadeLength(500);
-		pl.setInnerSpread(45);
-		pl.setOuterSpread(45.01);
+		pl.setInnerSpread(170);
+		pl.setOuterSpread(170.01);
+	}
+
+	for (int i = 0; i < 3; ++i)
+	{
+		auto& pl = lightManager.addPointLight();
+		auto& r = Engine::rand;
+		int s = 15000;
+		int sh = s / 2;
+		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 5000, s64(r() % s) - sh));
+		pl.setColour(glm::fvec3(1,1,1));
+		pl.setLinear(0.00000001);
+		pl.setQuadratic(0.00000001);
+		pl.setFadeStart(100000000);
+		pl.setFadeLength(500);
 	}
 
 	lightManager.updateLightCounts();
@@ -149,6 +163,7 @@ void Renderer::initialise()
 	lightManager.updateSunLight();
 
 	initialiseQueryPool();
+
 }
 
 /*
@@ -206,14 +221,14 @@ void Renderer::cleanup()
 	vkDestroySampler(device, skySampler, nullptr);
 	vkDestroySampler(device, shadowSampler, nullptr);
 
-	vkDestroySemaphore(device, gBufferFinishedSemaphore, 0);
-	vkDestroySemaphore(device, imageAvailableSemaphore, 0);
-	vkDestroySemaphore(device, pbrFinishedSemaphore, 0);
-	vkDestroySemaphore(device, screenFinishedSemaphore, 0);
-	vkDestroySemaphore(device, shadowFinishedSemaphore, 0);
-	vkDestroySemaphore(device, overlayFinishedSemaphore, 0);
-	vkDestroySemaphore(device, overlayCombineFinishedSemaphore, 0);
-	vkDestroySemaphore(device, ssaoFinishedSemaphore, 0);
+	gBufferFinishedSemaphore.destroy();
+	imageAvailableSemaphore.destroy();
+	pbrFinishedSemaphore.destroy();
+	screenFinishedSemaphore.destroy();
+	shadowFinishedSemaphore.destroy();
+	overlayFinishedSemaphore.destroy();
+	overlayCombineFinishedSemaphore.destroy();
+	ssaoFinishedSemaphore.destroy();
 
 	gBufferGroupFence.destroy();
 
@@ -842,8 +857,11 @@ void Renderer::createLogicalDevice()
 	pdf.shaderStorageImageExtendedFormats = VK_TRUE;
 	pdf.geometryShader = VK_TRUE;
 
-	lGraphicsQueue.prepare(0, 1.f);
-	lTransferQueue.prepare(0, 1.f);
+	auto& dev = Engine::physicalDevice;
+	auto qFams = dev->getQueueFamilies();
+
+	lGraphicsQueue = qFams[0].createQueue(1.f);
+	lTransferQueue = qFams[0].createQueue(1.f);
 
 	logicalDevice.addExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	logicalDevice.addLayer("VK_LAYER_LUNARG_standard_validation");
@@ -914,13 +932,15 @@ void Renderer::createTextureSampler()
 
 	VK_CHECK_RESULT(vkCreateSampler(device, &samplerInfo, nullptr, &skySampler));
 
-	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	
+	//samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	samplerInfo.addressModeV = samplerInfo.addressModeU;
 	samplerInfo.addressModeW = samplerInfo.addressModeU;
 	samplerInfo.anisotropyEnable = VK_FALSE;
 	samplerInfo.maxAnisotropy = 0;
-	//samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	//samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
@@ -979,14 +999,14 @@ void Renderer::createSynchroObjects()
 	VkSemaphoreCreateInfo semaphoreInfo = {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore));
-	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &gBufferFinishedSemaphore));
-	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &pbrFinishedSemaphore));
-	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &screenFinishedSemaphore));
-	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &shadowFinishedSemaphore));
-	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayFinishedSemaphore));
-	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &overlayCombineFinishedSemaphore));
-	VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &ssaoFinishedSemaphore));
+	gBufferFinishedSemaphore.create(&logicalDevice);
+	imageAvailableSemaphore.create(&logicalDevice);
+	pbrFinishedSemaphore.create(&logicalDevice);
+	screenFinishedSemaphore.create(&logicalDevice);
+	shadowFinishedSemaphore.create(&logicalDevice);
+	overlayFinishedSemaphore.create(&logicalDevice);
+	overlayCombineFinishedSemaphore.create(&logicalDevice);
+	ssaoFinishedSemaphore.create(&logicalDevice);
 
 	gBufferGroupFence.create(&logicalDevice, true);
 }
@@ -1071,7 +1091,7 @@ void Renderer::updateSSAOConfigBuffer()
 	ssaoConfigData.projScale = ssao.getProjScale();
 	ssaoConfigData.radius = ssao.getRadius();
 	ssaoConfigData.bias = ssao.getBias();
-	ssaoConfigData.intensity = ssao.getIntensity();
+	ssaoConfigData.intensity = ssao.getIntensityInternal();
 
 	auto& p = Engine::camera.getProj();
 	auto& r = renderResolution;

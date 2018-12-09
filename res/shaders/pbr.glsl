@@ -305,7 +305,7 @@ void main()
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
 
-		if(inFrustum)
+		//if(inFrustum)
 		{
 			uint nextTileLightIndex = atomicAdd(currentTilePointLightIndex,1);
 			tilePointLightIndices[nextTileLightIndex] = lightIndex;
@@ -327,7 +327,7 @@ void main()
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
 
-		if (inFrustum)
+		//if (inFrustum)
 		{
 			uint nextTileLightIndex = atomicAdd(currentTileSpotLightIndex,1);
 			tileSpotLightIndices[nextTileLightIndex] = lightIndex;
@@ -338,7 +338,8 @@ void main()
 	barrier();
 
 	vec3 litPixel = vec3(0.0);
-	float ambient = 0.12;
+	//float ambient = 0.01;
+	vec3 ambient = vec3(0.255, 0.242, 0.226);
 	vec4 albedoSpec = vec4(0.0);
 	float ssaoVal = 1.0;
 
@@ -399,7 +400,7 @@ void main()
 
 			float currentDepth = length(fragToLight);
 			    
-		    float bias = max(2.1f * (1.0 - dot(normal, lightDir)), 2.1f);
+		    float bias = max(100.f * (1.0 - dot(normal, lightDir)), 100.f);
 
 		    float shadow = 0.f;
 
@@ -438,6 +439,8 @@ void main()
 			shadow /= (samples * samples * samples);
 
 			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
+			//litPixel = vec3(shadow);
+			//litPixel = ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
 
 		for(uint j = 0; j < currentTileSpotLightIndex; ++j)

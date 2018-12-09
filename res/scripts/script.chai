@@ -11,10 +11,8 @@ def updateMovement()
 	auto& camera = getCamera();
 	//auto mv = fvec4(0, 0, 100*getFrameTime(), 1) * camera.getMatYaw();
 	auto dt = getFrameTime();
-	auto camSpeed = 200.0;
+	auto camSpeed = 5000.0;
 	auto mv = fvec4(0, 0, camSpeed*dt, 1) * camera.getMatYaw();
-
-	
 
 	auto m = fvec3(mv);
 

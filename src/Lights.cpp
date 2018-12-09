@@ -4,6 +4,8 @@
 #include "Renderer.hpp"
 #include "Profiler.hpp"
 
+constexpr float radiusConstant = 10000.0;
+
 void PointLight::initTexture(int resolution)
 {
 	TextureCreateInfo ci = {};
@@ -53,7 +55,7 @@ void PointLight::updateRadius()
 
 inline float PointLight::calculateRadius(float linear, float quad)
 {
-	return (0.5 * (std::sqrt(linear*linear + (200 * quad) - linear))) / quad;
+	return (0.5 * (std::sqrt(linear*linear + (radiusConstant * quad) - linear))) / quad;
 }
 
 void SpotLight::destroy()
@@ -139,7 +141,7 @@ void SpotLight::updateRadius()
 
 inline float SpotLight::calculateRadius(float linear, float quad)
 {
-	return (0.5 * (std::sqrt(linear*linear + (2000 * quad) - linear))) / (quad * 2.f);
+	return (0.5 * (std::sqrt(linear*linear + (radiusConstant * 10 * quad) - linear))) / (quad * 2.f);
 }
 
 void LightManager::init()
