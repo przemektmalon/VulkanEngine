@@ -211,12 +211,14 @@ void main()
 
 	const float zFar = 1000000.f;
 
-    const float realDepth = exp2(depth * log2(zFar + 1.0)) - 1.f;
+	const float logZ = log2(zFar + 1.0);
 
-	const float minZView = exp2(minZf * log2(zFar + 1.0)) - 1.f;
-    const float maxZView = exp2(maxZf * log2(zFar + 1.0)) - 1.f;
-    const float farZMinView = exp2(farZMinf * log2(zFar + 1.0)) - 1.f;
-    const float nearZMaxView = exp2(nearZMaxf * log2(zFar + 1.0)) - 1.f;
+    const float realDepth = exp2(depth * logZ) - 1.f;
+
+	const float minZView = exp2(minZf * logZ) - 1.f;
+    const float maxZView = exp2(maxZf * logZ) - 1.f;
+    const float farZMinView = exp2(farZMinf * logZ) - 1.f;
+    const float nearZMaxView = exp2(nearZMaxf * logZ) - 1.f;
 
 	const vec4 viewRays = camera.viewRays;
 
@@ -305,7 +307,7 @@ void main()
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
 
-		//if(inFrustum)
+		if(inFrustum)
 		{
 			uint nextTileLightIndex = atomicAdd(currentTilePointLightIndex,1);
 			tilePointLightIndices[nextTileLightIndex] = lightIndex;
@@ -327,7 +329,7 @@ void main()
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
 
-		//if (inFrustum)
+		if (inFrustum)
 		{
 			uint nextTileLightIndex = atomicAdd(currentTileSpotLightIndex,1);
 			tileSpotLightIndices[nextTileLightIndex] = lightIndex;
