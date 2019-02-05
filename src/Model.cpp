@@ -1,13 +1,14 @@
 #include "PCH.hpp"
 #include "Model.hpp"
-#include "assimp/Importer.hpp"
-#include "assimp/scene.h"
-#include "assimp/postprocess.h"
 #include "Engine.hpp"
 #include "Renderer.hpp"
 #include "rapidxml.hpp"
 #include "File.hpp"
 #include "Threading.hpp"
+
+#include "assimp/Importer.hpp"
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
 
 void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 {
@@ -18,10 +19,7 @@ void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 	for (auto& path : diskPaths)
 	{
 		Assimp::Importer importer;
-		char buff[FILENAME_MAX];
-		GetCurrentDir(buff, FILENAME_MAX);
-		std::string current_working_dir(buff);
-		const aiScene *scene = importer.ReadFile(current_working_dir + "/" + path, aiProcessPreset_TargetRealtime_MaxQuality);
+		const aiScene *scene = importer.ReadFile(Engine::workingDirectory + "/" + path, aiProcessPreset_TargetRealtime_MaxQuality);
 
 		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 		{

@@ -62,6 +62,7 @@
 }
 
 #define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
 //#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "glm/glm.hpp"
 #include "glm/common.hpp"
@@ -78,6 +79,10 @@
 #include "btBulletDynamicsCommon.h"
 #include "btBulletDynamicsCommon.h"
 #include "BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h"
+
+#include "assimp/Importer.hpp"
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
 
 #define CHAISCRIPT_NO_THREADS
 #include "chaiscript/chaiscript.hpp"
@@ -182,6 +187,8 @@
 #include <initializer_list>
 
 #include <atomic>
+
+#include <filesystem>
 
 /// Numeric limits includes
 

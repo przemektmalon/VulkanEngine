@@ -188,4 +188,11 @@
 		<physics></physics>
 	</model>
 
+	<model>
+		<path>_pillar/pillar.glb</path>
+		<name>pillar</name>
+		<material>marble</material>
+		<physics></physics>
+	</model>
+
 </resources>

@@ -6,7 +6,7 @@ def startup()
 	var defaultScale = fvec3(200,200,200);
 
 	// PBR Sphere
-	{
+	/*{
 		var model = world.addModel("pbrsphere", "pbrsphere");
 
 		t.setTranslation(fvec3(4,0,0));
@@ -16,7 +16,7 @@ def startup()
 		model.setTransform(t);
 		model.setMaterial(assets.getMaterial("marble"));
 		model.makePhysical();
-	}
+	}*/
 
 	t.setScale(defaultScale);
 
@@ -33,10 +33,21 @@ def startup()
 	}
 
 	// Wall
-	{
+	/*{
 		var model = world.addModel("wall", "wall");
 
 		t.setTranslation(fvec3(0, 0, 0));
+		t.setScale(fvec3(600,600,600));
+		t.updateMatrix();
+
+		model.setTransform(t);
+		model.setMaterial(assets.getMaterial("marble"));
+	}*/
+
+	{
+		var model = world.addModel("pillar", "pillar");
+
+		t.setTranslation(fvec3(0, 0, 5000));
 		t.setScale(fvec3(600,600,600));
 		t.updateMatrix();
 
