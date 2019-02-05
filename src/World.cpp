@@ -142,7 +142,7 @@ void World::setSkybox(const std::string & skyboxName)
 void World::frustumCulling(Camera * cam)
 {
 	/// TODO: actual culling, for now we draw everything thats available on the GPU
-	/// It would also be good to only perform culling when changes in the scene cross the frustum
+	/// It would also be good to only perform culling when changes in the scene cross the frustum, if that is more perfomant ?
 
 	instancesToDraw.clear();
 

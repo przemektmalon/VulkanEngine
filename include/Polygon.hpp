@@ -2,7 +2,6 @@
 #include "PCH.hpp"
 #include "OverlayElement.hpp"
 #include "Model.hpp"
-#include "Buffer.hpp"
 
 class UIPolygon : public OverlayElement
 {

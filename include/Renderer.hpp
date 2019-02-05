@@ -3,7 +3,6 @@
 #include "Engine.hpp"
 #include "Model.hpp"
 #include "Texture.hpp"
-#include "Buffer.hpp"
 #include "Lights.hpp"
 #include "ShaderSpecs.hpp"
 #include "Text.hpp"
