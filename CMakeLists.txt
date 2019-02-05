@@ -18,6 +18,8 @@ endif()
 ################    SET SOME DIRECTORY CONSTANTS
 ################################################################
 
+
+add_subdirectory("./lib")
 set(LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
 set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
@@ -29,73 +31,34 @@ set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 ################################################################
 
 project(VulkanEngine)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
-file(GLOB INCLUDES ${INCLUDE_DIR}/*.hpp)
-file(GLOB SOURCES ${SRC_DIR}/*.cpp)
-
-
+add_subdirectory(${INCLUDE_DIR})
+add_subdirectory(${SRC_DIR})
 
 ################################################################
-################    SET VULKAN SDK PATH
+################    FIND VULKAN AND SET SHADERC INCLUDE DIR AND LIBRARY
 ################################################################
 
-if(NOT VK_SDK_PATH)
-	message(WARNING "Vulkan SDK path not found")
-	set(VK_SDK_PATH "" CACHE PATH "Path to your Vulkan SDK folder")
-	set(ERROR "YES")
-endif()
-
-
-
-################################################################
-################    SET VULKAN DEV UTILITY PATH
-################################################################
-
-if(NOT LIB_VDU_INCLUDE_DIR)
-	message(WARNING "Vulkan dev utility path not found")
-	set(LIB_VDU_INCLUDE_DIR "" CACHE PATH "Path to your Vulkan Dev Utility include folder")
-	set(ERROR "YES")
-endif()
-if(NOT LIB_VDU_LIBRARY_DEBUG)
-	message(WARNING "Vulkan dev utility debug library not found")
-	set(LIB_VDU_LIBRARY_DEBUG "" CACHE FILEPATH "Path to your Vulkan Dev Utility debug library")
-	set(ERROR "YES")
-endif()
-if(NOT LIB_VDU_LIBRARY_RELEASE)
-	message(WARNING "Vulkan dev utility release library not found")
-	set(LIB_VDU_LIBRARY_RELEASE "" CACHE FILEPATH "Path to your Vulkan Dev Utility release library")
-	set(ERROR "YES")
-endif()
-
-
-
-################################################################
-################    SET VULKAN INCLUDES AND LIBRARY
-################################################################
-
-set(LIB_VK_INCLUDE_DIR "${VK_SDK_PATH}/include")
-if(WIN32)
-	set(LIB_VK_LIBRARY "${VK_SDK_PATH}/Lib/vulkan-1.lib")
-endif()
-if(UNIX)
-	set(LIB_VK_LIBRARY "${VK_SDK_PATH}/lib/libvulkan.so")
-endif()
-
-
-
-################################################################
-################    SET SHADERC INCLUDE AND LIBRARY
-################################################################
+find_package(Vulkan REQUIRED)
 
 if(WIN32)
-	set(LIB_SHADERC_DEBUG "${VK_SDK_PATH}/shaderc/build/libshaderc/Debug/shaderc_combined.lib")
-	set(LIB_SHADERC_RELEASE "${VK_SDK_PATH}/shaderc/build/libshaderc/Release/shaderc_combined.lib")
+	set(LIB_SHADERC_DEBUG "$ENV{VULKAN_SDK}/shaderc/build/libshaderc/Debug/shaderc_combined.lib")
+	set(LIB_SHADERC_RELEASE "$ENV{VULKAN_SDK}/shaderc/build/libshaderc/Release/shaderc_combined.lib")
 endif()
 if(UNIX)
-	set(LIB_SHADERC_DEBUG "${VK_SDK_PATH}/shaderc/Debug/libshaderc_shared.so")
-	set(LIB_SHADERC_RELEASE "${VK_SDK_PATH}/shaderc/Release/libshaderc_shared.so")
+	set(LIB_SHADERC_DEBUG "$ENV{VULKAN_SDK}/shaderc/Debug/libshaderc_shared.so")
+	set(LIB_SHADERC_RELEASE "$ENV{VULKAN_SDK}/shaderc/Release/libshaderc_shared.so")
 endif()
+
+
+
+################################################################
+################    SET VDU & FREETYPE INCLUDE PATHS
+################################################################
+
+set(LIB_VDU_INCLUDE_DIR "${LIBS_DIR}/vdu/include")
+set(LIB_FREETYPE_INCLUDE_DIR "${LIBS_DIR}/freetype/include")
 
 
 
@@ -136,28 +99,6 @@ endif()
 
 
 ################################################################
-################    SET GLM INCLUDES
-################################################################
-
-if(NOT LIB_GLM_INCLUDE_DIR)
-	message(WARNING "GLM library not found please specify it with -DLIB_GLM_INCLUDE_DIR='Path to your glm include dir' or use the cmake-gui to set it")
-	set(LIB_GLM_INCLUDE_DIR "" CACHE PATH "Path to your GLM include folder, should be 'glm'")
-endif()
-
-
-
-################################################################
-################    SET CHAISCRIPT INCLUDES
-################################################################
-
-if(NOT LIB_CHAI_INCLUDE_DIR)
-	message(WARNING "Chaiscript library not found please specify it with -DLIB_CHAI_INCLUDE_DIR='Path to your chaiscript include dir' or use the cmake-gui to set it")
-	set(LIB_CHAI_INCLUDE_DIR "" CACHE PATH "Path to your chaiscript include folder")
-endif()
-
-
-
-################################################################
 ################    SET ASSIMP & ZLIB INCLUDE AND LIBRARY
 ################################################################
 
@@ -190,22 +131,6 @@ if(WIN32)
 endif()
 
 
-
-################################################################
-################    SET FREETYPE INCLUDE AND LIBRARY
-################################################################
-
-if(NOT LIB_FREETYPE_INCLUDE_DIR)
-	message(WARNING "Freetype include dir not found please specify it with -DLIB_FREETYPE_INCLUDE_DIR='Path to your freetype include dir' or use the cmake-gui to set it")
-	set(LIB_FREETYPE_INCLUDE_DIR "" CACHE PATH "Path to your freetype include folder")
-endif()
-if(NOT LIB_FREETYPE_LIB_DEBUG)
-	message(WARNING "Freetype library not found please specify it with -DLIB_FREETYPE_INCLUDE_LIB_[DEBUG/RELEASE]='Path to your freetype DEBUG and RELEASE lib files' or use the cmake-gui to set it")
-	set(LIB_FREETYPE_LIB_DEBUG "" CACHE FILEPATH "Path to your freetype debug library")
-	set(LIB_FREETYPE_LIB_RELEASE "" CACHE FILEPATH "Path to your freetype release library")
-endif()
-
-
 ################################################################
 ################    SET SOME CMAKE VARIABLES
 ################################################################
@@ -230,13 +155,39 @@ endif()
 ################    SPECIFY INCLUDE DIRECTORIES
 ################################################################
 
-include_directories(${INCLUDE_DIR} ${LIBS_DIR} ${LIB_CHAI_INCLUDE_DIR} ${LIB_VDU_INCLUDE_DIR} ${LIB_BULLET_INCLUDE_DIR} ${LIB_FREETYPE_INCLUDE_DIR} ${LIB_VK_INCLUDE_DIR} ${LIB_GLM_INCLUDE_DIR} ${STB_INCLUDE_DIR} ${LIB_ASSIMP_INCLUDE_DIR})
+include_directories(${INCLUDE_DIR} ${LIB_XML_INCLUDE_DIR} ${LIB_CHAI_INCLUDE_DIR} ${LIB_VDU_INCLUDE_DIR} ${LIB_BULLET_INCLUDE_DIR} ${LIB_FREETYPE_INCLUDE_DIR} ${Vulkan_INCLUDE_DIRS} ${LIB_GLM_INCLUDE_DIR} ${LIB_STB_INCLUDE_DIR} ${LIB_ASSIMP_INCLUDE_DIR})
+
+
+
+################################################################
+################    MACRO FOR GENERATING MSVC PRECOMPILED HEADERS
+################    MODIFIED SLIGHTLY FROM SOURCE: https://stackoverflow.com/a/1380048
+################################################################
+
+MACRO(ADD_MSVC_PRECOMPILED_HEADER PrecompiledHeader PrecompiledSource SourcesVar)
+  IF(MSVC)
+    GET_FILENAME_COMPONENT(PrecompiledBasename ${PrecompiledHeader} NAME_WE)
+    SET(PrecompiledBinary "$(IntDir)$(TargetName).pch")
+    SET(Sources ${${SourcesVar}})
+
+    SET_SOURCE_FILES_PROPERTIES(${PrecompiledSource}
+                                PROPERTIES COMPILE_FLAGS "/Yc\"${PrecompiledHeader}\" /Fp\"${PrecompiledBinary}\""
+                                           OBJECT_OUTPUTS "${PrecompiledBinary}")
+    SET_SOURCE_FILES_PROPERTIES(${Sources}
+                                PROPERTIES COMPILE_FLAGS "/Yu\"${PrecompiledHeader}\" /FI\"${PrecompiledHeader}\" /Fp\"${PrecompiledBinary}\""
+                                           OBJECT_DEPENDS "${PrecompiledBinary}")  
+    # Add precompiled header to SourcesVar
+    LIST(APPEND ${SourcesVar} ${PrecompiledSource})
+  ENDIF(MSVC)
+ENDMACRO(ADD_MSVC_PRECOMPILED_HEADER)
 
 
 
 ################################################################
 ################    SPECIFY EXECUTABLE AND LINK LIBRARIES
 ################################################################
+
+ADD_MSVC_PRECOMPILED_HEADER("PCH.hpp" "${SRC_DIR}/PCH.cpp" SOURCES)
 
 add_executable(VulkanEngine ${SOURCES} ${INCLUDES})
 if (UNIX)
@@ -249,16 +200,18 @@ if (WIN32)
     	optimized ${LIB_ZLIB_LIBRARY_RELEASE})
 endif (WIN32)
 
-target_link_libraries(VulkanEngine ${LIB_VK_LIBRARY})
 target_link_libraries (VulkanEngine
 	debug ${LIB_ASSIMP_LIBRARY_DEBUG}
 	optimized ${LIB_ASSIMP_LIBRARY_RELEASE})
+
+target_link_libraries(VulkanEngine ${Vulkan_LIBRARY})
+
 target_link_libraries (VulkanEngine
     debug ${LIB_SHADERC_DEBUG}
-    optimized ${LIB_SHADERC_RELEASE})
-target_link_libraries (VulkanEngine
-    debug ${LIB_FREETYPE_LIB_DEBUG}
-    optimized ${LIB_FREETYPE_LIB_RELEASE})
+	optimized ${LIB_SHADERC_RELEASE})
+
+target_link_libraries(VulkanEngine freetype)
+target_link_libraries(VulkanEngine vdu)
 
 target_link_libraries (VulkanEngine
     debug ${LIB_BULLET_COLLISION_LIBRARY_DEBUG}
@@ -268,16 +221,16 @@ target_link_libraries (VulkanEngine
     optimized ${LIB_BULLET_DYNAMICS_LIBRARY_RELEASE})
 target_link_libraries (VulkanEngine
     debug ${LIB_BULLET_MATH_LIBRARY_DEBUG}
-    optimized ${LIB_BULLET_MATH_LIBRARY_RELEASE})
-target_link_libraries (VulkanEngine
-    debug ${LIB_VDU_LIBRARY_DEBUG}
-    optimized ${LIB_VDU_LIBRARY_RELEASE})
+	optimized ${LIB_BULLET_MATH_LIBRARY_RELEASE})
 
 
 
 ################################################################
-################    SET MSVC STARTUP PROJECT AND WORKING DIR
+################    SET SOME MSVC FLAGS AND PROPERTIES
 ################################################################
 
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+endif()
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT VulkanEngine)
 set_target_properties(VulkanEngine PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/")
