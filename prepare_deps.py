@@ -22,6 +22,10 @@ if __name__ == "__main__":
     call("git clone " + git_glm + " ./lib/glm --quiet", shell=True)
     call("git clone " + git_rapidxml + " ./lib/rapidxml --quiet", shell=True)
 
+    os.makedirs("lib/stb/stb")
+    urllib.request.urlretrieve(url_stb_image, "lib/stb/stb/stb_image.h")
+    urllib.request.urlretrieve(url_stb_image_write, "lib/stb/stb/stb_image_write.h")
+
     os.chdir("lib/chaiscript")
     call("git checkout release-6.x", shell=True)
 
@@ -29,10 +33,3 @@ if __name__ == "__main__":
     # The newest versions of glm don't seem to work (models don't draw)
     # TODO: find out why ?
     call("git checkout 8f39bb8", shell=True)
-    os.chdir("..")
-
-    os.makedirs("lib/stb/stb")
-
-    urllib.request.urlretrieve(url_stb_image, "lib/stb/stb/stb_image.h")
-    urllib.request.urlretrieve(url_stb_image_write, "lib/stb/stb/stb_image_write.h")
-
