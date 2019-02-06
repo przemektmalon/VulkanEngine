@@ -38,10 +38,12 @@ Some features that still need to be implemented include:
 * GLM
 * stb image (load and write)
 
+### Have to be downloaded and installed manually, but are linked automatically through CMake find_package()
+* LunarG Vulkan SDK
+
 ### Currently have to be downloaded, compiled, and linked manually (through CMake).
 * libshaderc (as distributed with the LunarG Vulkan SDK)
 * Assimp
 * Bullet Physics
 
-### Have to be downloaded and installed manually, but are linked automatically through find_package()
-* LunarG Vulkan SDK
+
