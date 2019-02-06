@@ -28,7 +28,7 @@ if __name__ == "__main__":
     os.chdir("../glm")
     # The newest versions of glm don't seem to work (models don't draw)
     # TODO: find out why ?
-    call("git checkout 8f39bb8")
+    call("git checkout 8f39bb8", shell=True)
     os.chdir("..")
 
     os.makedirs("lib/stb/stb")
