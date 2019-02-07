@@ -31,19 +31,19 @@ Some features that still need to be implemented include:
 
 # Dependencies
 
-### Downloaded by prepare_deps.py script and linked/included automatically in CMake
+#### Downloaded by prepare_deps.py script and linked/included automatically in CMake:
 * [VDU](https://github.com/przemektmalon/VulkanDevUtility) (my personal project to provide abstractions and interfaces for Vulkan functionality)
+* Assimp
 * FreeType
 * rapidxml
 * GLM
 * stb image (load and write)
 
-### Have to be downloaded and installed manually, but are linked automatically through CMake find_package()
+#### Have to be downloaded and installed manually, but are linked automatically through CMake find_package():
 * LunarG Vulkan SDK
 
-### Currently have to be downloaded, compiled, and linked manually (through CMake).
+#### Currently have to be downloaded, compiled, and linked manually (through CMake):
 * libshaderc (as distributed with the LunarG Vulkan SDK)
-* Assimp
 * Bullet Physics
 
 
