@@ -18,11 +18,35 @@ endif()
 ################    SET SOME DIRECTORY CONSTANTS
 ################################################################
 
-
-add_subdirectory("./lib")
-set(LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
 set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+
+add_subdirectory("./lib/freetype")
+add_subdirectory("./lib/vdu")
+add_subdirectory("./lib/assimp")
+
+# To speed up initial compilation, configure assimp components we want to build (no tests or tools, only obj and gltf importers)
+unset(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT CACHE)
+unset(ASSIMP_BUILD_ASSIMP_TOOLS CACHE)
+unset(ASSIMP_BUILD_TESTS CACHE)
+unset(ASSIMP_BUILD_GLTF_IMPORTER CACHE)
+unset(ASSIMP_BUILD_OBJ_IMPORTER CACHE)
+unset(BUILD_SHARED_LIBS CACHE)
+
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "")
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "")
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "")
+set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "")
+set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+
+set(LIB_GLM_INCLUDE_DIR 		"./lib/glm/")
+set(LIB_XML_INCLUDE_DIR 		"./lib/rapidxml")
+set(LIB_STB_INCLUDE_DIR 		"./lib/stb")
+set(LIB_CHAI_INCLUDE_DIR 		"./lib/chaiscript/include")
+set(LIB_VDU_INCLUDE_DIR 		"./lib/vdu/include")
+set(LIB_FREETYPE_INCLUDE_DIR 	"./lib/freetype/include")
+set(LIB_ASSIMP_INCLUDE_DIR 		"./lib/assimp/src")
 
 
 
@@ -50,15 +74,6 @@ if(UNIX)
 	set(LIB_SHADERC_DEBUG "$ENV{VULKAN_SDK}/shaderc/Debug/libshaderc_shared.so")
 	set(LIB_SHADERC_RELEASE "$ENV{VULKAN_SDK}/shaderc/Release/libshaderc_shared.so")
 endif()
-
-
-
-################################################################
-################    SET VDU & FREETYPE INCLUDE PATHS
-################################################################
-
-set(LIB_VDU_INCLUDE_DIR "${LIBS_DIR}/vdu/include")
-set(LIB_FREETYPE_INCLUDE_DIR "${LIBS_DIR}/freetype/include")
 
 
 
@@ -99,24 +114,9 @@ endif()
 
 
 ################################################################
-################    SET ASSIMP & ZLIB INCLUDE AND LIBRARY
+################    SET ZLIB INCLUDE AND LIBRARY (WIN32)
 ################################################################
 
-if(NOT LIB_ASSIMP_LIBRARY_DEBUG)
-	message(WARNING "ASSIMP debug library not found")
-	set(LIB_ASSIMP_LIBRARY_DEBUG "" CACHE FILEPATH "Path to your debug ASSIMP lib")
-	set(ERROR "YES")
-endif()
-if(NOT LIB_ASSIMP_LIBRARY_RELEASE)
-	message(WARNING "ASSIMP release library not found")
-	set(LIB_ASSIMP_LIBRARY_RELEASE "" CACHE FILEPATH "Path to your release ASSIMP lib")
-	set(ERROR "YES")
-endif()
-if(NOT LIB_ASSIMP_INCLUDE_DIR)
-	message(WARNING "ASSIMP include directory not found")
-	set(LIB_ASSIMP_INCLUDE_DIR "" CACHE PATH "Path to your ASSIMP include folder")
-	set(ERROR "YES")
-endif()
 if(WIN32)
 	if(NOT LIB_ZLIB_LIBRARY_DEBUG)
 		message(WARNING "ZLIB debug library not found")
@@ -200,10 +200,7 @@ if (WIN32)
     	optimized ${LIB_ZLIB_LIBRARY_RELEASE})
 endif (WIN32)
 
-target_link_libraries (VulkanEngine
-	debug ${LIB_ASSIMP_LIBRARY_DEBUG}
-	optimized ${LIB_ASSIMP_LIBRARY_RELEASE})
-
+target_link_libraries(VulkanEngine assimp)
 target_link_libraries(VulkanEngine ${Vulkan_LIBRARY})
 
 target_link_libraries (VulkanEngine
