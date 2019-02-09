@@ -206,6 +206,8 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 	auto fence = new vdu::Fence();
 	fence->create(&r->logicalDevice);
 
+	r->setImageLayout(cmd, *glyphs, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
 	vdu::QueueSubmission submission;
 	r->endTransferCommands(*cmd, submission);
 
