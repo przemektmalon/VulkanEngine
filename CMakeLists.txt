@@ -63,6 +63,13 @@ if (MSVC)
 	set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "" FORCE)
 endif (MSVC)
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
+set(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "" FORCE)
+set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "" FORCE)
+set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "" FORCE)
+set(ENABLE_HLSL ON CACHE BOOL "" FORCE)
+set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "" FORCE)
+set(ENABLE_SPVREMAPPER OFF CACHE BOOL "" FORCE)
+set(SHADERC_SKIP_INSTALL ON CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE) # disables glslang CTestDashboard targets
 set(RE2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(EFFCEE_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
@@ -221,3 +228,58 @@ if (MSVC)
 endif()
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT VulkanEngine)
 set_target_properties(VulkanEngine PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/")
+
+# For IDEs, place all dependency targets in a single folder so they dont clutter IDEs' solution trees
+# I'm being a bit lazy here and ignoring the original libshaderc folder structure, just placing all the targets in a single folder
+
+macro(TARGET_TO_FOLDER TARGET DEST_FOLDER)
+    set_target_properties(${TARGET} PROPERTIES FOLDER ${DEST_FOLDER})
+endmacro()
+
+set(DEPENDENCIES 
+    "glslang"
+    "OGLCompiler"
+    "OSDependent"
+    "SPIRV"
+    "HLSL"
+		"spirv-tools-build-version"
+		"spirv-tools-header-DebugInfo"
+		"spirv-tools-shared-pkg-config"
+    "spirv-tools-debuginfo"
+    "spirv-tools-spv-amd-gcn-shader"
+    "spirv-tools-spv-amd-shader-ballot"
+    "spirv-tools-spv-amd-shader-explicit-vertex-parameter"
+    "spirv-tools-spv-amd-shader-trinary-minmax"
+    "SPIRV-Tools"
+    "SPIRV-Tools-link"
+    "SPIRV-Tools-opt"
+    "SPIRV-Tools-reduce"
+    "SPIRV-Tools-shared"
+    "spirv-tools-vimsyntax"
+		"add-copyright"
+		"assimp"
+    "build-version"
+    "check-copyright"
+    "core_tables"
+    "enum_string_mapping"
+    "extinst_tables"
+    "freetype"
+    "glslc"
+    "glslc_exe"
+    "IrrXML"
+    "shaderc"
+    "shaderc_combined_genfile"
+    "shaderc_shared"
+    "shaderc_util"
+    "shaderc-online-compile"
+    "spirv-tools-pkg-config"
+    "testdata"
+    "uninstall"
+    "UpdateAssimpLibsDebugSymbolsAndDLLs"
+    "vdu"
+    "zlib"
+		"zlibstatic")
+		
+foreach(DEP ${DEPENDENCIES})
+	TARGET_TO_FOLDER(${DEP} "dependencies")
+endforeach(DEP)
