@@ -21,24 +21,17 @@ endif()
 set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+# To speed up initial compilation, configure assimp components we want to build (no tests or tools, only obj and gltf importers)
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
 add_subdirectory("./lib/freetype")
 add_subdirectory("./lib/vdu")
 add_subdirectory("./lib/assimp")
-
-# To speed up initial compilation, configure assimp components we want to build (no tests or tools, only obj and gltf importers)
-unset(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT CACHE)
-unset(ASSIMP_BUILD_ASSIMP_TOOLS CACHE)
-unset(ASSIMP_BUILD_TESTS CACHE)
-unset(ASSIMP_BUILD_GLTF_IMPORTER CACHE)
-unset(ASSIMP_BUILD_OBJ_IMPORTER CACHE)
-unset(BUILD_SHARED_LIBS CACHE)
-
-set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "")
-set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "")
-set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "")
-set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "")
-set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "")
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
 
 set(LIB_GLM_INCLUDE_DIR 		"./lib/glm/")
 set(LIB_XML_INCLUDE_DIR 		"./lib/rapidxml")
@@ -66,14 +59,14 @@ add_subdirectory(${SRC_DIR})
 
 find_package(Vulkan REQUIRED)
 
-if(WIN32)
-	set(LIB_SHADERC_DEBUG "$ENV{VULKAN_SDK}/shaderc/build/libshaderc/Debug/shaderc_combined.lib")
-	set(LIB_SHADERC_RELEASE "$ENV{VULKAN_SDK}/shaderc/build/libshaderc/Release/shaderc_combined.lib")
-endif()
-if(UNIX)
-	set(LIB_SHADERC_DEBUG "$ENV{VULKAN_SDK}/shaderc/Debug/libshaderc_shared.so")
-	set(LIB_SHADERC_RELEASE "$ENV{VULKAN_SDK}/shaderc/Release/libshaderc_shared.so")
-endif()
+if (MSVC)
+	set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "" FORCE)
+endif (MSVC)
+set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
+set(RE2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(EFFCEE_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
+set(EFFCEE_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+add_subdirectory("$ENV{VULKAN_SDK}/shaderc" "./lib/shaderc")
 
 
 
@@ -202,11 +195,7 @@ endif (WIN32)
 
 target_link_libraries(VulkanEngine assimp)
 target_link_libraries(VulkanEngine ${Vulkan_LIBRARY})
-
-target_link_libraries (VulkanEngine
-    debug ${LIB_SHADERC_DEBUG}
-	optimized ${LIB_SHADERC_RELEASE})
-
+target_link_libraries(VulkanEngine shaderc)
 target_link_libraries(VulkanEngine freetype)
 target_link_libraries(VulkanEngine vdu)
 
