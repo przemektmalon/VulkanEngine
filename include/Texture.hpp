@@ -2,7 +2,6 @@
 #include "PCH.hpp"
 #include "Image.hpp"
 #include "Asset.hpp"
-#include "vdu/DeviceMemory.hpp"
 
 struct TextureCreateInfo : vdu::TextureCreateInfo
 {

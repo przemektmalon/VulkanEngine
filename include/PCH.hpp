@@ -25,7 +25,7 @@
 #define VDU_NO_VALIDATION
 #endif
 
-#include "vdu/PCH.hpp"
+#include "vdu/VDU.hpp"
 
 #define VK_CHECK_RESULT(f) { \
 	auto result = f; \

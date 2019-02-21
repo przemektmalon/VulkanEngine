@@ -1,14 +1,14 @@
 #pragma once
 #include "PCH.hpp"
-#include "OverlayRenderer.hpp"
-#include "Text.hpp"
-#include "Polygon.hpp"
+#include "UIRenderer.hpp"
+#include "UIText.hpp"
+#include "UIPolygon.hpp"
 #include "Event.hpp"
 
 class Console
 {
 public:
-	Console() : active(true), layer(0), timeSinceBlink(0), blinkerPosition(1), oldBlinkerPosition(1), scrollPosition(0) { }
+	Console() : active(true), uiGroup(0), timeSinceBlink(0), blinkerPosition(1), oldBlinkerPosition(1), scrollPosition(0) { }
 
 	void create(glm::ivec2 resolution);
 	void update();
@@ -17,10 +17,10 @@ public:
 	void moveBlinker(Key k);
 	void scroll(s16 wheelDelta);
 
-	void toggle() { active = !active; layer->setDoDraw(active); }
-	void setActive(bool set) { active = set; layer->setDoDraw(active); }
+	void toggle() { active = !active; uiGroup->setDoDraw(active); }
+	void setActive(bool set) { active = set; uiGroup->setDoDraw(active); }
 	bool isActive() { return active; }
-	OLayer* getLayer() { return layer; }
+	UIElementGroup* getUIGroup() { return uiGroup; }
 
 	void postMessage(std::string msg, glm::fvec3 colour);
 
@@ -35,7 +35,7 @@ private:
 	void updatePositions();
 	void updateBacks();
 
-	OLayer* layer;
+	UIElementGroup* uiGroup;
 	vdu::Fence finishedStartupRenderFence;
 
 	Text* input;

@@ -37,18 +37,18 @@ void Renderer::createGBufferAttachments()
 void Renderer::createGBufferRenderPass()
 {
 	auto colourInfo = gBufferRenderPass.addColourAttachment(&gBufferColourAttachment, "colour");
-	colourInfo->setInitialLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	colourInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	colourInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+	colourInfo->setFinalLayout(VK_IMAGE_LAYOUT_GENERAL);
 	colourInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	auto normalInfo = gBufferRenderPass.addColourAttachment(&gBufferNormalAttachment, "normal");
-	normalInfo->setInitialLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	normalInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	normalInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+	normalInfo->setFinalLayout(VK_IMAGE_LAYOUT_GENERAL);
 	normalInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	auto pbrInfo = gBufferRenderPass.addColourAttachment(&gBufferPBRAttachment, "pbr");
-	pbrInfo->setInitialLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	pbrInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	pbrInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+	pbrInfo->setFinalLayout(VK_IMAGE_LAYOUT_GENERAL);
 	pbrInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	/*auto depthLinearInfo = gBufferRenderPass.addColourAttachment(&gBufferDepthLinearAttachment, "depthLinear");
@@ -58,7 +58,8 @@ void Renderer::createGBufferRenderPass()
 
 	auto depthInfo = gBufferRenderPass.setDepthAttachment(&gBufferDepthAttachment);
 	depthInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
-	depthInfo->setFinalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+	//depthInfo->setFinalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+	depthInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	depthInfo->setUsageLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 	gBufferRenderPass.create(&logicalDevice);
@@ -128,14 +129,14 @@ void Renderer::updateGBufferDescriptorSets()
 
 	transformsUpdate->buffer = transformUBO.getHandle();
 	transformsUpdate->offset = 0;
-	transformsUpdate->range = VK_WHOLE_SIZE;
+	transformsUpdate->range = 60000;
 
 	auto texturesUpdate = updater->addImageUpdate("textures", 0, 1000);
 
 	for (u32 i = 0; i < 1000; ++i)
 	{
 		texturesUpdate[i].sampler = textureSampler;
-		texturesUpdate[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		texturesUpdate[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 		texturesUpdate[i].imageView = Engine::assets.getTexture("blank")->getView();
 	}
 

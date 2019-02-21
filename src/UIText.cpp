@@ -1,12 +1,10 @@
 #include "PCH.hpp"
-#include "Text.hpp"
+#include "UIText.hpp"
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
-Text::Text() : OverlayElement(OverlayElement::Text)
+Text::Text() : UIElement(UIElement::Text)
 {
-	pushConstData = new glm::fvec4;
-	pushConstSize = sizeof(glm::fvec4);
 	drawUpdate = true;
 	drawable = false;
 	
@@ -148,7 +146,7 @@ void Text::update()
 	bounds.width = maxX - minX;
 	bounds.height = maxY - minY;
 
-	memcpy(pushConstData, &style.colour, sizeof(style.colour));
+	style.colour = getColour();
 
 	drawUpdate = true;
 
@@ -159,15 +157,15 @@ void Text::update()
 	drawingMutex.unlock();
 }
 
-void Text::render(VkCommandBuffer cmd)
+void Text::render(vdu::CommandBuffer& cmd)
 {
 	drawingMutex.lock();
 	if (drawable)
 	{
 		VkDeviceSize offsets[] = { 0 };
 		VkBuffer buffer[] = { vertsBuffer.getHandle() };
-		vkCmdBindVertexBuffers(cmd, 0, 1, buffer, offsets);
-		vkCmdDraw(cmd, verts.size(), 1, 0, 0);
+		vkCmdBindVertexBuffers(cmd.getHandle(), 0, 1, buffer, offsets);
+		vkCmdDraw(cmd.getHandle(), verts.size(), 1, 0, 0);
 	}
 	drawingMutex.unlock();
 }
@@ -226,6 +224,7 @@ void Text::setOrigin(glm::ivec2 pOrigin)
 
 void Text::setColour(glm::fvec4 pColour)
 {
+	colour = pColour;
 	style.setColour(pColour);
 }
 
@@ -269,8 +268,10 @@ glm::fvec2 Text::getCharsPosition(int index)
 
 void Text::updateDescriptorSet()
 {
+	/// TODO: Use VDU descriptor updaters if possible
+
 	VkDescriptorImageInfo fontInfo = {};
-	fontInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	fontInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	fontInfo.imageView = glyphs->getTexture()->getView();
 	fontInfo.sampler = Engine::renderer->textureSampler;
 

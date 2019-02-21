@@ -9,10 +9,9 @@
 #include "Console.hpp"
 #include "Scripting.hpp"
 #include "EngineConfig.hpp"
-#include "vdu/Instance.hpp"
 
 class Threading;
-class OLayer;
+class UIElementGroup;
 class Window;
 class Renderer;
 
@@ -71,7 +70,7 @@ public:
 	static Time engineStartTime;
 	static std::mt19937_64 rand;
 	static float maxDepth;
-	static OLayer* uiLayer;
+	static UIElementGroup* uiGroup;
 	static u64 gpuTimeStamps[14];
 	static std::atomic_char initialised;
 	static std::mutex waitForProfilerInitMutex;

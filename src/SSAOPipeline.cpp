@@ -40,6 +40,7 @@ void Renderer::createSSAORenderPass()
 	ssaoInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	ssaoRenderPass.create(&logicalDevice);
 
+	// This render pass operates on both ssaoBlurAttachment and ssaoFinalAttachment, see the command buffer recordings
 	auto ssaoBlurInfo = ssaoBlurRenderPass.addColourAttachment(&ssaoBlurAttachment, "ssao");
 	ssaoBlurInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
 	ssaoBlurInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -232,6 +233,7 @@ void Renderer::updateSSAOCommands()
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipeline.getHandle());
 
+	// Here we bind the ssaoFinalAttachment, it's final layout is SHADER_READ_ONLY_OPTIMAL as set in the renderpass, PBR pipeline expects LAYOUT_GENERAL, so set to this after render pass finished
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ssaoBlurPipelineLayout.getHandle(), 0, 1, &ssaoFinalDescriptorSet.getHandle(), 0, nullptr);
 
 	axis = { 0,1 };
@@ -242,6 +244,9 @@ void Renderer::updateSSAOCommands()
 	vkCmdDraw(cmd, 6, 1, 0, 0);
 
 	vkCmdEndRenderPass(cmd);
+
+	setImageLayout(cmd, gBufferDepthAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+	setImageLayout(cmd, ssaoFinalAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 	//gBufferDepthLinearAttachment.cmdTransitionLayout(ssaoCommandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 

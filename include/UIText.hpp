@@ -3,10 +3,9 @@
 #include "Font.hpp"
 #include "Rect.hpp"
 #include "Model.hpp"
-#include "OverlayElement.hpp"
-#include "vdu\DeviceMemory.hpp"
+#include "UIElement.hpp"
 
-class Text : public OverlayElement
+class Text : public UIElement
 {
 public:
 
@@ -35,12 +34,12 @@ public:
 	};
 
 	Text();
-	Text(Font* pFont) : style(pFont), OverlayElement(OverlayElement::Text) { Text(); }
-	Text(Font* pFont, u16 pCharSize) : style(pFont, pCharSize), OverlayElement(OverlayElement::Text) { Text(); }
+	Text(Font* pFont) : style(pFont), UIElement(UIElement::Text) { Text(); }
+	Text(Font* pFont, u16 pCharSize) : style(pFont, pCharSize), UIElement(UIElement::Text) { Text(); }
 
 	void update();
 
-	void render(VkCommandBuffer cmd);
+	void render(vdu::CommandBuffer& cmd);
 
 	void cleanup();
 

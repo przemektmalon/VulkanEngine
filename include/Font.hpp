@@ -2,7 +2,6 @@
 #include "PCH.hpp"
 #include "Texture.hpp"
 #include "ft2build.h"
-#include "vdu/DeviceMemory.hpp"
 
 #include FT_FREETYPE_H
 

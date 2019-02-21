@@ -1,27 +1,24 @@
 #pragma once
 #include "PCH.hpp"
-#include "OverlayElement.hpp"
+#include "UIElement.hpp"
 #include "Model.hpp"
 
-class UIPolygon : public OverlayElement
+class UIPolygon : public UIElement
 {
 public:
-	UIPolygon() : OverlayElement(Poly)
+	UIPolygon() : UIElement(Poly)
 	{
-		pushConstData = new glm::fvec4(1,1,1,1);
-		pushConstSize = sizeof(glm::fvec4);
 		drawable = false;
 	}
 
 	void reserveBuffer(int numVerts);
 
-	void render(VkCommandBuffer cmd);
+	void render(vdu::CommandBuffer& cmd);
 
 	void cleanup();
 
 	void setTexture(Texture* tex);
 	void setVerts(std::vector<Vertex2D>& v);
-	void setColour(glm::fvec4 colour);
 
 private:
 
@@ -30,5 +27,4 @@ private:
 	std::vector<Vertex2D> verts;
 	vdu::Buffer vertsBuffer;
 	Texture* texture;
-	glm::fvec4 colour;
 };

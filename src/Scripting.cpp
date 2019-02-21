@@ -18,17 +18,17 @@ void ScriptEnv::initChai()
 	glm::fvec2(*add2Func)(const glm::fvec2&, const glm::fvec2&) = glm::operator+;
 	glm::fvec2(*sub2Func)(const glm::fvec2&, const glm::fvec2&) = glm::operator-;
 	glm::fvec2(*mul2Func)(const glm::fvec2&, const glm::fvec2&) = glm::operator*;
-	glm::fvec2(*mul2aFunc)(const glm::fvec2&, const float&) = glm::operator*;
+	//glm::fvec2(*mul2aFunc)(const glm::fvec2&, const float&) = glm::operator*;
 
 	glm::fvec3(*add3Func)(const glm::fvec3&, const glm::fvec3&) = glm::operator+;
 	glm::fvec3(*sub3Func)(const glm::fvec3&, const glm::fvec3&) = glm::operator-;
 	glm::fvec3(*mul3Func)(const glm::fvec3&, const glm::fvec3&) = glm::operator*;
-	glm::fvec3(*mul3aFunc)(const glm::fvec3&, const float&) = glm::operator*;
+	//glm::fvec3(*mul3aFunc)(const glm::fvec3&, const float&) = glm::operator*;
 
 	glm::fvec4(*add4Func)(const glm::fvec4&, const glm::fvec4&) = glm::operator+;
 	glm::fvec4(*sub4Func)(const glm::fvec4&, const glm::fvec4&) = glm::operator-;
 	glm::fvec4(*mul4Func)(const glm::fvec4&, const glm::fvec4&) = glm::operator*;
-	glm::fvec4(*mul4aFunc)(const glm::fvec4&, const float) = glm::operator*;
+	//glm::fvec4(*mul4aFunc)(const glm::fvec4&, const float) = glm::operator*;
 
 	glm::fvec4(*mul4ByMatFunc)(const glm::fvec4&, const glm::fmat4&) = glm::operator*;
 	glm::fvec3(*mul3ByMatFunc)(const glm::fvec3&, const glm::fmat3&) = glm::operator*;
@@ -52,7 +52,7 @@ void ScriptEnv::initChai()
 			{ fun(add2Func), "+" },
 			{ fun(sub2Func), "-" },
 			{ fun(mul2Func), "*" },
-			{ fun(mul2aFunc), "*" }, }
+			/*{ fun(mul2aFunc), "*"},*/ }
 		);
 		chai.add(m);
 	}
@@ -82,7 +82,7 @@ void ScriptEnv::initChai()
 			{ fun(add3Func), "+" },
 			{ fun(sub3Func), "-" },
 			{ fun(mul3Func), "*" },
-			{ fun(mul3aFunc), "*" },
+			/*{ fun(mul3aFunc), "*" },*/
 			{ fun(mul3ByMatFunc), "*" },
 			{ fun(negateVec3), "negate" } }
 		);
@@ -102,7 +102,7 @@ void ScriptEnv::initChai()
 			{ fun(add4Func), "+" },
 			{ fun(sub4Func), "-" },
 			{ fun(mul4Func), "*" },
-			{ fun(mul4aFunc), "*" },
+			/*{ fun(mul4aFunc), "*" },*/
 			{ fun(mul4ByMatFunc), "*" },
 			{ fun(negateVec4), "negate" } }
 		);

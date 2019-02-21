@@ -1,5 +1,5 @@
 #include "PCH.hpp"
-#include "Polygon.hpp"
+#include "UIPolygon.hpp"
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
@@ -10,14 +10,14 @@ void UIPolygon::reserveBuffer(int numVerts)
 	vertsBuffer.create(&Engine::renderer->logicalDevice, numVerts * sizeof(Vertex2D));
 }
 
-void UIPolygon::render(VkCommandBuffer cmd)
+void UIPolygon::render(vdu::CommandBuffer& cmd)
 {
 	if (drawable)
 	{
 		VkDeviceSize offsets[] = { 0 };
 		VkBuffer buffer[] = { vertsBuffer.getHandle() };
-		vkCmdBindVertexBuffers(cmd, 0, 1, buffer, offsets);
-		vkCmdDraw(cmd, verts.size(), 1, 0, 0);
+		vkCmdBindVertexBuffers(cmd.getHandle(), 0, 1, buffer, offsets);
+		vkCmdDraw(cmd.getHandle(), verts.size(), 1, 0, 0);
 	}
 }
 
@@ -40,15 +40,12 @@ void UIPolygon::setVerts(std::vector<Vertex2D>& v)
 	drawable = true;
 }
 
-void UIPolygon::setColour(glm::fvec4 colour)
-{
-	memcpy(pushConstData, &colour, sizeof(colour));
-}
-
 void UIPolygon::updateDescriptorSet()
 {
+	/// TODO: Use VDU descriptor updaters if possible
+
 	VkDescriptorImageInfo fontInfo = {};
-	fontInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	fontInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	fontInfo.imageView = texture->getView();
 	fontInfo.sampler = Engine::renderer->textureSampler;
 

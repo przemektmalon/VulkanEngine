@@ -1,7 +1,6 @@
 #pragma once
 #include "PCH.hpp"
 #include "Asset.hpp"
-#include "vdu/Shaders.hpp"
 
 class ShaderProgram : public vdu::ShaderProgram
 {

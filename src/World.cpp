@@ -116,7 +116,7 @@ void World::setSkybox(const std::string & skyboxName)
 	TextureCreateInfo tci;
 	tci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
 	tci.format = VK_FORMAT_R8G8B8A8_UNORM;
-	tci.layout = VK_IMAGE_LAYOUT_GENERAL;
+	tci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	tci.name = "skybox";
 	tci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	tci.layers = 6;

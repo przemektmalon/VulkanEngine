@@ -5,9 +5,8 @@
 #include "Image.hpp"
 #include "Profiler.hpp"
 #include "PBRImage.hpp"
-#include "OverlayRenderer.hpp"
+#include "UIRenderer.hpp"
 #include "Threading.hpp"
-
 #include "CommonJobs.hpp"
 
 /*
@@ -19,6 +18,12 @@ void Engine::start()
 	engineStartTime = clock.time();
 #ifdef _WIN32
 	win32InstanceHandle = GetModuleHandle(NULL);
+	{
+		char cwd[_MAX_DIR];
+		GetCurrentDir(cwd, _MAX_DIR);
+		workingDirectory.assign(cwd);
+		DBG_INFO("Working Directory: " << workingDirectory);
+	}
 #endif
 #ifdef __linux__
 	connection = xcb_connect(NULL, NULL);
@@ -26,13 +31,7 @@ void Engine::start()
 		DBG_SEVERE("Failed to connect to X server using XCB");
 #endif
 
-	{
-		char cwd[_MAX_DIR];
-		GetCurrentDir(cwd, _MAX_DIR);
-		workingDirectory.assign(cwd);
-	}
-
-	PROFILE_START("init");
+	//PROFILE_START("init");
 
 	/*
 		Create basic engine commponents
@@ -152,7 +151,7 @@ void Engine::start()
 	*/
 	console = new Console();
 	console->create(glm::ivec2(window->resX, 276));
-	renderer->overlayRenderer.addLayer(console->getLayer()); // The console is a UI overlay
+	renderer->overlayRenderer.addUIGroup(console->getUIGroup()); // The console is a UI overlay
 	scriptEnv.chai.add_global(chaiscript::var(std::ref(*console)), "console"); // Add console to script environment
 
 	/*
@@ -199,16 +198,16 @@ void Engine::start()
 	// Startup script. Adds models to the world
 	scriptEnv.evalFile("./res/scripts/startup.chai");
 
-	PROFILE_END("init");
+	//PROFILE_END("init");
 
 	//console->postMessage("Initialisation time : " + std::to_string(PROFILE_TO_S(PROFILE_GET_RUNNING_AVERAGE("init"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
 
 	/*
 		Creating UI layer for displaying profiling stats
 	*/
-	uiLayer = new OLayer;
-	uiLayer->create(glm::ivec2(1280, 720));
-	renderer->overlayRenderer.addLayer(uiLayer);
+	/*auto uiGroup = new UIElementGroup();
+	uiGroup->setResolution(glm::ivec2(1280, 720));
+	renderer->overlayRenderer.addUIGroup(uiGroup);
 
 	// For GPU and CPU profiling times
 	Text* statsText = new Text;
@@ -219,7 +218,7 @@ void Engine::start()
 	statsText->setString("");
 	statsText->setPosition(glm::fvec2(0, 330));
 
-	uiLayer->addElement(statsText);
+	uiGroup->addElement(statsText);
 
 	// For mutex lock wait times
 	auto mutexStatsText = new Text;
@@ -230,7 +229,7 @@ void Engine::start()
 	mutexStatsText->setString("");
 	mutexStatsText->setPosition(glm::fvec2(600, 450));
 
-	uiLayer->addElement(mutexStatsText);
+	uiGroup->addElement(mutexStatsText);
 
 	// For per thread stats
 	auto threadStatsText = new Text;
@@ -241,7 +240,7 @@ void Engine::start()
 	threadStatsText->setString("");
 	threadStatsText->setPosition(glm::fvec2(600, 590));
 
-	uiLayer->addElement(threadStatsText);
+	uiGroup->addElement(threadStatsText);*/
 
 	// GPU commands
 	{
@@ -313,7 +312,7 @@ void Engine::engineLoop()
 		Engine::threading->instanceTransformMutex.unlock();
 		PROFILE_END("scripts");
 
-		console->update();
+		//console->update();
 
 		// Display performance stats
 		++frames;
@@ -469,12 +468,12 @@ bool Engine::processNextMainThreadJob()
 
 void Engine::updatePerformanceStatsDisplay()
 {
-	auto gBufferTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("gbuffer"));
+	/*auto gBufferTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("gbuffer"));
 	auto shadowTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("shadow"));
 	auto ssaoTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("ssao"));
 	auto pbrTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("pbr"));
 	auto overlayTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("overlay"));
-	auto overlayCombineTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("overlaycombine"));
+	//auto overlayCombineTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("overlaycombine"));
 	auto screenTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("screen"));
 
 	auto gBufferTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("gbuffer"));
@@ -482,7 +481,7 @@ void Engine::updatePerformanceStatsDisplay()
 	auto ssaoTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("ssao"));
 	auto pbrTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("pbr"));
 	auto overlayTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("overlay"));
-	auto overlayCombineTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("overlaycombine"));
+	//auto overlayCombineTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("overlaycombine"));
 	auto screenTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("screen"));
 
 	auto gBufferTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("gbuffer"));
@@ -525,7 +524,7 @@ void Engine::updatePerformanceStatsDisplay()
 	auto physicsTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("physics"));
 	auto scriptsTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("scripts"));
 
-	auto stats = (Text*)uiLayer->getElement("stats");
+	auto stats = (Text*)uiGroup->getElement("stats");
 
 	stats->setString(
 		"---------------------------------------------------\n"
@@ -555,7 +554,7 @@ void Engine::updatePerformanceStatsDisplay()
 
 	stats->setString("");
 
-	auto mutexStats = (Text*)uiLayer->getElement("mutexstats");
+	auto mutexStats = (Text*)uiGroup->getElement("mutexstats");
 
 	mutexStats->setString(
 		"----MUTEXES----------------\n"
@@ -568,7 +567,7 @@ void Engine::updatePerformanceStatsDisplay()
 
 	mutexStats->setString("");
 
-	auto threadStats = (Text*)uiLayer->getElement("threadstats");
+	auto threadStats = (Text*)uiGroup->getElement("threadstats");
 
 	std::string threadStatsString;
 
@@ -592,7 +591,7 @@ void Engine::updatePerformanceStatsDisplay()
 	}
 
 	threadStats->setString(threadStatsString);
-	threadStats->setString("");
+	threadStats->setString("");*/
 }
 
 void Engine::vduVkDebugCallback(vdu::Instance::DebugReportLevel level, vdu::Instance::DebugObjectType objectType, uint64_t objectHandle, const std::string & objectName, const std::string & message)
@@ -643,8 +642,8 @@ void Engine::createWindow()
 #ifdef __linux__
 	wci.connection = connection;
 #endif
-	wci.width = 1919;
-	wci.height = 1079;
+	wci.width = 1280;
+	wci.height = 720;
 	wci.posX = 0;
 	wci.posY = 0;
 	wci.title = "Vulkan Engine";
@@ -733,7 +732,7 @@ AssetStore Engine::assets;
 float Engine::maxDepth;
 std::mt19937_64 Engine::rand;
 u64 Engine::gpuTimeStamps[Renderer::NUM_GPU_TIMESTAMPS];
-OLayer* Engine::uiLayer;
+UIElementGroup* Engine::uiGroup;
 Console* Engine::console;
 Time Engine::frameTime(0);
 ScriptEnv Engine::scriptEnv;

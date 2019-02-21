@@ -1,7 +1,6 @@
 #pragma once
 #include "PCH.hpp"
 #include "Engine.hpp"
-#include "vdu/Shaders.hpp"
 
 class CombineOverlaysShader : public vdu::ShaderProgram
 {

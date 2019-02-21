@@ -4,7 +4,6 @@
 #include "Renderer.hpp"
 #include "XMLParser.hpp"
 #include "Threading.hpp"
-#include "vdu/DeviceMemory.hpp"
 
 void AssetStore::cleanup()
 {
@@ -186,12 +185,15 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 void AssetStore::loadDefaultAssets()
 {
+
+	/// TODO: Default assets should have READ_ONLY_OPTIMAL layout!
+
 	{
 		auto& tex = textures.try_emplace("blank").first->second;
 		TextureCreateInfo ci;
 		ci.genMipMaps = false;
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ci.layout = VK_IMAGE_LAYOUT_GENERAL;
 		ci.layers = 1;
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		ci.width = 2;
@@ -208,7 +210,7 @@ void AssetStore::loadDefaultAssets()
 		TextureCreateInfo ci;
 		ci.genMipMaps = false;
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ci.layout = VK_IMAGE_LAYOUT_GENERAL;
 		ci.layers = 6;
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		ci.width = 2;
@@ -225,7 +227,7 @@ void AssetStore::loadDefaultAssets()
 		TextureCreateInfo ci;
 		ci.genMipMaps = false;
 		ci.aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-		ci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ci.layout = VK_IMAGE_LAYOUT_GENERAL;
 		ci.layers = 1;
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		ci.width = 2;

@@ -10,8 +10,8 @@
 
 void Console::create(glm::ivec2 resolution)
 {
-	layer = new OLayer();
-	layer->create(resolution);
+	uiGroup = new UIElementGroup();
+	uiGroup->setResolution(resolution);
 
 	input = new Text();
 
@@ -24,7 +24,7 @@ void Console::create(glm::ivec2 resolution)
 	
 	input->setDepth(4);
 
-	layer->addElement(input);
+	uiGroup->addElement(input);
 
 	backs[0] = new UIPolygon();
 	backs[1] = new UIPolygon();
@@ -41,8 +41,8 @@ void Console::create(glm::ivec2 resolution)
 	backs[0]->setDepth(1);
 	backs[1]->setDepth(3);
 
-	layer->addElement(backs[0]);
-	layer->addElement(backs[1]);
+	uiGroup->addElement(backs[0]);
+	uiGroup->addElement(backs[1]);
 
 	blinker = new UIPolygon();
 
@@ -53,9 +53,9 @@ void Console::create(glm::ivec2 resolution)
 
 	update();
 
-	layer->addElement(blinker);
+	uiGroup->addElement(blinker);
 
-	layer->setDoDraw(active);
+	uiGroup->setDoDraw(active);
 	
 	updateBacks();
 
@@ -132,7 +132,7 @@ void Console::inputChar(char c)
 
 		postMessage(command, glm::fvec3(0.9, 0.9, 0.9));
 
-		layer->removeElement(input);
+		uiGroup->removeElement(input);
 
 		input = new Text();
 
@@ -143,7 +143,7 @@ void Console::inputChar(char c)
 		input->setPosition(glm::fvec2(3, 253));
 		input->setDepth(4);
 
-		layer->addElement(input);
+		uiGroup->addElement(input);
 
 		if (s.length() > 2)
 		{
@@ -281,7 +281,7 @@ void Console::postMessage(std::string msg, glm::fvec3 colour)
 	if (output.size() == historyLimit)
 	{
 		auto t = output.back();
-		layer->removeElement(t);
+		uiGroup->removeElement(t);
 		output.pop_back();
 	}
 	
@@ -294,7 +294,7 @@ void Console::postMessage(std::string msg, glm::fvec3 colour)
 	msgText->setPosition(glm::fvec2(3, 253));
 	msgText->setDepth(2);
 
-	layer->addElement(msgText);
+	uiGroup->addElement(msgText);
 
 	output.push_front(msgText);
 
@@ -316,22 +316,22 @@ void Console::renderAtStartup()
 
 	overlayRenderer.updateOverlayCommands();
 
-	std::vector<vdu::QueueSubmission> submissions(3);
+	std::vector<vdu::QueueSubmission> submissions(2);
 	
-	submissions[0].addCommands(&overlayRenderer.elementCommandBuffer);
+	submissions[0].addCommands(&overlayRenderer.commandBuffer);
 	submissions[0].addSignal(renderer->overlayFinishedSemaphore);
 
-	submissions[1].addWait(renderer->overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-	submissions[1].addCommands(&overlayRenderer.combineCommandBuffer);
-	submissions[1].addSignal(renderer->overlayCombineFinishedSemaphore);
+	//submissions[1].addWait(renderer->overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	//submissions[1].addCommands(&overlayRenderer.combineCommandBuffer);
+	//submissions[1].addSignal(renderer->overlayCombineFinishedSemaphore);
 
 	uint32_t imageIndex;
 	renderer->screenSwapchain.acquireNextImage(imageIndex, renderer->imageAvailableSemaphore);
 	
-	submissions[2].addWait(renderer->imageAvailableSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-	submissions[2].addWait(renderer->overlayCombineFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-	submissions[2].addCommands(renderer->screenCommandBuffersForConsole.getHandle(imageIndex));
-	submissions[2].addSignal(renderer->screenFinishedSemaphore);
+	submissions[1].addWait(renderer->imageAvailableSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	submissions[1].addWait(renderer->overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	submissions[1].addCommands(renderer->screenCommandBuffersForConsole.getHandle(imageIndex));
+	submissions[1].addSignal(renderer->screenFinishedSemaphore);
 
 	VK_CHECK_RESULT(renderer->lGraphicsQueue.submit(submissions, finishedStartupRenderFence));
 
@@ -357,7 +357,7 @@ void Console::setResolution(glm::ivec2 res)
 {
 	messagePostMutex.lock();
 	updateBacks();
-	layer->setResolution(glm::ivec2(Engine::window->resX, 276));
+	uiGroup->setResolution(glm::ivec2(Engine::window->resX, 276));
 	messagePostMutex.unlock();
 }
 

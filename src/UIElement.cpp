@@ -1,12 +1,13 @@
 #include "PCH.hpp"
-#include "OverlayElement.hpp"
+#include "UIElement.hpp"
 #include "Engine.hpp"
 #include "Renderer.hpp"
 
-OverlayElement::OverlayElement(Type pType) : type(pType), draw(true)
+UIElement::UIElement(Type pType) : type(pType), draw(true)
 {
 	shader = &Engine::renderer->overlayShader;
-		
+	
+	colour = glm::fvec4(1, 1, 1, 1);
 	depth = 0;
 
 	auto r = Engine::renderer;
@@ -14,7 +15,7 @@ OverlayElement::OverlayElement(Type pType) : type(pType), draw(true)
 	descSet.allocate(&r->logicalDevice, &r->overlayRenderer.getDescriptorSetLayout(), &r->freeableDescriptorPool);
 }
 
-OverlayElement::~OverlayElement()
+UIElement::~UIElement()
 {
 	descSet.free();
 }

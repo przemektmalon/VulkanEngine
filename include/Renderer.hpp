@@ -5,10 +5,9 @@
 #include "Texture.hpp"
 #include "Lights.hpp"
 #include "ShaderSpecs.hpp"
-#include "Text.hpp"
-#include "OverlayElement.hpp"
-#include "OverlayRenderer.hpp"
-#include "vdu\VDU.hpp"
+#include "UIText.hpp"
+#include "UIElement.hpp"
+#include "UIRenderer.hpp"
 
 struct CameraUBOData {
 	glm::fmat4 view;
@@ -52,7 +51,7 @@ public:
 		BEGIN_SCREEN,			END_SCREEN, 
 		NUM_GPU_TIMESTAMPS };
 
-	OverlayRenderer overlayRenderer;
+	UIRenderer overlayRenderer;
 
 	// Device, queues, swap chain
 	vdu::LogicalDevice logicalDevice;

@@ -1,7 +1,6 @@
 #include "PCH.hpp"
 #include "Renderer.hpp"
 #include "Window.hpp"
-#include "VulkanWrappers.hpp"
 #include "File.hpp"
 #include "Image.hpp"
 #include "Threading.hpp"
@@ -99,7 +98,6 @@ void Renderer::initialise()
 		overlayRenderer.createOverlayAttachments();
 		overlayRenderer.createOverlayRenderPass();
 		overlayRenderer.createOverlayDescriptorSetLayouts();
-		overlayRenderer.createOverlayDescriptorSets();
 		overlayRenderer.createOverlayPipeline();
 		overlayRenderer.createOverlayFramebuffer();
 		overlayRenderer.createOverlayCommands();
@@ -262,7 +260,7 @@ void Renderer::render()
 	/*
 		Query GPU profiling data and add it to our profiler
 	*/
-	auto timestamps = queryPool.query();
+	/*auto timestamps = queryPool.query();
 	memcpy(Engine::gpuTimeStamps, timestamps, sizeof(u64) * NUM_GPU_TIMESTAMPS);
 	
 	PROFILE_GPU_ADD_TIME("gbuffer", Engine::gpuTimeStamps[Renderer::BEGIN_GBUFFER], Engine::gpuTimeStamps[Renderer::END_GBUFFER]);
@@ -273,13 +271,13 @@ void Renderer::render()
 	PROFILE_GPU_ADD_TIME("overlaycombine", Engine::gpuTimeStamps[Renderer::BEGIN_OVERLAY_COMBINE], Engine::gpuTimeStamps[Renderer::END_OVERLAY_COMBINE]);
 	PROFILE_GPU_ADD_TIME("screen", Engine::gpuTimeStamps[Renderer::BEGIN_SCREEN], Engine::gpuTimeStamps[Renderer::END_SCREEN]);
 
-	PROFILE_START("submitrender");
+	PROFILE_START("submitrender");*/
 
 	/*
 		Submit batched vulkan commands
 	*/
 
-	std::vector<vdu::QueueSubmission> submissionsGroup1(4);
+	std::vector<vdu::QueueSubmission> submissionsGroup1(3);
 
 	/////////////////////////////////////////
 	/*
@@ -306,12 +304,8 @@ void Renderer::render()
 	submissionsGroup1[1].addCommands(&shadowCommandBuffer);
 	submissionsGroup1[1].addSignal(shadowFinishedSemaphore);
 
-	submissionsGroup1[2].addCommands(&overlayRenderer.elementCommandBuffer);
+	submissionsGroup1[2].addCommands(&overlayRenderer.commandBuffer);
 	submissionsGroup1[2].addSignal(overlayFinishedSemaphore);
-
-	submissionsGroup1[3].addWait(overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-	submissionsGroup1[3].addCommands(&overlayRenderer.combineCommandBuffer);
-	submissionsGroup1[3].addSignal(overlayCombineFinishedSemaphore);
 
 	gBufferGroupFence.reset();
 	VK_CHECK_RESULT(lGraphicsQueue.submit(submissionsGroup1, gBufferGroupFence));
@@ -359,7 +353,7 @@ void Renderer::render()
 	vdu::QueueSubmission screenSubmission;
 	screenSubmission.addWait(imageAvailableSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 	screenSubmission.addWait(pbrFinishedSemaphore, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-	screenSubmission.addWait(overlayCombineFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	screenSubmission.addWait(overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 	screenSubmission.addCommands(screenCommandBuffers.getHandle(imageIndex));
 	screenSubmission.addSignal(screenFinishedSemaphore);
 

@@ -2,7 +2,6 @@
 #include "Renderer.hpp"
 #include "Engine.hpp"
 #include "Window.hpp"
-#include "VulkanWrappers.hpp"
 
 void Renderer::createScreenSwapchain()
 {
@@ -50,7 +49,7 @@ void Renderer::updateScreenDescriptorSets()
 
 	auto overlayUpdate = updater->addImageUpdate("overlay");
 
-	overlayUpdate->imageView = overlayRenderer.combinedLayers.getView();
+	overlayUpdate->imageView = overlayRenderer.uiTexture.getView();
 	overlayUpdate->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	overlayUpdate->sampler = textureSampler;
 
@@ -103,7 +102,7 @@ void Renderer::updateScreenCommands()
 
 		vkCmdEndRenderPass(screenCommandBuffers.getHandle(i));
 
-		setImageLayout(screenCommandBuffers.getHandle(i), pbrOutput, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+		//setImageLayout(screenCommandBuffers.getHandle(i), pbrOutput, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 		queryPool.cmdTimestamp(screenCommandBuffers.getHandle(i), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, END_SCREEN);
 

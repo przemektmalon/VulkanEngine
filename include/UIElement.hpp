@@ -1,23 +1,20 @@
 #pragma once
 #include "PCH.hpp"
-#include "vdu/Shaders.hpp"
-#include "vdu/Descriptors.hpp"
 
-class OverlayElement
+class UIElement
 {
 public:
 	enum Type { Text, Poly };
 
-	OverlayElement(Type pType);
-	~OverlayElement();
+	UIElement(Type pType);
+	~UIElement();
 	void setName(std::string pName) { name = pName; }
 	std::string getName() { return name; }
-	virtual void render(VkCommandBuffer cmd) {}
+	virtual void render(vdu::CommandBuffer& cmd) {}
 	virtual void cleanup() {}
-	void* getPushConstData() { return pushConstData; }
-	int getPushConstSize() { return pushConstSize; }
-	VkDescriptorSet getDescriptorSet() { return descSet.getHandle(); }
+	vdu::DescriptorSet& getDescriptorSet() { return descSet; }
 	vdu::ShaderProgram* getShader() { return shader; }
+	glm::fvec4 getColour() { return colour; }
 	void setDepth(float pDepth) { depth = pDepth; depthUpdate = true; }
 	float getDepth() { return depth; }
 	Type getType() { return type; }
@@ -26,16 +23,16 @@ public:
 	bool needsDrawUpdate() { return drawUpdate; }
 	void setUpdated() { depthUpdate = false; drawUpdate = false; }
 
+	void setColour(glm::fvec4 pColour) { colour = pColour; }
 	void setDoDraw(bool pDoDraw) { draw = pDoDraw; drawUpdate = true; }
 	bool doDraw() { return draw; }
 	void toggleDoDraw() { setDoDraw(!doDraw()); }
 
 protected:
-	void* pushConstData; /// TODO: free in derived
-	int pushConstSize;
-
 	std::string name;
 	Type type;
+
+	glm::fvec4 colour;
 
 	vdu::DescriptorSet descSet;
 
@@ -48,7 +45,7 @@ protected:
 	bool draw;
 };
 
-inline bool compareOverlayElements(OverlayElement* lhs, OverlayElement* rhs)
+inline bool compareOverlayElements(UIElement* lhs, UIElement* rhs)
 {
 	return lhs->getDepth() < rhs->getDepth();
 }
