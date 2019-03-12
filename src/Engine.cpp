@@ -93,12 +93,12 @@ void Engine::start()
 	};
 
 	int i = 0;
-	std::vector<std::thread::id> threadIDs(numThreads+3);
+	std::vector<std::thread::id> threadIDs(numThreads+4);
 	threadIDs[i] = std::this_thread::get_id(); // Main thread can use profiler
 	++i;
-	for (auto& thread : threading->workers) {
-		threadIDs[i] = thread->get_id();
-		threading->threadIDAssociations.insert(std::make_pair(i, thread->get_id()));
+	for (auto& thread : threading->workerThreads) {
+		threadIDs[i] = thread->getID();
+		threading->threadIDAssociations.insert(std::make_pair(i, thread->getID()));
 		++i;
 	}
 	
@@ -127,10 +127,7 @@ void Engine::start()
 	/*
 		Wait until the renderer is initialised before we start loading assets
 	*/
-	while (!threading->allGPUJobsDone())
-	{
-		std::this_thread::yield();
-	}
+	threading->gpuWorker->waitForAllJobsToFinish();
 
 	/*
 		Default assets are null assets (blank textures to fall back on when desired not found)
@@ -141,10 +138,7 @@ void Engine::start()
 	assets.loadAssets("/res/consolefontresource.xml");
 	world.addModelInstance("nullModel", "nullModel"); // Null model needed in the world to prevent warning about empty vertex/index buffers
 
-	while (!threading->allGPUTransferJobsDone())
-	{
-		std::this_thread::yield();
-	}
+	threading->gpuWorker->waitForAllJobsToFinish();
 
 	/*
 		The console will start reporting progress of initialisation (loading assets)
@@ -262,7 +256,7 @@ void Engine::start()
 	threading->addCPUJob(new Job<>(physicsJobFunc));
 	threading->addCPUJob(new Job<>(cleanupJobsJobFunc));
 
-	threading->threadJobsProcessed[std::this_thread::get_id()] = 0;
+	//threading->threadJobsProcessed[std::this_thread::get_id()] = 0;
 
 	world.setSkybox("skybox");
 
@@ -432,29 +426,29 @@ void Engine::eventLoop()
 
 void Engine::processAllMainThreadJobs()
 {
-	JobBase* job;
+	/*JobBase* job;
 	s64 timeUntilNextJob;
 	while (threading->getGPUTransferJob(job, timeUntilNextJob))
 	{
 		job->run();
-		++threading->threadJobsProcessed[std::this_thread::get_id()];
+		//++threading->threadJobsProcessed[std::this_thread::get_id()];
 	}
 	while (threading->getCPUJob(job, timeUntilNextJob))
 	{
 		job->run();
-		++threading->threadJobsProcessed[std::this_thread::get_id()];
-	}
+		//++threading->threadJobsProcessed[std::this_thread::get_id()];
+	}*/
 }
 
 bool Engine::processNextMainThreadJob()
 {
-	renderer->executeFenceDelayedActions(); // Any externally synced vulkan objects created on this thread should be destroyed from this thread
+	/*renderer->executeFenceDelayedActions(); // Any externally synced vulkan objects created on this thread should be destroyed from this thread
 	JobBase* job;
 	s64 timeUntilNextJob;
 	if (threading->getGPUTransferJob(job, timeUntilNextJob))
 	{
 		job->run();
-		++threading->threadJobsProcessed[std::this_thread::get_id()];
+		//++threading->threadJobsProcessed[std::this_thread::get_id()];
 		return true;
 	}
 	/*else if (threading->getCPUJob(job, timeUntilNextJob))
@@ -693,9 +687,10 @@ void Engine::queryVulkanPhysicalDeviceDetails()
 void Engine::quit()
 {
 	DBG_INFO("Exiting");
-	for (auto t : threading->workers)
+	for (auto t : threading->workerThreads)
 	{
-		t->join();
+		if (t)
+			t->join();
 	}
 
 	threading->cleanupJobs(); // Cleanup memory of finished jobs

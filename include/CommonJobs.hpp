@@ -8,7 +8,7 @@
 #include "Console.hpp"
 
 static VoidJobType physicsJobFunc;
-static VoidJobType physicsToGPUJobFunc;
+//static VoidJobType physicsToGPUJobFunc;
 static VoidJobType renderJobFunc;
 static VoidJobType scriptsJobFunc;
 static VoidJobType cleanupJobsJobFunc;
@@ -53,7 +53,7 @@ static void initialiseCommonJobs()
 		}
 	};
 
-	physicsToGPUJobFunc = []() -> void {
+	/*physicsToGPUJobFunc = []() -> void {
 
 		auto& physics = Engine::physicsWorld;
 		auto& threading = Engine::threading;
@@ -75,7 +75,7 @@ static void initialiseCommonJobs()
 			nextPhysicsJob->setScheduledTime(clock.now() + microsecondsBetweenPhysicsUpdates);
 			threading->addGPUTransferJob(nextPhysicsJob);
 		}
-	};
+	};*/
 
 	renderJobFunc = []() -> void {
 
