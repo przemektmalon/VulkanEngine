@@ -9,6 +9,44 @@
 #include "Window.hpp"
 #include "Threading.hpp"
 
+void PhysicsWorld::updateJob()
+{
+	auto& _this = Engine::physicsWorld;
+	auto& threading = Engine::threading;
+	auto& renderer = Engine::renderer;
+	auto& clock = Engine::clock;
+
+	PROFILE_MUTEX("physmutex", threading->physBulletMutex.lock());
+	PROFILE_START("physics");
+
+	_this.updateAddedObjects(); // Objects just added to the physics world
+
+	static u64 endTime = clock.now(); // Static var for timing physics
+
+	u64 timeSinceLastPhysics = clock.now() - endTime;
+	_this.step(float(timeSinceLastPhysics) / 1000.f); // Step physics by appropriate time
+	endTime = clock.now();
+
+	_this.updateModels(); // Get transform data from bullet to engine
+
+	threading->physBulletMutex.unlock();
+
+	PROFILE_MUTEX("phystoenginemutex", threading->physToEngineMutex.lock());
+	renderer->updateTransformBuffer();
+	threading->physToEngineMutex.unlock();
+
+	PROFILE_END("physics");
+
+	if (Engine::engineRunning)
+	{
+		u64 microsecondsBetweenPhysicsUpdates = 1000000 / 60;
+
+		auto nextPhysicsJob = new Job<>(&updateJob);
+		//nextPhysicsJob->setScheduledTime(endTime + microsecondsBetweenPhysicsUpdates);
+		threading->addCPUJob(nextPhysicsJob);
+	}
+}
+
 void PhysicsWorld::addRigidBody(PhysicsObject * body)
 {
 	Engine::threading->physObjectAddMutex.lock();

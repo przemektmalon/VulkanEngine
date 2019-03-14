@@ -81,7 +81,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 		auto job = new Job<decltype(texLoadFunc)>(texLoadFunc, JobBase::CPUTransfer);
 		job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, JobBase::GPUTransfer));
-		Engine::threading->addCPUTransferJob(job);*/
+		Engine::threading->addDiskIOJob(job);*/
 		tex.prepare(paths, name);
 	}
 

@@ -12,36 +12,50 @@ Threading::Threading(int pNumThreads)
 
 Threading::~Threading()
 {
-	for (auto w : workerThreads) {
+	for (auto w : m_workerThreads) {
 		if (w)
 			w->join();
 	}
 }
 
+std::string Threading::getThisThreadIDString()
+{
+	std::stringstream ss;
+	ss << std::this_thread::get_id();
+	return ss.str();
+}
+
+std::string Threading::getThreadIDString(std::thread::id id)
+{
+	std::stringstream ss;
+	ss << id;
+	return ss.str();
+}
+
 void Threading::addCPUJob(JobBase * jobToAdd)
 {
-	cpuWorker->pushJob(jobToAdd);
+	m_cpuWorker->pushJob(jobToAdd);
 }
 
 void Threading::addGPUJob(JobBase * jobToAdd)
 {
-	gpuWorker->pushJob(jobToAdd);
+	m_gpuWorker->pushJob(jobToAdd);
 }
 
-void Threading::addCPUTransferJob(JobBase * jobToAdd)
+void Threading::addDiskIOJob(JobBase * jobToAdd)
 {
-	diskIOWorker->pushJob(jobToAdd);
+	m_diskIOWorker->pushJob(jobToAdd);
 }
 
 void Threading::initCompulsoryWorkers()
 {
 	// Create CPU worker
-	cpuWorker = new WorkerThread(
+	m_cpuWorker = new WorkerThread(
 		[]()->void { 
 			Engine::renderer->createPerThreadCommandPools(); 
 		},
 		[this]()->void {
-			while (gpuWorker)
+			while (m_gpuWorker)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			}
@@ -52,7 +66,7 @@ void Threading::initCompulsoryWorkers()
 		"cpu");
 	
 	// Create GPU worker
-	gpuWorker = new WorkerThread(
+	m_gpuWorker = new WorkerThread(
 		[]()->void { Engine::renderer->createPerThreadCommandPools(); },
 		[this]()->void {
 			/// TODO: this shouldn't be neccessary ? But if we get mysterious crashes then we will have to find a work around 
@@ -66,38 +80,50 @@ void Threading::initCompulsoryWorkers()
 			Engine::renderer->lGraphicsQueue.waitIdle();
 			Engine::renderer->lTransferQueue.waitIdle();
 			Engine::renderer->commandPool.destroy();
-			gpuWorker = nullptr;
+			m_gpuWorker = nullptr;
 		},
 		"gpu");
 
 	// Create DISK IO worker
-	diskIOWorker = new WorkerThread(
+	m_diskIOWorker = new WorkerThread(
 		[]()->void { },
 		[]()->void { },
 		"disk");
 
 	// Add the created workers to the workers list
-	workerThreads.push_back(cpuWorker);
-	workerThreads.push_back(gpuWorker);
-	workerThreads.push_back(diskIOWorker);
+	m_workerThreads.push_back(m_cpuWorker);
+	m_workerThreads.push_back(m_gpuWorker);
+	m_workerThreads.push_back(m_diskIOWorker);
 }
 
 void Threading::freeJob(JobBase * jobToFree)
 {
-	jobsFreeMutex.lock();
-	jobsToFree.push_front(jobToFree);
-	jobsFreeMutex.unlock();
+	m_jobsFreeMutex.lock();
+	m_jobsToFree.push_front(jobToFree);
+	m_jobsFreeMutex.unlock();
 }
 
-void Threading::cleanupJobs()
+void Threading::freeFinishedJobs()
 {
-	jobsFreeMutex.lock();
-	for (auto j : jobsToFree)
+	m_jobsFreeMutex.lock();
+	for (auto j : m_jobsToFree)
 	{
 		delete j;
 	}
-	jobsToFree.clear();
-	jobsFreeMutex.unlock();
+	m_jobsToFree.clear();
+	m_jobsFreeMutex.unlock();
+}
+
+void Threading::cleanupJob()
+{
+	Engine::threading->freeFinishedJobs();
+
+	if (Engine::engineRunning)
+	{
+		auto nextCleanupJob = new Job<>(&cleanupJob);
+		//nextCleanupJob->setScheduledTime(Engine::clock.now() + 10000);
+		Engine::threading->addCPUJob(nextCleanupJob);
+	}
 }
 
 void Threading::WorkerThread::pushJob(JobBase * job)
@@ -106,7 +132,7 @@ void Threading::WorkerThread::pushJob(JobBase * job)
 
 	m_jobsQueueMutex.lock();
 
-	job->owningWorker = this;
+	job->m_owningWorker = this;
 	++m_totalJobsAdded;
 	m_jobsQueue.push(job);
 
@@ -136,9 +162,9 @@ void Threading::WorkerThread::run()
 	// Register the thread in the engine profiler
 	Engine::waitForProfilerInitMutex.lock();
 	Engine::waitForProfilerInitMutex.unlock();
-	Engine::threading->initThreadProfilerTagsMutex.lock();
+	Engine::threading->m_initThreadProfilerTagsMutex.lock();
 	Profiler::prealloc(std::vector<std::thread::id>{ std::this_thread::get_id() }, std::vector<std::string>{ "thread_" + getThisThreadIDString() });
-	Engine::threading->initThreadProfilerTagsMutex.unlock();
+	Engine::threading->m_initThreadProfilerTagsMutex.unlock();
 
 	m_initFunc();
 

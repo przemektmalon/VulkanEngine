@@ -35,6 +35,8 @@ public:
 	void cleanup();
 	void render();
 
+	static void renderJob();
+
 	void createShaders();
 	void compileShaders();
 	void reloadShaders();
@@ -66,8 +68,6 @@ public:
 	VkExtent2D renderResolution;
 
 	vdu::VertexInputState defaultVertexInputState;
-
-	
 
 	std::mutex bufferFreeMutex;
 

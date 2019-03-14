@@ -18,6 +18,8 @@ public:
 		delete broadphase;
 	}
 
+	static void updateJob();
+
 	void create()
 	{
 		broadphase = new btDbvtBroadphase();

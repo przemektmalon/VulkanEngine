@@ -69,9 +69,9 @@ ModelInstance* World::addModelInstance(std::string modelName, std::string instan
 			m->getAvailability() |= Asset::LOADING_TO_RAM;
 			m->getAvailability() |= Asset::LOADING_TO_GPU;
 
-			auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, JobBase::CPUTransfer);
-			job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, JobBase::GPUTransfer));
-			Engine::threading->addCPUTransferJob(job);
+			auto job = new Job<decltype(loadJobFunc)>(loadJobFunc);
+			job->setChild(new Job<decltype(modelToGPUFunc)>(modelToGPUFunc, Engine::threading->m_gpuWorker));
+			Engine::threading->addDiskIOJob(job);
 		}
 		else
 		{
@@ -134,9 +134,9 @@ void World::setSkybox(const std::string & skyboxName)
 	skybox->getAvailability() |= Asset::LOADING_TO_RAM;
 	skybox->getAvailability() |= Asset::LOADING_TO_GPU;
 
-	auto job = new Job<decltype(texToRAMFunc)>(texToRAMFunc, JobBase::CPUTransfer);
-	job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, JobBase::GPUTransfer));
-	Engine::threading->addCPUTransferJob(job);
+	auto job = new Job<decltype(texToRAMFunc)>(texToRAMFunc);
+	job->setChild(new Job<decltype(texToGPUFunc)>(texToGPUFunc, Engine::threading->m_gpuWorker));
+	Engine::threading->addDiskIOJob(job);
 }
 
 void World::frustumCulling(Camera * cam)

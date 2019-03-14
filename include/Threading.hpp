@@ -6,14 +6,23 @@
 // class Threading	-- worker threads with job queues
 // class Job		-- function to call with some arguments (by some worker thread)
 
+typedef std::function<void(void)> VoidJobType;
+
 class JobBase;
+template<typename>
+class Job;
 
 class Threading
 {
 	friend class JobBase;
+	template<typename> friend class Job;
+	
+
+protected:
+
 	class WorkerThread {
 	public:
-		WorkerThread(std::function<void(void)> initFunc, std::function<void(void)> closeFunc, const std::string& name) :
+		WorkerThread(VoidJobType initFunc, VoidJobType closeFunc, const std::string& name) :
 			m_initFunc(initFunc), m_closeFunc(closeFunc), m_name(name), m_thread(&WorkerThread::run, this), m_totalJobsAdded(0), m_totalJobsFinished(0) {}
 		WorkerThread(const WorkerThread&) = delete;
 		WorkerThread& operator=(const WorkerThread&) = delete;
@@ -43,8 +52,8 @@ class Threading
 		std::atomic_char32_t m_totalJobsAdded;
 		std::atomic_char32_t m_totalJobsFinished;
 
-		std::function<void(void)> m_initFunc;
-		std::function<void(void)> m_closeFunc;
+		VoidJobType m_initFunc;
+		VoidJobType m_closeFunc;
 		std::string m_name;
 	};
 
@@ -56,33 +65,23 @@ public:
 	// Terminate worker threads
 	~Threading();
 
-	// Get thread ID strings
-	static std::string getThisThreadIDString()
-	{
-		std::stringstream ss;
-		ss << std::this_thread::get_id();
-		return ss.str();
-	}
-	static std::string getThreadIDString(std::thread::id id)
-	{
-		std::stringstream ss;
-		ss << id;
-		return ss.str();
-	}
+	// Get thread IDs as strings
+	static std::string getThisThreadIDString();
+	static std::string getThreadIDString(std::thread::id id);
 
-	// Compulsory workers (CPU, DISK I/O, GPU)
-	WorkerThread* cpuWorker;
-	WorkerThread* diskIOWorker;
-	WorkerThread* gpuWorker;
-
-	std::mutex initThreadProfilerTagsMutex;
-	std::unordered_map<int, std::thread::id> threadIDAssociations;
+	std::mutex m_initThreadProfilerTagsMutex;
+	std::unordered_map<int, std::thread::id> m_threadIDAssociations;
 	
+	// Compulsory workers (CPU, DISK I/O, GPU)
+	WorkerThread* m_cpuWorker;
+	WorkerThread* m_diskIOWorker;
+	WorkerThread* m_gpuWorker;
+
 	void addWorkerThread(const std::function<void(void)>& initFunc, const std::function<void(void)>& closeFunc, const std::string& name) {
-		workerThreads.push_back(new WorkerThread(initFunc, closeFunc, name));
+		m_workerThreads.push_back(new WorkerThread(initFunc, closeFunc, name));
 	}
 
-	std::vector<WorkerThread*> workerThreads;
+	std::vector<WorkerThread*> m_workerThreads;
 
 	// Systems add their jobs to the queue, jobs submitted with this function CANNOT submit GPU operations
 	void addCPUJob(JobBase* job);
@@ -96,16 +95,19 @@ public:
 	/// void addGPUTransferJob(JobBase* job);
 
 	// DISK <-> RAM transfer operation will have their own thread
-	void addCPUTransferJob(JobBase* job);
+	void addDiskIOJob(JobBase* job);
 
 	// Mark job for freeing memory
 	void freeJob(JobBase* job);
 
 	// Free jobs that are finished
-	void cleanupJobs();
+	void freeFinishedJobs();
 
-	std::list<JobBase*> jobsToFree;
-	std::mutex jobsFreeMutex;
+	// A job that calls freeFinishedJobs
+	static void cleanupJob();
+
+	std::list<JobBase*> m_jobsToFree;
+	std::mutex m_jobsFreeMutex;
 
 
 	// Engine mutexes
@@ -133,15 +135,11 @@ private:
 class JobBase
 {
 	friend class Threading;
-public:
-	enum Type { CPU, GPU, CPUTransfer, GPUTransfer };
-
 protected:
 
-	JobBase() = delete;
+	JobBase(Threading::WorkerThread* owningWorker) : m_owningWorker(owningWorker) {}
+	JobBase() {}
 	JobBase(const JobBase&) = delete;
-	JobBase(Type pType) : type(pType), child(nullptr), scheduledTime(0) {}
-	JobBase(Type pType, u64 pScheduledTime) : type(pType), child(nullptr), scheduledTime(pScheduledTime) {}
 
 public:
 
@@ -152,64 +150,40 @@ public:
 		child = pChild;
 	}
 
-	void setType(Type pType)
-	{
-		type = pType;
-	}
-
-	Type getType()
-	{
-		return type;
-	}
-
-	void setScheduledTime(u64 pScheduledTime)
-	{
-		scheduledTime = pScheduledTime;
-	}
-
-	s64 getScheduledTime()
-	{
-		return scheduledTime;
-	}
-
 protected:
 
-	Threading::WorkerThread* owningWorker;
-	s64 scheduledTime;
-	JobBase * child;
-	Type type;
-};
+	void pushChildJob() { 
+		child->m_owningWorker->pushJob(child); 
+	}
 
-typedef std::function<void(void)> VoidJobType;
+	Threading::WorkerThread* m_owningWorker = nullptr;
+	JobBase * child = nullptr;
+};
 
 template<typename JobFuncType = VoidJobType>
 class Job : public JobBase
 {
+	friend class Threading;
 public:
-	Job(JobFuncType pJobFunction) : jobFunction(pJobFunction), JobBase(CPU) {}
-	Job(JobFuncType pJobFunction, Type pType) : jobFunction(pJobFunction), JobBase(pType) {}
+	/*
+		Constructor for regular jobs
+	*/
+	Job(JobFuncType pJobFunction) : jobFunction(pJobFunction) {}
+
+	/*
+		This constructor is for child jobs that would be run on a different worker thread than the parent job.
+		Usually m_owningThread is set automatically when a job is pushed to a specific worker,
+		however for child jobs that need to be run by a different worker, this constructor should be used
+		so that the child job is pushed to the correct worker thread
+	*/
+	Job(JobFuncType pJobFunction, Threading::WorkerThread* owningWorker) : jobFunction(pJobFunction), JobBase(owningWorker) {}
 
 	void run()
 	{
 		jobFunction();
-		if (child)
-		{
-			switch (child->getType())
-			{
-			case (CPU):
-				Engine::threading->addCPUJob(child);
-				break;
-			case (GPU):
-				Engine::threading->addGPUJob(child);
-				break;
-			case (CPUTransfer):
-				Engine::threading->addCPUTransferJob(child);
-				break;
-			case (GPUTransfer):
-				//Engine::threading->addGPUTransferJob(child);
-				Engine::threading->addGPUJob(child);
-				break;
-			}
+
+		if (child) {
+			pushChildJob();
 		}
 
 		Engine::threading->freeJob(this);

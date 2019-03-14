@@ -374,6 +374,58 @@ void Renderer::render()
 	PROFILE_END("submitrender");
 }
 
+void Renderer::renderJob()
+{
+	auto& _this = Engine::renderer;
+	auto& assets = Engine::assets;
+	auto& threading = Engine::threading;
+	auto& world = Engine::world;
+
+
+	PROFILE_START("commands");
+	_this->gBufferGroupFence.wait();
+	_this->updateMaterialDescriptors();
+	_this->updateGBufferCommands();
+	_this->updateShadowCommands(); // Mutex with engine model transform update
+	PROFILE_END("commands");
+
+	_this->lightManager.sunLight.calcProjs();
+	world.frustumCulling(&Engine::camera);
+
+	PROFILE_START("qwaitidle");
+	_this->lGraphicsQueue.waitIdle();
+	PROFILE_END("qwaitidle");
+
+	_this->updateSkyboxDescriptor();
+
+	PROFILE_START("cullingdrawbuffer");
+
+	_this->lightManager.updateSunLight();
+	_this->overlayRenderer.cleanupLayerElements();
+	_this->executeFenceDelayedActions();
+
+	_this->populateDrawCmdBuffer(); // Mutex with engine model transform update
+	_this->lightManager.updateShadowDrawCommands();
+	_this->updateCameraBuffer();
+
+	PROFILE_END("cullingdrawbuffer");
+
+	PROFILE_START("setuprender");
+
+	_this->updateConfigs();
+	_this->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
+	PROFILE_MUTEX("transformmutex", threading->instanceTransformMutex.lock());
+	threading->instanceTransformMutex.unlock();
+	PROFILE_MUTEX("phystogpumutex", threading->physToGPUMutex.lock());
+	_this->render();
+	threading->physToGPUMutex.unlock();
+
+	PROFILE_END("setuprender");
+
+	if (Engine::engineRunning)
+		threading->addGPUJob(new Job<>(&renderJob));
+}
+
 void Renderer::reloadShaders()
 {
 	VK_CHECK_RESULT(vkDeviceWaitIdle(device));

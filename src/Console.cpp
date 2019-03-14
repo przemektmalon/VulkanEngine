@@ -348,7 +348,7 @@ void Console::renderAtStartup()
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(15));
 		auto renderAgainFunc = std::bind(&Console::renderAtStartup, this);
-		auto renderAgainJob = new Job<decltype(renderAgainFunc)>(renderAgainFunc, JobBase::GPU);
+		auto renderAgainJob = new Job<decltype(renderAgainFunc)>(renderAgainFunc);
 		threading->addGPUJob(renderAgainJob);
 	}
 }

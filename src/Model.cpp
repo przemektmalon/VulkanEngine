@@ -108,9 +108,9 @@ void ModelInstance::setMaterial(Material* pMaterial)
 		m->loadToGPU();
 	}, material);
 
-	auto job = new Job<decltype(loadJobFunc)>(loadJobFunc, JobBase::CPUTransfer);
-	job->setChild(new Job<decltype(toGPUFunc)>(toGPUFunc, JobBase::GPUTransfer));
-	Engine::threading->addCPUTransferJob(job);
+	auto job = new Job<decltype(loadJobFunc)>(loadJobFunc);
+	job->setChild(new Job<decltype(toGPUFunc)>(toGPUFunc, Engine::threading->m_gpuWorker));
+	Engine::threading->addDiskIOJob(job);
 }
 
 /*void ModelInstance::makePhysicsObject(btCollisionShape * collisionShape, float mass)

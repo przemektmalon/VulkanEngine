@@ -7,7 +7,6 @@
 #include "PBRImage.hpp"
 #include "UIRenderer.hpp"
 #include "Threading.hpp"
-#include "CommonJobs.hpp"
 
 /*
 	@brief	Initialise enigne and sub-systems and start main loop
@@ -39,7 +38,6 @@ void Engine::start()
 	createVulkanInstance();
 	createWindow();
 	queryVulkanPhysicalDeviceDetails();
-	initialiseCommonJobs();
 	rand.seed(0);
 
 	/// TODO: A more convenient utility for this \/ \/ \/
@@ -96,9 +94,9 @@ void Engine::start()
 	std::vector<std::thread::id> threadIDs(numThreads+4);
 	threadIDs[i] = std::this_thread::get_id(); // Main thread can use profiler
 	++i;
-	for (auto& thread : threading->workerThreads) {
+	for (auto& thread : threading->m_workerThreads) {
 		threadIDs[i] = thread->getID();
-		threading->threadIDAssociations.insert(std::make_pair(i, thread->getID()));
+		threading->m_threadIDAssociations.insert(std::make_pair(i, thread->getID()));
 		++i;
 	}
 	
@@ -121,13 +119,13 @@ void Engine::start()
 	auto initRendererJobFunc = []() -> void {
 		renderer->initialise();
 	};
-	threading->addGPUJob(new Job<>(initRendererJobFunc, JobBase::GPU));
+	threading->addGPUJob(new Job<>(initRendererJobFunc));
 	renderer->createPerThreadCommandPools();
 
 	/*
 		Wait until the renderer is initialised before we start loading assets
 	*/
-	threading->gpuWorker->waitForAllJobsToFinish();
+	threading->m_gpuWorker->waitForAllJobsToFinish();
 
 	/*
 		Default assets are null assets (blank textures to fall back on when desired not found)
@@ -138,7 +136,7 @@ void Engine::start()
 	assets.loadAssets("/res/consolefontresource.xml");
 	world.addModelInstance("nullModel", "nullModel"); // Null model needed in the world to prevent warning about empty vertex/index buffers
 
-	threading->gpuWorker->waitForAllJobsToFinish();
+	threading->m_gpuWorker->waitForAllJobsToFinish();
 
 	/*
 		The console will start reporting progress of initialisation (loading assets)
@@ -161,7 +159,7 @@ void Engine::start()
 	/*
 		Submit graphics job (console rendering)
 	*/
-	auto renderConsoleJob = new Job<>(renderConsoleFunc, JobBase::GPU);
+	auto renderConsoleJob = new Job<>(renderConsoleFunc);
 	threading->addGPUJob(renderConsoleJob);
 
 	/*
@@ -248,15 +246,11 @@ void Engine::start()
 	}
 
 	/*
-		These jobs are found in "CommonJobs.hpp"
-		They will be re-added at the end of each frame
+		These jobs push themselves back into the job queue while Engine::engineRunning == true
 	*/
-	//threading->addGraphicsJob(new Job<>(physicsToGPUJobFunc, defaultCPUJobDoneFunc), 1);
-	threading->addGPUJob(new Job<>(renderJobFunc, JobBase::GPU));
-	threading->addCPUJob(new Job<>(physicsJobFunc));
-	threading->addCPUJob(new Job<>(cleanupJobsJobFunc));
-
-	//threading->threadJobsProcessed[std::this_thread::get_id()] = 0;
+	threading->addGPUJob(new Job<>(&Renderer::renderJob));
+	threading->addCPUJob(new Job<>(&PhysicsWorld::updateJob));
+	threading->addCPUJob(new Job<>(&Threading::cleanupJob));
 
 	world.setSkybox("skybox");
 
@@ -340,7 +334,7 @@ void Engine::eventLoop()
 				console->setResolution(glm::ivec2(Engine::window->resX, 276));
 				console->postMessage("Window resized", glm::fvec3(0.2, 0.9, 0.2));
 			}, console);
-			threading->addGPUJob(new Job<>(consoleSizeUpdateJobFunc, JobBase::GPU));
+			threading->addGPUJob(new Job<>(consoleSizeUpdateJobFunc));
 		}
 		case(Event::TextInput):
 		{
@@ -410,7 +404,7 @@ void Engine::eventLoop()
 				auto reloadJobFunc = []() -> void {
 					Engine::renderer->reloadShaders();
 				};
-				threading->addGPUJob(new Job<>(reloadJobFunc, JobBase::GPU));
+				threading->addGPUJob(new Job<>(reloadJobFunc));
 			}
 			break;
 		}
@@ -431,12 +425,10 @@ void Engine::processAllMainThreadJobs()
 	while (threading->getGPUTransferJob(job, timeUntilNextJob))
 	{
 		job->run();
-		//++threading->threadJobsProcessed[std::this_thread::get_id()];
 	}
 	while (threading->getCPUJob(job, timeUntilNextJob))
 	{
 		job->run();
-		//++threading->threadJobsProcessed[std::this_thread::get_id()];
 	}*/
 }
 
@@ -448,13 +440,11 @@ bool Engine::processNextMainThreadJob()
 	if (threading->getGPUTransferJob(job, timeUntilNextJob))
 	{
 		job->run();
-		//++threading->threadJobsProcessed[std::this_thread::get_id()];
 		return true;
 	}
 	/*else if (threading->getCPUJob(job, timeUntilNextJob))
 	{
 		job->run();
-		++threading->threadJobsProcessed[std::this_thread::get_id()];
 		return true;
 	}*/
 	return false;
@@ -687,13 +677,13 @@ void Engine::queryVulkanPhysicalDeviceDetails()
 void Engine::quit()
 {
 	DBG_INFO("Exiting");
-	for (auto t : threading->workerThreads)
+	for (auto t : threading->m_workerThreads)
 	{
 		if (t)
 			t->join();
 	}
 
-	threading->cleanupJobs(); // Cleanup memory of finished jobs
+	threading->freeFinishedJobs(); // Cleanup memory of finished jobs
 	renderer->lGraphicsQueue.waitIdle();
 	renderer->lTransferQueue.waitIdle();
 	assets.cleanup();

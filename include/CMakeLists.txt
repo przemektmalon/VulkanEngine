@@ -3,7 +3,6 @@ set(FILES
         "AssetStore.hpp"
         "Camera.hpp"
         "Clock.hpp"
-        "CommonJobs.hpp"
         "Console.hpp"
         "Engine.hpp"
         "EngineConfig.hpp"
