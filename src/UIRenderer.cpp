@@ -191,7 +191,7 @@ void UIRenderer::updateOverlayCommands()
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
-	Engine::renderer->queryPool.cmdTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, Renderer::BEGIN_OVERLAY);
+	Engine::renderer->queryPool.cmdTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, Renderer::BEGIN_UI);
 
 	vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -240,7 +240,7 @@ void UIRenderer::updateOverlayCommands()
 
 	vkCmdEndRenderPass(cmd);
 
-	Engine::renderer->queryPool.cmdTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Renderer::END_OVERLAY);
+	Engine::renderer->queryPool.cmdTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, Renderer::END_UI);
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(cmd));
 

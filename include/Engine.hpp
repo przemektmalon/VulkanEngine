@@ -70,7 +70,7 @@ public:
 	static std::mt19937_64 rand;
 	static float maxDepth;
 	static UIElementGroup* uiGroup;
-	static u64 gpuTimeStamps[14];
+	static u64 gpuTimeStamps[12];
 	static std::atomic_char initialised;
 	static std::mutex waitForProfilerInitMutex;
 	static std::string workingDirectory;

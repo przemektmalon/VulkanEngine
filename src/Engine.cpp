@@ -191,42 +191,33 @@ void Engine::start()
 	/*
 		Creating UI layer for displaying profiling stats
 	*/
-	/*auto uiGroup = new UIElementGroup();
+
+	uiGroup = renderer->uiRenderer.createUIGroup("stats");
 	uiGroup->setResolution(glm::ivec2(1280, 720));
-	renderer->uiRenderer.createUIGroup(uiGroup);
 
 	// For GPU and CPU profiling times
-	Text* statsText = new Text;
-	statsText->setName("stats");
+	auto statsText = uiGroup->createElement<Text>("stats");
 	statsText->setFont(Engine::assets.getFont("consola"));
 	statsText->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	statsText->setCharSize(20);
 	statsText->setString("");
 	statsText->setPosition(glm::fvec2(0, 330));
 
-	uiGroup->createElement(statsText);
-
 	// For mutex lock wait times
-	auto mutexStatsText = new Text;
-	mutexStatsText->setName("mutexstats");
+	auto mutexStatsText = uiGroup->createElement<Text>("mutexstats");
 	mutexStatsText->setFont(Engine::assets.getFont("consola"));
 	mutexStatsText->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	mutexStatsText->setCharSize(20);
 	mutexStatsText->setString("");
 	mutexStatsText->setPosition(glm::fvec2(600, 450));
 
-	uiGroup->createElement(mutexStatsText);
-
 	// For per thread stats
-	auto threadStatsText = new Text;
-	threadStatsText->setName("threadstats");
+	auto threadStatsText = uiGroup->createElement<Text>("threadstats");
 	threadStatsText->setFont(Engine::assets.getFont("consola"));
 	threadStatsText->setColour(glm::fvec4(0.2, 0.95, 0.2, 1));
 	threadStatsText->setCharSize(20);
 	threadStatsText->setString("");
 	threadStatsText->setPosition(glm::fvec2(600, 590));
-
-	uiGroup->createElement(threadStatsText);*/
 
 	// GPU commands
 	{
@@ -420,12 +411,11 @@ void Engine::processNextMainThreadJob()
 
 void Engine::updatePerformanceStatsDisplay()
 {
-	/*auto gBufferTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("gbuffer"));
+	auto gBufferTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("gbuffer"));
 	auto shadowTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("shadow"));
 	auto ssaoTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("ssao"));
 	auto pbrTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("pbr"));
 	auto overlayTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("overlay"));
-	//auto overlayCombineTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("overlaycombine"));
 	auto screenTime = PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("screen"));
 
 	auto gBufferTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("gbuffer"));
@@ -433,7 +423,6 @@ void Engine::updatePerformanceStatsDisplay()
 	auto ssaoTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("ssao"));
 	auto pbrTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("pbr"));
 	auto overlayTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("overlay"));
-	//auto overlayCombineTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("overlaycombine"));
 	auto screenTimeMax = PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("screen"));
 
 	auto gBufferTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("gbuffer"));
@@ -441,12 +430,11 @@ void Engine::updatePerformanceStatsDisplay()
 	auto ssaoTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("ssao"));
 	auto pbrTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("pbr"));
 	auto overlayTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("overlay"));
-	auto overlayCombineTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("overlaycombine"));
 	auto screenTimeMin = PROFILE_TO_MS(PROFILE_GET_RUNNING_MIN("screen"));
 
-	auto totalGPUTime = gBufferTime + ssaoTime + shadowTime + pbrTime + overlayTime + overlayCombineTime + screenTime;
-	auto totalGPUMaxTime = gBufferTimeMax + ssaoTimeMax + shadowTimeMax + pbrTimeMax + overlayTimeMax + overlayCombineTimeMax + screenTimeMax;
-	auto totalGPUMinTime = gBufferTimeMin + ssaoTimeMax + shadowTimeMin + pbrTimeMin + overlayTimeMin + overlayCombineTimeMin + screenTimeMin;
+	auto totalGPUTime = gBufferTime + ssaoTime + shadowTime + pbrTime + overlayTime + screenTime;
+	auto totalGPUMaxTime = gBufferTimeMax + ssaoTimeMax + shadowTimeMax + pbrTimeMax + overlayTimeMax + screenTimeMax;
+	auto totalGPUMinTime = gBufferTimeMin + ssaoTimeMax + shadowTimeMin + pbrTimeMin + overlayTimeMin + screenTimeMin;
 
 	auto gpuFPS = 1000.0 / totalGPUTime;
 	auto gpuFPSMin = 1000.0 / totalGPUMinTime;
@@ -485,7 +473,6 @@ void Engine::updatePerformanceStatsDisplay()
 		"SSAO pass      : " + std::to_string(ssaoTime) + "ms ( " + std::to_string(ssaoTimeMin) + " \\ " + std::to_string(ssaoTimeMax) + ")\n" +
 		"PBR pass       : " + std::to_string(pbrTime) + "ms ( " + std::to_string(pbrTimeMin) + " \\ " + std::to_string(pbrTimeMax) + " )\n" +
 		"Overlay pass   : " + std::to_string(overlayTime) + "ms ( " + std::to_string(overlayTimeMin) + " \\ " + std::to_string(overlayTimeMax) + " )\n" +
-		"OCombine pass  : " + std::to_string(overlayCombineTime) + "ms ( " + std::to_string(overlayCombineTimeMin) + " \\ " + std::to_string(overlayCombineTimeMax) + " )\n" +
 		"Screen pass    : " + std::to_string(screenTime) + "ms ( " + std::to_string(screenTimeMin) + " \\ " + std::to_string(screenTimeMax) + " )\n" +
 
 		"Total GPU time : " + std::to_string(totalGPUTime) + "ms ( " + std::to_string(totalGPUMinTime) + " \\ " + std::to_string(totalGPUMaxTime) + " )\n" +
@@ -504,8 +491,6 @@ void Engine::updatePerformanceStatsDisplay()
 		//"FPS            : " + std::to_string((int)(double(frames) / timeSinceLastStatsUpdate))
 	);
 
-	stats->setString("");
-
 	auto mutexStats = (Text*)uiGroup->getElement("mutexstats");
 
 	mutexStats->setString(
@@ -517,8 +502,6 @@ void Engine::updatePerformanceStatsDisplay()
 		"Transform      : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("transformmutex"))) + "ms\n"
 	);
 
-	mutexStats->setString("");
-
 	auto threadStats = (Text*)uiGroup->getElement("threadstats");
 
 	std::string threadStatsString;
@@ -526,24 +509,27 @@ void Engine::updatePerformanceStatsDisplay()
 	threadStatsString = "----THREADS-------------------\n------------------------------\n"
 		"Thread_1 (main)    : " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + "ms ( " + std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(std::this_thread::get_id())))) + " )\n";
 
-	threadStatsString += std::string("Thread_2 (render)  : " +
-		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[1])))) + "ms ( " + 
-		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[1]))))) + " )\n";
+	threadStatsString += std::string("Thread_2 (cpu)  : " +
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->m_threadIDAssociations[1])))) + "ms ( " + 
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->m_threadIDAssociations[1]))))) + " )\n";
+
+	threadStatsString += std::string("Thread_3 (gpu)    : " +
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->m_threadIDAssociations[2])))) + "ms ( " +
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->m_threadIDAssociations[2]))))) + " )\n";
 
 	threadStatsString += std::string("Thread_3 (disk)    : " +
-		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[2])))) + "ms ( " + 
-		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[2]))))) + " )\n";
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->m_threadIDAssociations[3])))) + "ms ( " +
+		std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->m_threadIDAssociations[3]))))) + " )\n";
 
-	for (int i = 2; i < threading->workers.size(); ++i)
+	for (int i = 3; i < threading->m_workerThreads.size(); ++i)
 	{
-		threadStatsString += std::string("Thread_") + std::to_string(i+2) + " (generic) : " +
-			std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i + 1])))) + "ms ( " + 
-			std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->threadIDAssociations[i + 1])))) + " )\n";
+		threadStatsString += std::string("Thread_") + std::to_string(i+3) + " (generic) : " +
+			std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_AVERAGE("thread_" + Threading::getThreadIDString(threading->m_threadIDAssociations[i + 1])))) + "ms ( " +
+			std::to_string(PROFILE_TO_MS(PROFILE_GET_RUNNING_MAX("thread_" + Threading::getThreadIDString(threading->m_threadIDAssociations[i + 1])))) + " )\n";
 		++i;
 	}
 
 	threadStats->setString(threadStatsString);
-	threadStats->setString("");*/
 }
 
 void Engine::vduVkDebugCallback(vdu::Instance::DebugReportLevel level, vdu::Instance::DebugObjectType objectType, uint64_t objectHandle, const std::string & objectName, const std::string & message)

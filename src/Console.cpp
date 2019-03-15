@@ -13,7 +13,6 @@ void Console::create(glm::ivec2 resolution)
 	uiGroup = Engine::renderer->uiRenderer.createUIGroup("console");
 	uiGroup->setResolution(resolution);
 
-	//input = new Text();
 	input = uiGroup->createElement<Text>("constext");
 
 	input->setName("constext");
@@ -25,13 +24,8 @@ void Console::create(glm::ivec2 resolution)
 	
 	input->setDepth(4);
 
-	//uiGroup->createElement(input);
-
 	backs[0] = uiGroup->createElement<UIPolygon>("back0");
 	backs[1] = uiGroup->createElement<UIPolygon>("back1");
-
-	//backs[0] = new UIPolygon();
-	//backs[1] = new UIPolygon();
 
 	backs[0]->reserveBuffer(6);
 	backs[1]->reserveBuffer(6);
@@ -45,10 +39,6 @@ void Console::create(glm::ivec2 resolution)
 	backs[0]->setDepth(1);
 	backs[1]->setDepth(3);
 
-	//uiGroup->createElement(backs[0]);
-	//uiGroup->createElement(backs[1]);
-
-	//blinker = new UIPolygon();
 	blinker = uiGroup->createElement<UIPolygon>("blinker");
 
 	blinker->reserveBuffer(6);
@@ -57,8 +47,6 @@ void Console::create(glm::ivec2 resolution)
 	blinker->setDepth(5);
 
 	update();
-
-	//uiGroup->createElement(blinker);
 
 	uiGroup->setDoDraw(active);
 	
@@ -104,7 +92,6 @@ void Console::update()
 void Console::cleanup()
 {
 	finishedStartupRenderFence.destroy();
-	delete uiGroup;
 }
 
 void Console::inputChar(char c)
@@ -149,8 +136,6 @@ void Console::inputChar(char c)
 		input->setString("> ");
 		input->setPosition(glm::fvec2(3, 253));
 		input->setDepth(4);
-
-		//uiGroup->createElement(input);
 
 		if (s.length() > 2)
 		{
@@ -292,7 +277,6 @@ void Console::postMessage(std::string msg, glm::fvec3 colour)
 		output.pop_back();
 	}
 	
-	//Text* msgText = new Text;
 	auto msgText = uiGroup->createElement<Text>();
 
 	msgText->setFont(Engine::assets.getFont("consola"));
@@ -301,8 +285,6 @@ void Console::postMessage(std::string msg, glm::fvec3 colour)
 	msgText->setString("$ " + msg);
 	msgText->setPosition(glm::fvec2(3, 253));
 	msgText->setDepth(2);
-
-	//uiGroup->createElement(msgText);
 
 	output.push_front(msgText);
 
