@@ -30,8 +30,6 @@ void Engine::start()
 		DBG_SEVERE("Failed to connect to X server using XCB");
 #endif
 
-	//PROFILE_START("init");
-
 	/*
 		Create basic engine commponents
 	*/
@@ -143,14 +141,14 @@ void Engine::start()
 	*/
 	console = new Console();
 	console->create(glm::ivec2(window->resX, 276));
-	renderer->overlayRenderer.addUIGroup(console->getUIGroup()); // The console is a UI overlay
+	//renderer->uiRenderer.createUIGroup(console->getUIGroup()); // The console is a UI overlay
 	scriptEnv.chai.add_global(chaiscript::var(std::ref(*console)), "console"); // Add console to script environment
 
 	/*
 		This graphics job will 'loop' (see Console::renderAtStartup) until initialisation is complete
 	*/
 	auto renderConsoleFunc = []() -> void {
-		renderer->overlayRenderer.updateOverlayCommands();
+		renderer->uiRenderer.updateOverlayCommands();
 		renderer->updateScreenDescriptorSets();
 		renderer->updateScreenCommandsForConsole();
 		console->renderAtStartup();
@@ -190,16 +188,12 @@ void Engine::start()
 	// Startup script. Adds models to the world
 	scriptEnv.evalFile("./res/scripts/startup.chai");
 
-	//PROFILE_END("init");
-
-	//console->postMessage("Initialisation time : " + std::to_string(PROFILE_TO_S(PROFILE_GET_RUNNING_AVERAGE("init"))) + " seconds", glm::fvec3(0.8, 0.8, 0.3));
-
 	/*
 		Creating UI layer for displaying profiling stats
 	*/
 	/*auto uiGroup = new UIElementGroup();
 	uiGroup->setResolution(glm::ivec2(1280, 720));
-	renderer->overlayRenderer.addUIGroup(uiGroup);
+	renderer->uiRenderer.createUIGroup(uiGroup);
 
 	// For GPU and CPU profiling times
 	Text* statsText = new Text;
@@ -210,7 +204,7 @@ void Engine::start()
 	statsText->setString("");
 	statsText->setPosition(glm::fvec2(0, 330));
 
-	uiGroup->addElement(statsText);
+	uiGroup->createElement(statsText);
 
 	// For mutex lock wait times
 	auto mutexStatsText = new Text;
@@ -221,7 +215,7 @@ void Engine::start()
 	mutexStatsText->setString("");
 	mutexStatsText->setPosition(glm::fvec2(600, 450));
 
-	uiGroup->addElement(mutexStatsText);
+	uiGroup->createElement(mutexStatsText);
 
 	// For per thread stats
 	auto threadStatsText = new Text;
@@ -232,7 +226,7 @@ void Engine::start()
 	threadStatsText->setString("");
 	threadStatsText->setPosition(glm::fvec2(600, 590));
 
-	uiGroup->addElement(threadStatsText);*/
+	uiGroup->createElement(threadStatsText);*/
 
 	// GPU commands
 	{
@@ -242,7 +236,7 @@ void Engine::start()
 		renderer->updateGBufferCommands();
 		renderer->updateShadowCommands(); // Mutex with engine model transform update
 		renderer->updateSSAOCommands();
-		renderer->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
+		renderer->uiRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
 	}
 
 	/*
@@ -272,8 +266,6 @@ void Engine::engineLoop()
 
 		processNextMainThreadJob();
 
-		//PROFILE_START("msgevent");
-
 		// Process OS messages (user input, etc) and translate them to engine events
 		PROFILE_START("msgevent");
 		window->processMessages();
@@ -300,19 +292,15 @@ void Engine::engineLoop()
 		Engine::threading->instanceTransformMutex.unlock();
 		PROFILE_END("scripts");
 
-		//console->update();
+		console->update();
 
 		// Display performance stats
-		++frames;
 		timeSinceLastStatsUpdate += frameTime.getSeconds();
 		if (timeSinceLastStatsUpdate > 0.05f)
 		{
 			updatePerformanceStatsDisplay();
 			timeSinceLastStatsUpdate = 0.f;
-			frames = 0;
 		}
-
-		//PROFILE_END("msgevent");
 
 		PROFILE_END("thread_" + Threading::getThisThreadIDString());
 	}
@@ -418,36 +406,16 @@ void Engine::eventLoop()
 	window->eventQ.pushEventMutex.unlock();
 }
 
-void Engine::processAllMainThreadJobs()
+/*
+	Main thread can steal CPU jobs from the CPU worker thread
+*/
+void Engine::processNextMainThreadJob()
 {
-	/*JobBase* job;
-	s64 timeUntilNextJob;
-	while (threading->getGPUTransferJob(job, timeUntilNextJob))
-	{
-		job->run();
-	}
-	while (threading->getCPUJob(job, timeUntilNextJob))
-	{
-		job->run();
-	}*/
-}
-
-bool Engine::processNextMainThreadJob()
-{
-	/*renderer->executeFenceDelayedActions(); // Any externally synced vulkan objects created on this thread should be destroyed from this thread
+	renderer->executeFenceDelayedActions(); // Any externally synced vulkan objects created on this thread should be destroyed from this thread
 	JobBase* job;
-	s64 timeUntilNextJob;
-	if (threading->getGPUTransferJob(job, timeUntilNextJob))
-	{
+	if (threading->m_cpuWorker->popJob(job)) {
 		job->run();
-		return true;
 	}
-	/*else if (threading->getCPUJob(job, timeUntilNextJob))
-	{
-		job->run();
-		return true;
-	}*/
-	return false;
 }
 
 void Engine::updatePerformanceStatsDisplay()
@@ -725,7 +693,6 @@ Threading* Engine::threading;
 std::atomic_char Engine::initialised = 0;
 std::mutex Engine::waitForProfilerInitMutex;
 double Engine::timeSinceLastStatsUpdate = 0.f;
-int Engine::frames = 0;
 vdu::Instance Engine::instance;
 vdu::PhysicalDevice* Engine::physicalDevice;
 std::vector<vdu::PhysicalDevice> Engine::allPhysicalDevices;

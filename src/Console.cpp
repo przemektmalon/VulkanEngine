@@ -10,10 +10,11 @@
 
 void Console::create(glm::ivec2 resolution)
 {
-	uiGroup = new UIElementGroup();
+	uiGroup = Engine::renderer->uiRenderer.createUIGroup("console");
 	uiGroup->setResolution(resolution);
 
-	input = new Text();
+	//input = new Text();
+	input = uiGroup->createElement<Text>("constext");
 
 	input->setName("constext");
 	input->setFont(Engine::assets.getFont("consola"));
@@ -24,10 +25,13 @@ void Console::create(glm::ivec2 resolution)
 	
 	input->setDepth(4);
 
-	uiGroup->addElement(input);
+	//uiGroup->createElement(input);
 
-	backs[0] = new UIPolygon();
-	backs[1] = new UIPolygon();
+	backs[0] = uiGroup->createElement<UIPolygon>("back0");
+	backs[1] = uiGroup->createElement<UIPolygon>("back1");
+
+	//backs[0] = new UIPolygon();
+	//backs[1] = new UIPolygon();
 
 	backs[0]->reserveBuffer(6);
 	backs[1]->reserveBuffer(6);
@@ -41,10 +45,11 @@ void Console::create(glm::ivec2 resolution)
 	backs[0]->setDepth(1);
 	backs[1]->setDepth(3);
 
-	uiGroup->addElement(backs[0]);
-	uiGroup->addElement(backs[1]);
+	//uiGroup->createElement(backs[0]);
+	//uiGroup->createElement(backs[1]);
 
-	blinker = new UIPolygon();
+	//blinker = new UIPolygon();
+	blinker = uiGroup->createElement<UIPolygon>("blinker");
 
 	blinker->reserveBuffer(6);
 	blinker->setTexture(Engine::assets.getTexture("blank"));
@@ -53,7 +58,7 @@ void Console::create(glm::ivec2 resolution)
 
 	update();
 
-	uiGroup->addElement(blinker);
+	//uiGroup->createElement(blinker);
 
 	uiGroup->setDoDraw(active);
 	
@@ -99,6 +104,7 @@ void Console::update()
 void Console::cleanup()
 {
 	finishedStartupRenderFence.destroy();
+	delete uiGroup;
 }
 
 void Console::inputChar(char c)
@@ -135,6 +141,7 @@ void Console::inputChar(char c)
 		uiGroup->removeElement(input);
 
 		input = new Text();
+		input = uiGroup->createElement<Text>();
 
 		input->setFont(Engine::assets.getFont("consola"));
 		input->setColour(glm::fvec4(0.1, 0.9, 0.1, 1.0));
@@ -143,7 +150,7 @@ void Console::inputChar(char c)
 		input->setPosition(glm::fvec2(3, 253));
 		input->setDepth(4);
 
-		uiGroup->addElement(input);
+		//uiGroup->createElement(input);
 
 		if (s.length() > 2)
 		{
@@ -285,7 +292,8 @@ void Console::postMessage(std::string msg, glm::fvec3 colour)
 		output.pop_back();
 	}
 	
-	Text* msgText = new Text;
+	//Text* msgText = new Text;
+	auto msgText = uiGroup->createElement<Text>();
 
 	msgText->setFont(Engine::assets.getFont("consola"));
 	msgText->setColour(glm::fvec4(colour.x, colour.y, colour.z, 1.0));
@@ -294,7 +302,7 @@ void Console::postMessage(std::string msg, glm::fvec3 colour)
 	msgText->setPosition(glm::fvec2(3, 253));
 	msgText->setDepth(2);
 
-	uiGroup->addElement(msgText);
+	//uiGroup->createElement(msgText);
 
 	output.push_front(msgText);
 
@@ -307,23 +315,19 @@ void Console::renderAtStartup()
 {
 	auto& window = Engine::window;
 	auto& renderer = Engine::renderer;
-	auto& overlayRenderer = renderer->overlayRenderer;
+	auto& uiRenderer = renderer->uiRenderer;
 	auto& threading = Engine::threading;
 
 	finishedStartupRenderFence.reset();
 
 	window->processMessages();
 
-	overlayRenderer.updateOverlayCommands();
+	uiRenderer.updateOverlayCommands();
 
 	std::vector<vdu::QueueSubmission> submissions(2);
 	
-	submissions[0].addCommands(&overlayRenderer.commandBuffer);
+	submissions[0].addCommands(&uiRenderer.commandBuffer);
 	submissions[0].addSignal(renderer->overlayFinishedSemaphore);
-
-	//submissions[1].addWait(renderer->overlayFinishedSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-	//submissions[1].addCommands(&overlayRenderer.combineCommandBuffer);
-	//submissions[1].addSignal(renderer->overlayCombineFinishedSemaphore);
 
 	uint32_t imageIndex;
 	renderer->screenSwapchain.acquireNextImage(imageIndex, renderer->imageAvailableSemaphore);

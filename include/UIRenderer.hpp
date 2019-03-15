@@ -27,18 +27,21 @@ public:
 	void destroyOverlayCommands();
 
 	void cleanup();
-	void cleanupLayerElements();
 	void cleanupForReInit();
 
-	void addUIGroup(UIElementGroup* group);
-	void removeUIGroup(UIElementGroup* group);
+	void garbageCollect();
+
+	UIElementGroup* createUIGroup(const std::string& groupName);
+	UIElementGroup* getUIGroup(const std::string& groupName);
+	void deleteUIGroup(UIElementGroup* group);
+	void deleteUIGroup(const std::string& groupName);
 
 	const vdu::RenderPass& getRenderPass() { return overlayRenderPass; }
 	vdu::DescriptorSetLayout& getDescriptorSetLayout() { return overlayDescriptorSetLayout; }
 
 private:
 
-	std::set<UIElementGroup*> uiGroups;
+	std::vector<UIElementGroup*> uiGroups;
 
 	vdu::RenderPass overlayRenderPass;
 

@@ -27,8 +27,7 @@ public:
 	static void start();
 	static void engineLoop();
 	static void eventLoop();
-	static void processAllMainThreadJobs();
-	static bool processNextMainThreadJob();
+	static void processNextMainThreadJob();
 	static void createVulkanInstance();
 	static void queryVulkanPhysicalDeviceDetails();
 	static void createWindow();
@@ -78,7 +77,4 @@ public:
 	
 	// Used to display stats every X seconds
 	static double timeSinceLastStatsUpdate;
-
-	// Used to get average frame time
-	static int frames;
 };

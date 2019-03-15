@@ -53,7 +53,7 @@ public:
 		BEGIN_SCREEN,			END_SCREEN, 
 		NUM_GPU_TIMESTAMPS };
 
-	UIRenderer overlayRenderer;
+	UIRenderer uiRenderer;
 
 	// Device, queues, swap chain
 	vdu::LogicalDevice logicalDevice;

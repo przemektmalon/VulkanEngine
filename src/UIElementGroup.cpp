@@ -3,51 +3,20 @@
 #include "Threading.hpp"
 #include "UIElementGroup.hpp"
 
-void UIElementGroup::addElement(UIElement * el)
+UIElement * UIElementGroup::getElement(const std::string& elementName)
 {
-	Engine::threading->layersMutex.lock();
-
-	auto find = std::find(elements.begin(), elements.end(), el);
-	if (find == elements.end())
-	{
-		// No element with required shader exists, add vector for this type of shader
-		elements.push_back(el);
-	}
-	else
-	{
-		// Elements already exists
-		/// TODO: log error ?
-	}
-
-	auto nameFind = elementLabels.find(el->getName());
-	if (nameFind == elementLabels.end())
-		elementLabels.insert(std::make_pair(el->getName(), el));
-	else
-	{
-		std::string newName = el->getName();
-		newName += std::to_string(Engine::clock.now());
-		nameFind = elementLabels.find(newName);
-		u64 i = 1;
-		while (nameFind != elementLabels.end())
-		{
-			newName = el->getName() + std::to_string(Engine::clock.now() + i);
-			nameFind = elementLabels.find(newName);
-		}
-		elementLabels.insert(std::make_pair(newName, el));
-	}
-
-	Engine::threading->layersMutex.unlock();
-}
-
-UIElement * UIElementGroup::getElement(std::string pName)
-{
-	auto find = elementLabels.find(pName);
+	auto find = elementLabels.find(elementName);
 	if (find == elementLabels.end())
 	{
-		DBG_WARNING("Layer element not found: " << pName);
-		return 0;
+		DBG_WARNING("Layer element not found: " << elementName);
+		return nullptr;
 	}
 	return find->second;
+}
+
+UIElement * UIElementGroup::takeElement(const std::string & elementName)
+{
+	return nullptr;
 }
 
 void UIElementGroup::removeElement(UIElement * el)
@@ -58,7 +27,7 @@ void UIElementGroup::removeElement(UIElement * el)
 	Engine::threading->layersMutex.unlock();
 }
 
-void UIElementGroup::cleanupElements()
+void UIElementGroup::garbageCollect()
 {
 	Engine::threading->layersMutex.lock();
 
@@ -92,4 +61,40 @@ void UIElementGroup::setPosition(glm::ivec2 pPos)
 void UIElementGroup::setResolution(glm::ivec2 pRes)
 {
 	resolution = pRes;
+}
+
+void UIElementGroup::insertElement(UIElement * element)
+{
+	Engine::threading->layersMutex.lock();
+
+	auto find = std::find(elements.begin(), elements.end(), element);
+	if (find == elements.end())
+	{
+		// No element with required shader exists, add vector for this type of shader
+		elements.push_back(element);
+	}
+	else
+	{
+		// Element already exists
+		/// TODO: log error ?
+	}
+
+	auto nameFind = elementLabels.find(element->getName());
+	if (nameFind == elementLabels.end())
+		elementLabels.insert(std::make_pair(element->getName(), element));
+	else
+	{
+		std::string newName = element->getName();
+		newName += std::to_string(Engine::clock.now());
+		nameFind = elementLabels.find(newName);
+		u64 i = 1;
+		while (nameFind != elementLabels.end())
+		{
+			newName = element->getName() + std::to_string(Engine::clock.now() + i);
+			nameFind = elementLabels.find(newName);
+		}
+		elementLabels.insert(std::make_pair(newName, element));
+	}
+
+	Engine::threading->layersMutex.unlock();
 }

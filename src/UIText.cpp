@@ -45,7 +45,8 @@ void Text::update()
 {
 	drawingMutex.lock();
 
-	glyphs = style.font->requestGlyphs(style.charSize, this); /// TODO: We get device lost sometimes, most likely a threading issue !!
+	glyphs = style.font->requestGlyphs(style.charSize, this);
+
 	bounds.zero();
 
 	drawable = false;

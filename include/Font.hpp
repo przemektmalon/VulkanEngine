@@ -85,5 +85,5 @@ private:
 	FT_Face ftFace;
 	std::map<u16, std::set<Text*>> useTrack;
 	std::map<u16, GlyphContainer> glyphContainers;
-	GlyphContainer gl;
+	//GlyphContainer gl;
 };

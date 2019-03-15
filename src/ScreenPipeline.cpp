@@ -49,7 +49,7 @@ void Renderer::updateScreenDescriptorSets()
 
 	auto overlayUpdate = updater->addImageUpdate("overlay");
 
-	overlayUpdate->imageView = overlayRenderer.uiTexture.getView();
+	overlayUpdate->imageView = uiRenderer.uiTexture.getView();
 	overlayUpdate->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	overlayUpdate->sampler = textureSampler;
 

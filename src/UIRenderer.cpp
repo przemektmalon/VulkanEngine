@@ -12,22 +12,8 @@ void UIRenderer::cleanup()
 	destroyOverlayAttachmentsFramebuffers();
 	destroyOverlayDescriptorSetLayouts();
 
-	/*for (auto layer : layers)
-		layer->cleanup();
-
-	layers.empty();*/
-
-	//for (auto group : uiGroups)
-		//group->cleanupElements
-
-}
-
-void UIRenderer::cleanupLayerElements()
-{
-	//for (auto layer : layers)
-	//{
-	//	layer->cleanupElements();
-	//}
+	std::for_each(uiGroups.begin(), uiGroups.end(), [](UIElementGroup* uiGroup) -> void { delete uiGroup; });
+	uiGroups.clear();
 }
 
 void UIRenderer::cleanupForReInit()
@@ -38,17 +24,43 @@ void UIRenderer::cleanupForReInit()
 	destroyOverlayCommands();
 }
 
-void UIRenderer::addUIGroup(UIElementGroup * group)
+void UIRenderer::garbageCollect()
+{
+	for (auto uiGroup : uiGroups) {
+		uiGroup->garbageCollect();
+	}
+}
+
+UIElementGroup* UIRenderer::createUIGroup(const std::string& groupName)
+{
+	auto newUIGroup = new UIElementGroup(groupName);
+	Engine::threading->layersMutex.lock();
+	uiGroups.push_back(newUIGroup);
+	Engine::threading->layersMutex.unlock();
+	return newUIGroup;
+}
+
+UIElementGroup * UIRenderer::getUIGroup(const std::string & groupName)
+{
+	auto group = std::find_if(uiGroups.begin(), uiGroups.end(), [&groupName](UIElementGroup* uiGroup) -> bool {
+		return uiGroup->getName() == groupName;
+	});
+	return group != uiGroups.end() ? *group : nullptr;
+}
+
+void UIRenderer::deleteUIGroup(UIElementGroup * group)
 {
 	Engine::threading->layersMutex.lock();
-	uiGroups.insert(group);
+	std::remove(uiGroups.begin(), uiGroups.end(), group);
 	Engine::threading->layersMutex.unlock();
 }
 
-void UIRenderer::removeUIGroup(UIElementGroup * group)
+void UIRenderer::deleteUIGroup(const std::string & groupName)
 {
 	Engine::threading->layersMutex.lock();
-	uiGroups.erase(group);
+	std::remove_if(uiGroups.begin(), uiGroups.end(), [&groupName](UIElementGroup* uiGroup) -> bool {
+		return uiGroup->getName() == groupName;
+	});
 	Engine::threading->layersMutex.unlock();
 }
 
@@ -143,14 +155,10 @@ void UIRenderer::updateOverlayCommands()
 
 	Engine::threading->layersMutex.lock();
 
-	/// TODO:
-	///		- Sort by depth
-	///		- 
-
 	/*bool update = false;
-	for (auto l : layers)
+	for (auto group : uiGroups)
 	{
-		update |= l->needsDrawUpdate();
+		update |= group->needsUpdate;
 		l->setUpdated();
 	}
 
@@ -193,6 +201,8 @@ void UIRenderer::updateOverlayCommands()
 	{
 		if (!group->doDraw())
 			continue;
+
+		group->sortByDepths();
 
 		auto& elements = group->elements;
 

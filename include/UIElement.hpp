@@ -44,8 +44,3 @@ protected:
 	bool drawable;
 	bool draw;
 };
-
-inline bool compareOverlayElements(UIElement* lhs, UIElement* rhs)
-{
-	return lhs->getDepth() < rhs->getDepth();
-}

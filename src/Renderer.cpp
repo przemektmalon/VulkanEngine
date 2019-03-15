@@ -36,8 +36,8 @@ void Renderer::initialise()
 	screenVertexInputState.addBinding(Vertex2D::getBindingDescription());
 	screenVertexInputState.addAttributes(Vertex2D::getAttributeDescriptions());
 
-	overlayRenderer.vertexInputState.addBinding(VertexNoNormal::getBindingDescription());
-	overlayRenderer.vertexInputState.addAttributes(VertexNoNormal::getAttributeDescriptions());
+	uiRenderer.vertexInputState.addBinding(VertexNoNormal::getBindingDescription());
+	uiRenderer.vertexInputState.addAttributes(VertexNoNormal::getAttributeDescriptions());
 
 	// Shaders
 	createShaders();
@@ -95,12 +95,12 @@ void Renderer::initialise()
 
 	// Overlays
 	{
-		overlayRenderer.createOverlayAttachments();
-		overlayRenderer.createOverlayRenderPass();
-		overlayRenderer.createOverlayDescriptorSetLayouts();
-		overlayRenderer.createOverlayPipeline();
-		overlayRenderer.createOverlayFramebuffer();
-		overlayRenderer.createOverlayCommands();
+		uiRenderer.createOverlayAttachments();
+		uiRenderer.createOverlayRenderPass();
+		uiRenderer.createOverlayDescriptorSetLayouts();
+		uiRenderer.createOverlayPipeline();
+		uiRenderer.createOverlayFramebuffer();
+		uiRenderer.createOverlayCommands();
 	}
 
 	createDataBuffers();
@@ -208,7 +208,7 @@ void Renderer::cleanup()
 		destroyScreenSwapchain();
 	}
 
-	overlayRenderer.cleanup();
+	uiRenderer.cleanup();
 
 	descriptorPool.destroy();
 	freeableDescriptorPool.destroy();
@@ -304,7 +304,7 @@ void Renderer::render()
 	submissionsGroup1[1].addCommands(&shadowCommandBuffer);
 	submissionsGroup1[1].addSignal(shadowFinishedSemaphore);
 
-	submissionsGroup1[2].addCommands(&overlayRenderer.commandBuffer);
+	submissionsGroup1[2].addCommands(&uiRenderer.commandBuffer);
 	submissionsGroup1[2].addSignal(overlayFinishedSemaphore);
 
 	gBufferGroupFence.reset();
@@ -401,7 +401,7 @@ void Renderer::renderJob()
 	PROFILE_START("cullingdrawbuffer");
 
 	_this->lightManager.updateSunLight();
-	_this->overlayRenderer.cleanupLayerElements();
+	_this->uiRenderer.garbageCollect();
 	_this->executeFenceDelayedActions();
 
 	_this->populateDrawCmdBuffer(); // Mutex with engine model transform update
@@ -413,7 +413,7 @@ void Renderer::renderJob()
 	PROFILE_START("setuprender");
 
 	_this->updateConfigs();
-	_this->overlayRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
+	_this->uiRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
 	PROFILE_MUTEX("transformmutex", threading->instanceTransformMutex.lock());
 	threading->instanceTransformMutex.unlock();
 	PROFILE_MUTEX("phystogpumutex", threading->physToGPUMutex.lock());
@@ -448,35 +448,35 @@ void Renderer::reloadShaders()
 	destroyScreenPipeline();
 	destroyShadowPipeline();
 	destroySSAOPipeline();
-	overlayRenderer.destroyOverlayPipeline();
+	uiRenderer.destroyOverlayPipeline();
 
 	destroyGBufferCommands();
 	destroyPBRCommands();
 	destroyScreenCommands();
 	destroyShadowCommands();
 	destroySSAOCommands();
-	overlayRenderer.destroyOverlayCommands();
+	uiRenderer.destroyOverlayCommands();
 
 	createGBufferPipeline();
 	createPBRPipeline();
 	createScreenPipeline();
 	createShadowPipeline();
 	createSSAOPipeline();
-	overlayRenderer.createOverlayPipeline();
+	uiRenderer.createOverlayPipeline();
 
 	createGBufferCommands();
 	createPBRCommands();
 	createScreenCommands();
 	createShadowCommands();
 	createSSAOCommands();
-	overlayRenderer.createOverlayCommands();
+	uiRenderer.createOverlayCommands();
 
 	updateGBufferCommands();
 	updatePBRCommands();
 	updateScreenCommands();
 	updateShadowCommands();
 	updateSSAOCommands();
-	overlayRenderer.updateOverlayCommands();
+	uiRenderer.updateOverlayCommands();
 }
 
 void Renderer::updateConfigs()
@@ -586,15 +586,15 @@ void Renderer::updateConfigs()
 
 			// Recreate the overlay pipeline and resolution dependant components
 			{
-				overlayRenderer.cleanupForReInit();
+				uiRenderer.cleanupForReInit();
 
-				overlayRenderer.createOverlayRenderPass();
-				overlayRenderer.createOverlayPipeline();
-				overlayRenderer.createOverlayAttachments();
-				overlayRenderer.createOverlayFramebuffer();
-				overlayRenderer.createOverlayCommands();
+				uiRenderer.createOverlayRenderPass();
+				uiRenderer.createOverlayPipeline();
+				uiRenderer.createOverlayAttachments();
+				uiRenderer.createOverlayFramebuffer();
+				uiRenderer.createOverlayCommands();
 
-				overlayRenderer.updateOverlayCommands();
+				uiRenderer.updateOverlayCommands();
 			}
 
 			// Update screen commands and descriptor sets
