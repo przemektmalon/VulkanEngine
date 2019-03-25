@@ -74,7 +74,7 @@ set(BUILD_TESTING OFF CACHE BOOL "" FORCE) # disables glslang CTestDashboard tar
 set(RE2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(EFFCEE_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
 set(EFFCEE_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-add_subdirectory("$ENV{VULKAN_SDK}/shaderc" "./lib/shaderc")
+add_subdirectory("$ENV{VULKAN_SDK}/shaderc" "$ENV{VULKAN_SDK}/shaderc/build")
 
 
 

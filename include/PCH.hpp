@@ -77,7 +77,7 @@
 #include "glm/gtx/vector_angle.hpp"
 
 #include "btBulletDynamicsCommon.h"
-#include "btBulletDynamicsCommon.h"
+#include "btBulletCollisionCommon.h"
 #include "BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h"
 
 #include "assimp/Importer.hpp"
