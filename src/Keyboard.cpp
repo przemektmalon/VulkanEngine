@@ -1,6 +1,8 @@
 #include "PCH.hpp"
 #include "Keyboard.hpp"
 
+namespace os {
+
 u8 Keyboard::keyState[256];
 
 #ifdef __linux__
@@ -115,3 +117,5 @@ s32 Key::linuxScanCodeToInternal(s32 scan)
 	}
 }
 #endif
+
+}

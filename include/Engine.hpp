@@ -12,8 +12,10 @@
 
 class Threading;
 class UIElementGroup;
-class Window;
 class Renderer;
+namespace os {
+	class Window;
+}
 
 /*
 	@brief Main engine class that collates the engine sub-classes and sub-systems
@@ -39,18 +41,11 @@ public:
 	static void vduVkErrorCallback(VkResult result, const std::string& message);
 	static void vduDebugCallback(vdu::LogicalDevice::VduDebugLevel level, const std::string& message);
 
-#ifdef _WIN32
-	static HINSTANCE win32InstanceHandle;
-#endif
-#ifdef __linux__
-	static xcb_connection_t * connection;
-#endif
-
 	static EngineConfig config;
 	static AssetStore assets;
 	static World world;
 	static Clock clock;
-	static Window* window;
+	static os::Window* window;
 	static Renderer* renderer;
 	static Camera camera;
 	static PhysicsWorld physicsWorld;
@@ -58,8 +53,7 @@ public:
 	static ScriptEnv scriptEnv;
 	static Threading* threading;
 	
-	static vdu::Instance instance;
-	static VkInstance vkInstance;
+	static vdu::Instance vulkanInstance;
 	static std::vector<vdu::PhysicalDevice> allPhysicalDevices;
 	static vdu::PhysicalDevice* physicalDevice;
 

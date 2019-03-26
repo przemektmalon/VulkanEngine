@@ -18,7 +18,7 @@ struct Event
 		EventUnion(){}
 		
 		struct key_struct {
-			Key key;
+			os::Key key;
 			bool shift;
 			bool alt;
 			bool sys;
@@ -31,7 +31,7 @@ struct Event
 		};
 		text_struct textInputEvent;
 		struct mouse_struct {
-			MouseCode code;
+			os::MouseCode code;
 			glm::ivec2 position;
 			glm::ivec2 move;
 			s16 wheelDelta;
@@ -49,53 +49,53 @@ struct Event
 	EventUnion::text_struct getTextEvent() { return eventUnion.textInputEvent; }
 	EventUnion::window_struct getWindowEvent() { return eventUnion.windowEvent; }
 
-	void constructKey(Key pKey, bool pShift, bool pAlt, bool pSys, bool pCtrl, bool pCaps)
+	void constructKey(os::Key pKey, bool pShift, bool pAlt, bool pSys, bool pCtrl, bool pCaps)
 	{
 		eventUnion.keyEvent.key = pKey; eventUnion.keyEvent.shift = pShift; eventUnion.keyEvent.alt = pAlt; eventUnion.keyEvent.sys = pSys; eventUnion.keyEvent.ctrl = pCtrl; eventUnion.keyEvent.caps = pCaps;
 	}
 
-	void constructMouse(MouseCode pCode, glm::ivec2 pPos, glm::ivec2 pMove, s16 pDelta)
+	void constructMouse(os::MouseCode pCode, glm::ivec2 pPos, glm::ivec2 pMove, s16 pDelta)
 	{
 		eventUnion.mouseEvent.code = pCode; eventUnion.mouseEvent.position = pPos; eventUnion.mouseEvent.move = pMove; eventUnion.mouseEvent.wheelDelta = pDelta;
 	}
 
-	void constructText(Key pKey, bool pShift)
+	void constructText(os::Key pKey, bool pShift)
 	{
 		unsigned char c = pKey.code;
-		if (c == Key::KC_BACKSPACE || c == Key::KC_ENTER)
+		if (c == os::Key::KC_BACKSPACE || c == os::Key::KC_ENTER)
 		{
 			eventUnion.textInputEvent.character = c;
 			return;
 		}
-		else if (c == Key::KC_DELETE)
+		else if (c == os::Key::KC_DELETE)
 		{
 			eventUnion.textInputEvent.character = 127;
 			return;
 		}
-		else if (c >= Key::KC_A && c <= Key::KC_Z)
+		else if (c >= os::Key::KC_A && c <= os::Key::KC_Z)
 		{
 			if (!pShift)
 				c += 32;
 			eventUnion.textInputEvent.character = c;
 			return;
 		}
-		else if (c == Key::KC_SPACE)
+		else if (c == os::Key::KC_SPACE)
 		{
 			eventUnion.textInputEvent.character = 32;
 			return;
 		}
-		else if ((c >= Key::KC_0 && c <= Key::KC_9) ||
-			c == Key::KC_MINUS ||
-			c == Key::KC_PLUS ||
-			c == Key::KC_LEFT_BRACKET ||
-			c == Key::KC_RIGHT_BRACKET ||
-			c == Key::KC_SEMICOLON ||
-			c == Key::KC_APOSTROPHE ||
-			c == Key::KC_BACK_SLASH ||
-			c == Key::KC_COMMA ||
-			c == Key::KC_PERIOD ||
-			c == Key::KC_FORWARD_SLASH ||
-			c == Key::KC_GRAVE)
+		else if ((c >= os::Key::KC_0 && c <= os::Key::KC_9) ||
+			c == os::Key::KC_MINUS ||
+			c == os::Key::KC_PLUS ||
+			c == os::Key::KC_LEFT_BRACKET ||
+			c == os::Key::KC_RIGHT_BRACKET ||
+			c == os::Key::KC_SEMICOLON ||
+			c == os::Key::KC_APOSTROPHE ||
+			c == os::Key::KC_BACK_SLASH ||
+			c == os::Key::KC_COMMA ||
+			c == os::Key::KC_PERIOD ||
+			c == os::Key::KC_FORWARD_SLASH ||
+			c == os::Key::KC_GRAVE)
 		{
 			if (pShift)
 			{
@@ -131,37 +131,37 @@ struct Event
 				case '0':
 					c = ')';
 					break;
-				case Key::KC_MINUS:
+				case os::Key::KC_MINUS:
 					c = '_';
 					break;
-				case Key::KC_PLUS:
+				case os::Key::KC_PLUS:
 					c = '+';
 					break;
-				case Key::KC_LEFT_BRACKET:
+				case os::Key::KC_LEFT_BRACKET:
 					c = '{';
 					break;
-				case Key::KC_RIGHT_BRACKET:
+				case os::Key::KC_RIGHT_BRACKET:
 					c = '}';
 					break;
-				case Key::KC_SEMICOLON:
+				case os::Key::KC_SEMICOLON:
 					c = ':';
 					break;
-				case Key::KC_APOSTROPHE:
+				case os::Key::KC_APOSTROPHE:
 					c = '"';
 					break;
-				case Key::KC_FORWARD_SLASH:
+				case os::Key::KC_FORWARD_SLASH:
 					c = '|';
 					break;
-				case Key::KC_COMMA:
+				case os::Key::KC_COMMA:
 					c = '<';
 					break;
-				case Key::KC_PERIOD:
+				case os::Key::KC_PERIOD:
 					c = '>';
 					break;
-				case Key::KC_BACK_SLASH:
+				case os::Key::KC_BACK_SLASH:
 					c = '?';
 					break;
-				case Key::KC_GRAVE:
+				case os::Key::KC_GRAVE:
 					c = '~';
 					break;
 				}
@@ -169,37 +169,37 @@ struct Event
 			else
 			{
 				switch (c) {
-				case Key::KC_MINUS:
+				case os::Key::KC_MINUS:
 					c = '-';
 					break;
-				case Key::KC_PLUS:
+				case os::Key::KC_PLUS:
 					c = '=';
 					break;
-				case Key::KC_LEFT_BRACKET:
+				case os::Key::KC_LEFT_BRACKET:
 					c = '[';
 					break;
-				case Key::KC_RIGHT_BRACKET:
+				case os::Key::KC_RIGHT_BRACKET:
 					c = ']';
 					break;
-				case Key::KC_SEMICOLON:
+				case os::Key::KC_SEMICOLON:
 					c = ';';
 					break;
-				case Key::KC_APOSTROPHE:
+				case os::Key::KC_APOSTROPHE:
 					c = '\'';
 					break;
-				case Key::KC_FORWARD_SLASH:
+				case os::Key::KC_FORWARD_SLASH:
 					c = '/';
 					break;
-				case Key::KC_COMMA:
+				case os::Key::KC_COMMA:
 					c = ',';
 					break;
-				case Key::KC_PERIOD:
+				case os::Key::KC_PERIOD:
 					c = '.';
 					break;
-				case Key::KC_BACK_SLASH:
+				case os::Key::KC_BACK_SLASH:
 					c = '\\';
 					break;
-				case Key::KC_GRAVE:
+				case os::Key::KC_GRAVE:
 					c = '`';
 					break;
 				}
@@ -281,7 +281,7 @@ public:
 class KeyEvent : private Event
 {
 public:
-	Key getKey() { return eventUnion.keyEvent.key; }
+	os::Key getKey() { return eventUnion.keyEvent.key; }
 	bool getShift() { return eventUnion.keyEvent.shift; }
 	bool getAlt() { return eventUnion.keyEvent.alt; }
 	bool getSys() { return eventUnion.keyEvent.sys; }
@@ -295,7 +295,7 @@ public:
 class MouseEvent : private Event
 {
 public:
-	MouseCode getCode() { return eventUnion.mouseEvent.code; }
+	os::MouseCode getCode() { return eventUnion.mouseEvent.code; }
 	glm::ivec2 getPosition() { return eventUnion.mouseEvent.position; }
 	glm::fvec2 getMove() { return eventUnion.mouseEvent.move; }
 	int getDelta() { return eventUnion.mouseEvent.wheelDelta; }

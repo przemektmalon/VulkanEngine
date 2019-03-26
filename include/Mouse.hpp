@@ -1,6 +1,8 @@
 #pragma once
 #include "PCH.hpp"
 
+namespace os {
+
 class Window;
 typedef s32 MouseCode;
 
@@ -27,3 +29,5 @@ public:
 	static MouseCode state;
 	static glm::ivec2 wheelDelta;
 };
+
+}

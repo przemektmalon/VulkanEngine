@@ -245,7 +245,7 @@ void ScriptEnv::initChai()
 
 	chai.add(fun(crossFunc), "cross");
 
-	bool(*isKeyPressedFunc)(char) = Keyboard::isKeyPressed;
+	bool(*isKeyPressedFunc)(char) = os::Keyboard::isKeyPressed;
 
 #define ADD_TO_STRING_OVERLOAD(TYPE) \
 	std::string( *to_string_##TYPE## )( ##TYPE## ) = std::to_string; \

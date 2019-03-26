@@ -238,13 +238,13 @@ void Console::inputChar(char c)
 	input->setString(s);
 }
 
-void Console::moveBlinker(Key k)
+void Console::moveBlinker(os::Key k)
 {
-	if (k.code == Key::KC_LEFT)
+	if (k.code == os::Key::KC_LEFT)
 	{
 		blinkerPosition = std::max(1, blinkerPosition - 1);
 	}
-	else if (k.code == Key::KC_RIGHT)
+	else if (k.code == os::Key::KC_RIGHT)
 	{
 		blinkerPosition = std::min((int)input->getString().length() - 1, blinkerPosition + 1);
 	}

@@ -1,6 +1,8 @@
 #pragma once
 #include "PCH.hpp"
 
+namespace os {
+
 typedef s32 KeyCode;
 
 /*
@@ -157,3 +159,5 @@ public:
 
 	static u8 keyState[256];
 };
+
+}

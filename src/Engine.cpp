@@ -16,18 +16,12 @@ void Engine::start()
 	DBG_INFO("Launching engine");
 	engineStartTime = clock.time();
 #ifdef _WIN32
-	win32InstanceHandle = GetModuleHandle(NULL);
 	{
 		char cwd[_MAX_DIR];
 		GetCurrentDir(cwd, _MAX_DIR);
 		workingDirectory.assign(cwd);
 		DBG_INFO("Working Directory: " << workingDirectory);
 	}
-#endif
-#ifdef __linux__
-	connection = xcb_connect(NULL, NULL);
-	if (xcb_connection_has_error(connection))
-		DBG_SEVERE("Failed to connect to X server using XCB");
 #endif
 
 	/*
@@ -71,7 +65,7 @@ void Engine::start()
 	/*
 		Initialise worker threads (each one needs vulkan logical device before initialising its command pool)
 	*/
-	int numThreads = 0; // Extra threads to the 3 compulsory ones (MAIN thread, GPU render thread, DISK loading thread)
+	int numThreads = 0; // Extra threads to the 4 compulsory ones (MAIN thread, CPU thread, GPU submission thread, DISK IO thread)
 	waitForProfilerInitMutex.lock();
 	threading = new Threading(numThreads);
 
@@ -82,7 +76,7 @@ void Engine::start()
 		"init", "setuprender", "physics", "submitrender", "scripts", "qwaitidle", // CPU Tags
 		"shadowfence", "gbufferfence",
 
-		"gbuffer", "shadow", "pbr", "overlay", "overlaycombine",  "screen", "commands", "cullingdrawbuffer", // GPU Tags
+		"gbuffer", "shadow", "pbr", "overlay", "screen", "commands", "cullingdrawbuffer", // GPU Tags
 
 		"physmutex", "phystoenginemutex", "phystogpumutex", // Mutex tags
 		"transformmutex", "modeladdmutex"
@@ -264,7 +258,7 @@ void Engine::engineLoop()
 
 #ifdef _WIN32
 		// We get keyboard state here for SHIFT+KEY events to work properly
-		GetKeyboardState(Keyboard::keyState);
+		GetKeyboardState(os::Keyboard::keyState);
 #endif
 
 		eventLoop();
@@ -327,7 +321,7 @@ void Engine::eventLoop()
 		}
 		case(Event::MouseDown):
 		{
-			if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
+			if (ev.eventUnion.mouseEvent.code & os::Mouse::M_LEFT)
 			{
 				PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock()); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
 				glm::fvec3 p = camera.getPosition();
@@ -343,7 +337,7 @@ void Engine::eventLoop()
 		}
 		case(Event::MouseUp):
 		{
-			if (ev.eventUnion.mouseEvent.code & Mouse::M_LEFT)
+			if (ev.eventUnion.mouseEvent.code & os::Mouse::M_LEFT)
 			{
 				PROFILE_MUTEX("physmutex", Engine::threading->physBulletMutex.lock()); /// TODO: this avoids a crash, but we dont want to hang the main thread for adding a constraint !!! maybe this should be a job, or better, batch all physics changes in one job
 				physicsWorld.removePickingConstraint();
@@ -353,7 +347,7 @@ void Engine::eventLoop()
 		}
 		case(Event::MouseMove):
 		{
-			if (ev.eventUnion.mouseEvent.code & Mouse::M_RIGHT)
+			if (ev.eventUnion.mouseEvent.code & os::Mouse::M_RIGHT)
 			{
 				camera.rotate(0, 0.0035 * ev.eventUnion.mouseEvent.move.y, 0.0035 * ev.eventUnion.mouseEvent.move.x);
 				/// TODO: set mouse position to be locked to middle of window
@@ -365,7 +359,7 @@ void Engine::eventLoop()
 			if (console->isActive())
 				console->moveBlinker(key);
 
-			if (key == Key::KC_ESCAPE)
+			if (key == os::Key::KC_ESCAPE)
 			{
 				if (console->isActive())
 					console->toggle();
@@ -374,11 +368,11 @@ void Engine::eventLoop()
 			}
 			if (console->isActive())
 				break;
-			if (key == Key::KC_TILDE)
+			if (key == os::Key::KC_TILDE)
 			{
 				console->toggle();
 			}
-			if (key == Key::KC_L)
+			if (key == os::Key::KC_L)
 			{
 				auto reloadJobFunc = []() -> void {
 					Engine::renderer->reloadShaders();
@@ -393,7 +387,7 @@ void Engine::eventLoop()
 		}
 		window->eventQ.popEvent();
 	}
-	physicsWorld.mouseMoveCallback(Mouse::getWindowPosition(window).x, Mouse::getWindowPosition(window).y);
+	physicsWorld.mouseMoveCallback(os::Mouse::getWindowPosition(window).x, os::Mouse::getWindowPosition(window).y);
 	window->eventQ.pushEventMutex.unlock();
 }
 
@@ -573,13 +567,8 @@ void Engine::createWindow()
 {
 	DBG_INFO("Creating window");
 	// Window creator requires OS specific handles
-	WindowCreateInfo wci;
-#ifdef _WIN32
-	wci.win32InstanceHandle = win32InstanceHandle;
-#endif
-#ifdef __linux__
-	wci.connection = connection;
-#endif
+
+	os::WindowCreateInfo wci;
 	wci.width = 1280;
 	wci.height = 720;
 	wci.posX = 0;
@@ -587,7 +576,7 @@ void Engine::createWindow()
 	wci.title = "Vulkan Engine";
 	wci.borderless = true;
 
-	window = new Window;
+	window = new os::Window;
 	window->create(&wci);
 }
 
@@ -599,21 +588,19 @@ void Engine::createVulkanInstance()
 {
 	DBG_INFO("Creating vulkan instance");
 
-	instance.setApplicationName("App");
-	instance.setEngineName("Engine");
-	instance.addExtension(VK_KHR_SURFACE_EXTENSION_NAME);
-	instance.addExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-	instance.addExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+	vulkanInstance.setApplicationName("App");
+	vulkanInstance.setEngineName("Engine");
+	vulkanInstance.addExtension(VK_KHR_SURFACE_EXTENSION_NAME);
+	vulkanInstance.addExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+	vulkanInstance.addExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 #ifdef ENABLE_VULKAN_VALIDATION
-	instance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Warning);
-	instance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Error);
-	instance.setDebugCallback(&vduVkDebugCallback);
-	instance.addLayer("VK_LAYER_LUNARG_standard_validation");
+	vulkanInstance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Warning);
+	vulkanInstance.addDebugReportLevel(vdu::Instance::DebugReportLevel::Error);
+	vulkanInstance.setDebugCallback(&vduVkDebugCallback);
+	vulkanInstance.addLayer("VK_LAYER_LUNARG_standard_validation");
 #endif
 
-	VK_CHECK_RESULT(instance.create());
-	
-	vkInstance = instance.getInstanceHandle();
+	VK_CHECK_RESULT(vulkanInstance.create());
 }
 
 /*
@@ -621,7 +608,7 @@ void Engine::createVulkanInstance()
 */
 void Engine::queryVulkanPhysicalDeviceDetails()
 {
-	physicalDevice = &instance.enumratePhysicalDevices().front();
+	physicalDevice = &vulkanInstance.enumratePhysicalDevices().front();
 	VK_CHECK_RESULT(physicalDevice->querySurfaceCapabilities(window->vkSurface));
 }
 
@@ -644,23 +631,15 @@ void Engine::quit()
 	console->cleanup();
 	renderer->cleanup();
 	window->destroy();
-	instance.destroy();
+	vulkanInstance.destroy();
 	delete renderer;
 	delete window;
 }
 
-
-#ifdef _WIN32
-HINSTANCE Engine::win32InstanceHandle;
-#endif
-#ifdef __linux__
-xcb_connection_t * Engine::connectionasd;
-#endif
 EngineConfig Engine::config;
 Clock Engine::clock;
-Window* Engine::window;
+os::Window* Engine::window;
 Renderer* Engine::renderer;
-VkInstance Engine::vkInstance;
 PhysicsWorld Engine::physicsWorld;
 bool Engine::engineRunning = true;
 Time Engine::engineStartTime;
@@ -679,7 +658,7 @@ Threading* Engine::threading;
 std::atomic_char Engine::initialised = 0;
 std::mutex Engine::waitForProfilerInitMutex;
 double Engine::timeSinceLastStatsUpdate = 0.f;
-vdu::Instance Engine::instance;
+vdu::Instance Engine::vulkanInstance;
 vdu::PhysicalDevice* Engine::physicalDevice;
 std::vector<vdu::PhysicalDevice> Engine::allPhysicalDevices;
 std::string Engine::workingDirectory;

@@ -2,19 +2,14 @@
 #include "PCH.hpp"
 #include "Event.hpp"
 
+namespace os {
+
 /*
 	@brief	Data required to create a window
-	@note	OS specific handles required (HINSTANCE on Win32, XCB connection on linux)
 */
 struct WindowCreateInfo
 {
 	WindowCreateInfo() : posX(0), posY(0), borderless(true) {}
-#ifdef _WIN32
-	HINSTANCE win32InstanceHandle;
-#endif
-#ifdef __linux__
-	xcb_connection_t * connection;
-#endif
 	int width;
 	int height;
 	const char* title;
@@ -67,3 +62,5 @@ public:
 	xcb_atom_t wmDeleteWin;
 #endif
 };
+
+}

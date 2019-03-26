@@ -14,7 +14,7 @@ public:
 	void update();
 	void cleanup();
 	void inputChar(char c);
-	void moveBlinker(Key k);
+	void moveBlinker(os::Key k);
 	void scroll(s16 wheelDelta);
 
 	void toggle() { active = !active; uiGroup->setDoDraw(active); }

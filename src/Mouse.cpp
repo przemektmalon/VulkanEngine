@@ -2,6 +2,8 @@
 #include "Mouse.hpp"
 #include "Window.hpp"
 
+namespace os {
+
 glm::ivec2 Mouse::getScreenPosition()
 {
 #ifdef _WIN32
@@ -24,3 +26,5 @@ glm::ivec2 Mouse::getWindowPosition(const Window* pWnd)
 glm::ivec2 Mouse::windowPosition;
 MouseCode Mouse::state;
 glm::ivec2 Mouse::wheelDelta;
+
+}

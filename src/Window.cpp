@@ -15,17 +15,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void processEvent(xcb_generic_event_t *event);
 #endif
 
+namespace os {
+
 /*
 	@brief	Create a window surface for drawing to screen
 */
 void Window::create(WindowCreateInfo * c)
 {
 #ifdef _WIN32
+
+	win32InstanceHandle = GetModuleHandle(NULL);
+
 	memset(&win32WindowClass, 0, sizeof(WNDCLASSEX));
 	win32WindowClass.cbSize = sizeof(WNDCLASSEX);
 	win32WindowClass.lpfnWndProc = WndProc;
 	win32WindowClass.lpszClassName = LPCSTR(c->title);
-	win32WindowClass.hInstance = c->win32InstanceHandle;
+	win32WindowClass.hInstance = win32InstanceHandle;
 	win32WindowClass.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
 	win32WindowClass.style = CS_OWNDC;
 	win32WindowClass.cbClsExtra = 0;
@@ -43,7 +48,7 @@ void Window::create(WindowCreateInfo * c)
 		windowStyle = (WS_OVERLAPPED | WS_SYSMENU);
 
 	win32WindowHandle = CreateWindowEx(0, win32WindowClass.lpszClassName, win32WindowClass.lpszClassName, windowStyle,
-										c->posX, c->posY, c->width, c->height, 0, 0, c->win32InstanceHandle, 0);
+										c->posX, c->posY, c->width, c->height, 0, 0, win32InstanceHandle, 0);
 
 	if (!win32WindowHandle)
 		DBG_SEVERE("Could not create win32 window");
@@ -54,15 +59,19 @@ void Window::create(WindowCreateInfo * c)
 	sci.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 	sci.pNext = 0;
 	sci.flags = 0;
-	sci.hinstance = Engine::win32InstanceHandle;
+	sci.hinstance = win32InstanceHandle;
 	sci.hwnd = win32WindowHandle;
 
-	VK_CHECK_RESULT(vkCreateWin32SurfaceKHR(Engine::vkInstance, &sci, NULL, &vkSurface));
+	VK_CHECK_RESULT(vkCreateWin32SurfaceKHR(Engine::vulkanInstance.getInstanceHandle(), &sci, NULL, &vkSurface));
 
 	registerRawMouseDevice();
 #endif
 #ifdef __linux__
-	connection = c->connection;
+
+	connection = xcb_connect(NULL, NULL);
+	if (xcb_connection_has_error(connection))
+		DBG_SEVERE("Failed to connect to X server using XCB");
+
 	xcb_screen_iterator_t iter = xcb_setup_roots_iterator(xcb_get_setup(connection));
 	
 	screen = iter.data;
@@ -121,9 +130,9 @@ void Window::resize(u32 newResX, u32 newResY)
 */
 void Window::destroy()
 {
-	vkDestroySurfaceKHR(Engine::vkInstance, vkSurface, 0);
+	vkDestroySurfaceKHR(Engine::vulkanInstance.getInstanceHandle(), vkSurface, 0);
 #ifdef _WIN32
-	UnregisterClass(windowName.c_str(), Engine::win32InstanceHandle);
+	UnregisterClass(windowName.c_str(), win32InstanceHandle);
 #endif
 #ifdef __linux__
 	xcb_destroy_window(connection, window);
@@ -182,6 +191,16 @@ void Window::registerRawMouseDevice()
 	}
 }
 #endif
+
+#ifdef __linux__
+bool Window::isWmDeleteWin(xcb_atom_t message) {
+	return wmDeleteWin == message;
+}
+#endif
+
+}
+
+using namespace os;
 
 #ifdef __linux__
 void processEvent(xcb_generic_event_t *event){
@@ -460,10 +479,4 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-#endif
-
-#ifdef __linux__
-bool Window::isWmDeleteWin(xcb_atom_t message){
-	return wmDeleteWin == message;
-}
 #endif
