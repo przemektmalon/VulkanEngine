@@ -325,7 +325,7 @@ void main()
 
 		vec4 lightPos = spotLights.data[lightIndex].posRad;
 		float rad = lightPos.w * 0.5;
-		lightPos.xyz = lightPos.xyz + (spotLights.data[lightIndex].dirInner.xyz * rad);
+		//lightPos.xyz = lightPos.xyz + (spotLights.data[lightIndex].dirInner.xyz * rad);
 
 		bool inFrustum = sphereVsAABB(lightPos.xyz, rad, AABBFarCenter, AABBFarHalfSize) || sphereVsAABB(lightPos.xyz, rad, AABBNearCenter, AABBNearHalfSize);
 
@@ -402,7 +402,7 @@ void main()
 
 			float currentDepth = length(fragToLight);
 			    
-		    float bias = max(100.f * (1.0 - dot(normal, lightDir)), 100.f);
+		    float bias = max(1000.f * (1.0 - dot(normal, lightDir)), 1.f);
 
 		    float shadow = 0.f;
 
@@ -441,8 +441,6 @@ void main()
 			shadow /= (samples * samples * samples);
 
 			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
-			//litPixel = vec3(shadow);
-			//litPixel = ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
 
 		for(uint j = 0; j < currentTileSpotLightIndex; ++j)
@@ -494,7 +492,7 @@ void main()
 
 			float currentDepth = projCoords.z;
 		    
-		    float bias = max(0.0001f * (1.0 - dot(normal, lightDir)), 0.0001f);
+			float bias = max(1000.f * (1.0 - dot(normal, lightDir)), 1.f);
 
 	    	const int pres = 2;
 
@@ -621,5 +619,6 @@ void main()
 		imageStore(outColour, pixel, vec4(vec3(depth),1.f));
 	else
 		imageStore(outColour, pixel, vec4(vec3(0,1,0),1.f));*/
+
 	imageStore(outColour, pixel, vec4(litPixel,1.f));
 }

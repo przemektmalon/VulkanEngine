@@ -129,6 +129,7 @@ void ScriptEnv::initChai()
 			{ fun(&Camera::getMatYaw), "getMatYaw", },
 			{ fun(&Camera::setFOV), "setFOV" },
 			{ fun(&Camera::setPosition), "setPosition" },
+			{ fun(&Camera::getPosition), "getPosition" },
 			{ fun(&Camera::lockView), "lockView"},
 			{ fun(&Camera::freeView), "freeView"}, }
 		);

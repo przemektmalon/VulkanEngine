@@ -33,6 +33,19 @@ void Camera::recalculateProj()
 	//clip = glm::transpose(clip);
 	proj = clip * proj;
 	inverseProj = glm::inverse(proj);
+
+	viewRays[0] = glm::fvec4(-1.f, -1.f, -1.f, 1.f);//BL
+	viewRays[1] = glm::fvec4(1.f, -1.f, -1.f, 1.f);//BR
+	viewRays[2] = glm::fvec4(1.f, 1.f, -1.f, 1.f);//TR
+	viewRays[3] = glm::fvec4(-1.f, 1.f, -1.f, 1.f);//TL
+
+	for (int i = 0; i < 4; ++i)
+	{
+		viewRays[i] = inverseProj * viewRays[i];
+		viewRays[i] /= viewRays[i].w;
+		viewRays[i] /= viewRays[i].z;
+		viewRays[i].w = 1;
+	}
 }
 
 void Camera::initaliseOrtho(int sizeX, int sizeY, float pNear, float pFar)
@@ -87,19 +100,6 @@ void Camera::update()
 	inverseView = glm::inverse(view);
 
 	projView = proj * view;
-
-	viewRays[0] = glm::fvec4(-1.f, -1.f, -1.f, 1.f);//BL
-	viewRays[1] = glm::fvec4(1.f, -1.f, -1.f, 1.f);//BR
-	viewRays[2] = glm::fvec4(1.f, 1.f, -1.f, 1.f);//TR
-	viewRays[3] = glm::fvec4(-1.f, 1.f, -1.f, 1.f);//TL
-
-	for (int i = 0; i < 4; ++i)
-	{
-		viewRays[i] = inverseProj * viewRays[i];
-		viewRays[i] /= viewRays[i].w;
-		viewRays[i] /= viewRays[i].z;
-		viewRays[i].w = 1;
-	}
 }
 
 void Camera::setFOV(float pFOV)

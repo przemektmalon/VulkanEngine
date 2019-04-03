@@ -89,6 +89,7 @@ public:
 
 	// Fences
 	vdu::Fence gBufferGroupFence;
+	vdu::Fence pbrGroupFence;
 
 	// Samplers
 	VkSampler textureSampler;
@@ -315,7 +316,6 @@ public:
 
 	// Command buffer
 	vdu::CommandBuffer pbrCommandBuffer;
-	VkFence pbrFence;
 
 	/// --------------------
 	/// Screen pipeline

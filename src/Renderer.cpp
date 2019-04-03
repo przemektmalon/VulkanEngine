@@ -112,7 +112,7 @@ void Renderer::initialise()
 		int s = 15000;
 		int sh = s / 2;
 		//pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 5000, s64(r() % s) - sh));
-		pl.setPosition(glm::fvec3(10000,4000,-10000));
+		pl.setPosition(glm::fvec3(0,1000,0));
 		pl.setDirection(glm::normalize(-pl.getPosition()));
 		pl.setColour(glm::fvec3(2.55, 2.42, 2.26));
 		/*switch (i)
@@ -127,12 +127,12 @@ void Renderer::initialise()
 			pl.setColour(glm::fvec3(0.5, 1.5, 2.5));
 			break;
 		}*/
-		pl.setLinear(0.000000000001);
-		pl.setQuadratic(0.000000000001);
+		pl.setLinear(0.00000001);
+		pl.setQuadratic(0.00000001);
 		pl.setFadeStart(1000000000000);
 		pl.setFadeLength(500);
-		pl.setInnerSpread(170);
-		pl.setOuterSpread(170.01);
+		pl.setInnerSpread(45);
+		pl.setOuterSpread(45.01);
 	}
 
 	for (int i = 0; i < 3; ++i)
@@ -229,6 +229,7 @@ void Renderer::cleanup()
 	ssaoFinishedSemaphore.destroy();
 
 	gBufferGroupFence.destroy();
+	pbrGroupFence.destroy();
 
 	cameraUBO.destroy();
 	transformUBO.destroy();
@@ -333,7 +334,8 @@ void Renderer::render()
 	submissionsGroup2[1].addCommands(&pbrCommandBuffer);
 	submissionsGroup2[1].addSignal(pbrFinishedSemaphore);
 
-	VK_CHECK_RESULT(lGraphicsQueue.submit(submissionsGroup2));
+	pbrGroupFence.reset();
+	VK_CHECK_RESULT(lGraphicsQueue.submit(submissionsGroup2, pbrGroupFence));
 
 	/////////////////////////////////////////
 	/*
@@ -380,7 +382,6 @@ void Renderer::renderJob()
 	auto& threading = Engine::threading;
 	auto& world = Engine::world;
 
-
 	PROFILE_START("commands");
 	_this->gBufferGroupFence.wait();
 	_this->updateMaterialDescriptors();
@@ -393,6 +394,7 @@ void Renderer::renderJob()
 
 	PROFILE_START("qwaitidle");
 	_this->lGraphicsQueue.waitIdle();
+	vkDeviceWaitIdle(_this->logicalDevice.getHandle());
 	PROFILE_END("qwaitidle");
 
 	_this->updateSkyboxDescriptor();
@@ -402,7 +404,6 @@ void Renderer::renderJob()
 	_this->lightManager.updateSunLight();
 	_this->uiRenderer.garbageCollect();
 	_this->executeFenceDelayedActions();
-
 	_this->populateDrawCmdBuffer(); // Mutex with engine model transform update
 	_this->lightManager.updateShadowDrawCommands();
 	_this->updateCameraBuffer();
@@ -959,6 +960,7 @@ void Renderer::createTextureSampler()
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 11.0f;
 
+
 	VK_CHECK_RESULT(vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler));
 
 	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -1054,6 +1056,7 @@ void Renderer::createSynchroObjects()
 	ssaoFinishedSemaphore.create(&logicalDevice);
 
 	gBufferGroupFence.create(&logicalDevice, true);
+	pbrGroupFence.create(&logicalDevice, true);
 }
 
 void Renderer::beginTransferCommands(vdu::CommandBuffer& cmd)
@@ -1101,9 +1104,9 @@ void Renderer::updateCameraBuffer()
 */
 void Renderer::updateTransformBuffer()
 {
-	//PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
+	//gBufferGroupFence.wait();
 
-	//VK_CHECK_RESULT(vkWaitForFences(device, 1, &gBufferCommands.fence, 1, std::numeric_limits<u64>::max()));
+	//PROFILE_MUTEX("transformmutex", Engine::threading->instanceTransformMutex.lock());
 
 	auto tIndex = ModelInstance::toGPUTransformIndex;
 
@@ -1118,11 +1121,9 @@ void Renderer::updateTransformBuffer()
 
 	transformUBO.getMemory()->unmap();
 
-	//VK_CHECK_RESULT(vkResetFences(device, 1, &gBufferCommands.fence));
+	//Engine::threading->instanceTransformMutex.unlock();
 
 	ModelInstance::toGPUTransformIndex = tIndex == 0 ? 1 : 0;
-
-	//Engine::threading->instanceTransformMutex.unlock();
 }
 
 void Renderer::updateSSAOConfigBuffer()

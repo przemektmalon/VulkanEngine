@@ -6,7 +6,7 @@ def startup()
 	var defaultScale = fvec3(200,200,200);
 
 	// PBR Sphere
-	/*{
+	{
 		var model = world.addModel("pbrsphere", "pbrsphere");
 
 		t.setTranslation(fvec3(4,0,0));
@@ -16,7 +16,7 @@ def startup()
 		model.setTransform(t);
 		model.setMaterial(assets.getMaterial("marble"));
 		model.makePhysical();
-	}*/
+	}
 
 	t.setScale(defaultScale);
 
