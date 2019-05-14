@@ -8,6 +8,8 @@
 #include "UIRenderer.hpp"
 #include "Threading.hpp"
 
+#include "Filesystem.hpp"
+
 /*
 	@brief	Initialise enigne and sub-systems and start main loop
 */
@@ -19,10 +21,12 @@ void Engine::start()
 	{
 		char cwd[_MAX_DIR];
 		GetCurrentDir(cwd, _MAX_DIR);
-		workingDirectory.assign(cwd);
+		workingDirectory.assign(cwd).append("/");
 		DBG_INFO("Working Directory: " << workingDirectory);
 	}
 #endif
+
+	assets.gatherAvailableAssets();
 
 	/*
 		Create basic engine commponents
@@ -49,8 +53,8 @@ void Engine::start()
 	maxDepth = 1000000.f;
 
 	/// TODO: cameras should be objects in the world, need an entity component system
-	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(90.f), 1.0, maxDepth);
-	camera.setPosition(glm::fvec3(50, 50, 50));
+	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(90.f), 0.1, maxDepth);
+	camera.setPosition(glm::fvec3(5, 5, 5));
 	camera.update();
 
 
@@ -169,18 +173,32 @@ void Engine::start()
 	*/
 	assets.loadAssets("/res/resources.xml");
 	
+	
 	/*
 		Update descriptor sets for all pipelines
 	*/
+
 	renderer->updateGBufferDescriptorSets();
+	renderer->updateGBufferNoTexDescriptorSets();
 	renderer->updateShadowDescriptorSets();
-	renderer->updatePBRDescriptorSets();
+	renderer->updatePBRDescriptorSets(renderer->usedGBuffer);
 	renderer->updateSSAODescriptorSets();
 
 	initialised = 1;
 
+	// Load various assets
+	assets.loadAsset(Asset::Model, "simplepillar2");
+	assets.loadAsset(Asset::Model, "simplepillar");
+	assets.loadAsset(Asset::Model, "arena");
+	assets.loadAsset(Asset::Model, "simpledoor");
+	assets.loadAsset(Asset::Model, "PBRCube");
+	assets.loadAsset(Asset::Model, "ground");
+
+	threading->m_gpuWorker->waitForAllJobsToFinish();
+
 	// Startup script. Adds models to the world
 	scriptEnv.evalFile("./res/scripts/startup.chai");
+	
 
 	/*
 		Creating UI layer for displaying profiling stats
@@ -219,6 +237,7 @@ void Engine::start()
 		renderer->updateScreenCommands();
 		renderer->updatePBRCommands();
 		renderer->updateGBufferCommands();
+		renderer->updateGBufferNoTexCommands();
 		renderer->updateShadowCommands(); // Mutex with engine model transform update
 		renderer->updateSSAOCommands();
 		renderer->uiRenderer.updateOverlayCommands(); // Mutex with any overlay additions/removals
@@ -637,6 +656,7 @@ void Engine::quit()
 }
 
 EngineConfig Engine::config;
+Filesystem Engine::fs;
 Clock Engine::clock;
 os::Window* Engine::window;
 Renderer* Engine::renderer;

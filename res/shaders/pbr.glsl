@@ -8,7 +8,7 @@ layout(binding=0, rgba32f) uniform writeonly image2D outColour;
 
 layout(binding=1, rgba8) uniform readonly image2D gAlbedoSpec;
 layout(binding=2, rg32f) uniform readonly image2D gNormal;
-layout(binding=3, rgba8) uniform readonly image2D gPBR;
+layout(binding=3, rg8) uniform readonly image2D gPBR;
 layout(binding=4) uniform sampler2D gDepth;
 layout(binding=5) uniform samplerCube skybox;
 layout(binding=6, r8) uniform readonly image2D gSSAO;
@@ -341,7 +341,7 @@ void main()
 
 	vec3 litPixel = vec3(0.0);
 	//float ambient = 0.01;
-	vec3 ambient = vec3(0.255, 0.242, 0.226);
+	vec3 ambient = vec3(0.01);
 	vec4 albedoSpec = vec4(0.0);
 	float ssaoVal = 1.0;
 
@@ -358,10 +358,12 @@ void main()
 
 		albedoSpec = imageLoad(gAlbedoSpec, pixel.xy);
 
-		albedoSpec.xyz = albedoSpec.xyz * ssaoVal;
+		//albedoSpec.xyz = albedoSpec.xyz * ssaoVal;
 		
-		ssaoVal = imageLoad(gSSAO, pixel.xy).r;
-		litPixel += albedoSpec.xyz * ambient * ssaoVal;
+		//ssaoVal = imageLoad(gSSAO, pixel.xy).r;
+		//litPixel += albedoSpec.xyz * ssaoVal;// * ambient * ssaoVal;
+
+		litPixel += albedoSpec.xyz * ambient;
 
 		float metallic = albedoSpec.a;
 		vec3 V = normalize(viewPos - worldPos);
@@ -402,7 +404,7 @@ void main()
 
 			float currentDepth = length(fragToLight);
 			    
-		    float bias = max(1000.f * (1.0 - dot(normal, lightDir)), 1.f);
+		    float bias = max(1.f * (1.0 - dot(normal, lightDir)), 0.1f);
 
 		    float shadow = 0.f;
 
@@ -443,7 +445,7 @@ void main()
 			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
 		}
 
-		for(uint j = 0; j < currentTileSpotLightIndex; ++j)
+		/*for(uint j = 0; j < currentTileSpotLightIndex; ++j)
 		{
 			uint i = tileSpotLightIndices[j];
 			vec4 posRad = spotLights.data[i].posRad;
@@ -526,7 +528,7 @@ void main()
 	        	shadow = 0.0;
 
 			litPixel += (1.f - shadow) * ((kD * albedoSpec.rgb / PI + specular) * radiance * NdotL);
-		}
+		}*/
 
 		/*vec4 colour = sunLight.data.colour;
 		vec4 direction = sunLight.data.direction;
@@ -620,5 +622,12 @@ void main()
 	else
 		imageStore(outColour, pixel, vec4(vec3(0,1,0),1.f));*/
 
+
+	//imageStore(outColour, pixel, vec4(vec3(albedoSpec),1.f));
+	//imageStore(outColour, pixel, vec4(vec3(worldPos),1.f));
+
+	//imageStore(outColour, pixel, vec4(vec3(depth),1.f));
 	imageStore(outColour, pixel, vec4(litPixel,1.f));
+
+	//imageStore(outColour, pixel, vec4(decodeNormal(imageLoad(gNormal, pixel).xy),1.0));
 }

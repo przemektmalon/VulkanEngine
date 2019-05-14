@@ -47,11 +47,7 @@ bool File::open(Mode pFileMode)
 		return false;
 	}
 
-	char buff[FILENAME_MAX];
-  	GetCurrentDir( buff, FILENAME_MAX );
-  	std::string current_working_dir(buff);
-	meta.path = current_working_dir + meta.path;
-	//DBG_INFO("Path: " + meta.path);
+	meta.path = Engine::workingDirectory + meta.path;
 	meta.fileMode = pFileMode;
 
 	file.open(meta.path.c_str(), (std::ios_base::openmode)meta.fileMode);

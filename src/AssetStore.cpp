@@ -4,6 +4,7 @@
 #include "Renderer.hpp"
 #include "XMLParser.hpp"
 #include "Threading.hpp"
+#include "Filesystem.hpp"
 
 void AssetStore::cleanup()
 {
@@ -26,7 +27,8 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 	auto fontFolder = resFolder + xml.getString(xml.firstNode(root, "fontfolder"));
 
 	// Textures ---------------------------------------------------------------------
-	
+
+
 	auto texNode = xml.firstNode(root, "texture");
 	while (texNode)
 	{
@@ -255,20 +257,66 @@ void AssetStore::loadDefaultAssets()
 	}
 }
 
+void AssetStore::gatherAvailableAssets()
+{
+	std::vector<std::string> assetDirectories = { "res/models_test/", "res/fonts/", "res/textures/", "res/shaders/" };
+
+	typedef std::unordered_map<std::string, AssetInfo> AssetMap;
+
+	auto storeAssetsInfos = [this](AssetMap* destMap, const std::string & directorySource) {
+		std::vector<std::string> paths;
+		Engine::fs.getFilesInDirectory(directorySource, paths);
+
+		for (auto& path : paths) {
+			AssetInfo assetInfo;
+			getAssetInfo(path, assetInfo);
+			(*destMap)[assetInfo.name] = assetInfo;
+		}
+	};
+
+	storeAssetsInfos(&modelsOnDisk, "res/models_test/");
+	storeAssetsInfos(&texturesOnDisk, "res/textures/");
+	storeAssetsInfos(&fontsOnDisk, "res/fonts/");
+	storeAssetsInfos(&shadersOnDisk, "res/shaders/");
+}
+
 void AssetStore::addMaterial(std::string name, std::string albedoSpec, std::string normalRough)
 {
 	Engine::threading->addMaterialMutex.lock();
 
 	auto find = materialIndices.find(name);
-	if (find != materialIndices.end())
+	if (find != materialIndices.end()) {
+		Engine::threading->addMaterialMutex.unlock();
 		return;
+	}
 
 	u32 matIndex = materials.size();
 	materialIndices[name] = matIndex;
 
 	materials.try_emplace(matIndex, name);
-	materials[matIndex].albedoSpec = getTexture(albedoSpec);
-	materials[matIndex].normalRough = getTexture(normalRough);
+	materials[matIndex].data.textures.albedoSpec = getTexture(albedoSpec);
+	materials[matIndex].data.textures.normalRough = getTexture(normalRough);
+	materials[matIndex].gpuIndexBase = (materials.size() - 1) * 2;
+
+	Engine::threading->addMaterialMutex.unlock();
+}
+
+void AssetStore::addMaterial(std::string name, Texture* albedoMetal, Texture* normalRough)
+{
+	Engine::threading->addMaterialMutex.lock();
+
+	auto find = materialIndices.find(name);
+	if (find != materialIndices.end()) {
+		Engine::threading->addMaterialMutex.unlock();
+		return;
+	}
+
+	u32 matIndex = materials.size();
+	materialIndices[name] = matIndex;
+
+	materials.try_emplace(matIndex, name);
+	materials[matIndex].data.textures.albedoSpec = albedoMetal;
+	materials[matIndex].data.textures.normalRough = normalRough;
 	materials[matIndex].gpuIndexBase = (materials.size() - 1) * 2;
 
 	Engine::threading->addMaterialMutex.unlock();
@@ -276,9 +324,13 @@ void AssetStore::addMaterial(std::string name, std::string albedoSpec, std::stri
 
 void AssetStore::addMaterial(std::string name, glm::fvec3 albedo, float roughness, float metal)
 {
+	Engine::threading->addMaterialMutex.lock();
+
 	auto find = materialIndices.find(name);
-	if (find != materialIndices.end())
+	if (find != materialIndices.end()) {
+		Engine::threading->addMaterialMutex.unlock();
 		return;
+	}
 
 	u32 matIndex = materials.size();
 	materialIndices[name] = matIndex;
@@ -306,7 +358,7 @@ void AssetStore::addMaterial(std::string name, glm::fvec3 albedo, float roughnes
 
 		tex.loadToGPU(&ci);
 
-		materials[matIndex].albedoSpec = &tex;
+		materials[matIndex].data.textures.albedoSpec = &tex;
 	}
 	{
 		auto genTexNameNormalRough = genTexName + "_NR";
@@ -329,10 +381,45 @@ void AssetStore::addMaterial(std::string name, glm::fvec3 albedo, float roughnes
 
 		tex.loadToGPU(&ci);
 
-		materials[matIndex].normalRough = &tex;
+		materials[matIndex].data.textures.normalRough = &tex;
 	}
 
 	materials[matIndex].gpuIndexBase = (materials.size() - 1) * 2;
 
+	Engine::threading->addMaterialMutex.unlock();
+}
 
+void AssetStore::getAssetInfo(const std::string& assetPath, AssetInfo& asset)
+{
+	std::string fileExtension, fileName;
+	std::uintmax_t fileSizeInBytes;
+
+	auto itr = assetPath.rbegin();
+
+	for (itr; itr != assetPath.rend(); ++itr) {
+		if (*itr == '.') {
+			break;
+		}
+		else {
+			fileExtension += *itr;
+		}
+	}
+
+	std::reverse(fileExtension.begin(), fileExtension.end());
+
+	for (++itr; itr != assetPath.rend(); ++itr) {
+		if (*itr == '/' || *itr == '\\') {
+			break;
+		}
+		else {
+			fileName += *itr;
+		}
+	}
+
+	std::reverse(fileName.begin(), fileName.end());
+
+	asset.name = fileName;
+	asset.extension = fileExtension;
+	asset.sizeInBytes = Engine::fs.getFileSize(assetPath);
+	asset.fullPath = Engine::workingDirectory + assetPath;
 }

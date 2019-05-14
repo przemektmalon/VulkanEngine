@@ -5,8 +5,11 @@
 
 struct TextureCreateInfo : vdu::TextureCreateInfo
 {
-	TextureCreateInfo() : pData(0), genMipMaps(0), name(std::string("Unnamed texture")) {}
+	TextureCreateInfo() : pData(nullptr), image(nullptr), genMipMaps(0), name(std::string("Unnamed texture")) {}
 
+	TextureCreateInfo(Image* sourceImage) : pData(nullptr), image(sourceImage), genMipMaps(0), name(std::string("Unnamed texture")) {}
+
+	Image* image;
 	void* pData;
 	bool genMipMaps;
 	std::vector<std::string> paths;

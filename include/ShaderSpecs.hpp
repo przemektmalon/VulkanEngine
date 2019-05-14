@@ -73,6 +73,16 @@ public:
 	}
 };
 
+class GBufferNoTexShader : public vdu::ShaderProgram
+{
+public:
+	GBufferNoTexShader()
+	{
+		addModule(vdu::ShaderStage::Vertex, Engine::workingDirectory + "/res/shaders/gBufferNoTex.glsl");
+		addModule(vdu::ShaderStage::Fragment, Engine::workingDirectory + "/res/shaders/gBufferNoTex.glsl");
+	}
+};
+
 class PBRShader : public vdu::ShaderProgram
 {
 public:

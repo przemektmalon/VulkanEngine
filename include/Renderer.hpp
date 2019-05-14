@@ -21,13 +21,16 @@ struct CameraUBOData {
 #define INDEX_BUFFER_BASE VERTEX_BUFFER_SIZE
 #define INDEX_BUFFER_SIZE u64(32) * u64(1024) * u64(1024) // 32 MB
 
+#define USED_GBUFFER texturedGBufferAttachments
+//#define USED_GBUFFER flatGBufferAttachments
+
 /*
 	@brief	Collates Vulkan objects and controls rendering pipeline
 */
 class Renderer
 {
 public:
-	Renderer() : vertexInputByteOffset(0), indexInputByteOffset(0), gBufferDescriptorSetNeedsUpdate(true) {}
+	Renderer() : vertexInputByteOffset(0), indexInputByteOffset(0), gBufferDescriptorSetNeedsUpdate(true), gBufferNoTexDescriptorSetNeedsUpdate(true) {}
 
 	// Top level
 	void initialiseDevice();
@@ -106,6 +109,7 @@ public:
 
 	// Shaders
 	GBufferShader gBufferShader;
+	GBufferNoTexShader gBufferNoTexShader;
 	PBRShader pbrShader;
 	ScreenShader screenShader;
 	PointShadowShader pointShadowShader;
@@ -117,6 +121,14 @@ public:
 	SSAOShader ssaoShader;
 	SSAOBlurShader ssaoBlurShader;
 
+	/// There are probably more elegant solutions to this
+	/// A generic full rendering pipeline class would be useful
+	struct GBufferAttachments {
+		vdu::Texture* albedo;
+		vdu::Texture* normal;
+		vdu::Texture* pbr;
+		vdu::Texture* depth;
+	};
 
 	/// --------------------
 	/// GBuffer pipeline
@@ -157,7 +169,9 @@ public:
 	Texture gBufferNormalAttachment;
 	Texture gBufferPBRAttachment;
 	Texture gBufferDepthAttachment;
-	Texture gBufferDepthLinearAttachment;
+	//Texture gBufferDepthLinearAttachment;
+
+	GBufferAttachments texturedGBufferAttachments = { &gBufferColourAttachment, &gBufferNormalAttachment, &gBufferPBRAttachment, &gBufferDepthAttachment };
 
 	// Render pass
 	vdu::RenderPass gBufferRenderPass;
@@ -165,6 +179,58 @@ public:
 	// Command buffer
 	vdu::CommandBuffer gBufferCommandBuffer;
 	bool gBufferCmdsNeedUpdate;
+
+	/// --------------------
+	/// GBuffer no texture pipeline
+	/// --------------------
+
+	// Functions
+	void createGBufferNoTexAttachments();
+	void createGBufferNoTexRenderPass();
+	void createGBufferNoTexDescriptorSetLayouts();
+	void createGBufferNoTexPipeline();
+	void createGBufferNoTexFramebuffers();
+	void createGBufferNoTexDescriptorSets();
+	void createGBufferNoTexCommands();
+
+	void updateGBufferNoTexDescriptorSets();
+	void updateGBufferNoTexCommands();
+
+	void destroyGBufferNoTexAttachments();
+	void destroyGBufferNoTexRenderPass();
+	void destroyGBufferNoTexDescriptorSetLayouts();
+	void destroyGBufferNoTexPipeline();
+	void destroyGBufferNoTexFramebuffers();
+	void destroyGBufferNoTexDescriptorSets();
+	void destroyGBufferNoTexCommands();
+
+	// Pipeline objets
+	vdu::GraphicsPipeline gBufferNoTexPipeline;
+	vdu::PipelineLayout gBufferNoTexPipelineLayout;
+
+	// Descriptors
+	vdu::DescriptorSetLayout gBufferNoTexDescriptorSetLayout;
+	vdu::DescriptorSet gBufferNoTexDescriptorSet;
+	bool gBufferNoTexDescriptorSetNeedsUpdate;
+
+	// Framebuffer and attachments
+	vdu::Framebuffer gBufferNoTexFramebuffer;
+	Texture gBufferNoTexColourAttachment;
+	Texture gBufferNoTexNormalAttachment;
+	Texture gBufferNoTexPBRAttachment;
+	Texture gBufferNoTexDepthAttachment;
+
+	GBufferAttachments flatGBufferAttachments = { &gBufferNoTexColourAttachment, &gBufferNoTexNormalAttachment, &gBufferNoTexPBRAttachment, &gBufferNoTexDepthAttachment };
+
+	// Render pass
+	vdu::RenderPass gBufferNoTexRenderPass;
+
+	// Command buffer
+	vdu::CommandBuffer gBufferNoTexCommandBuffer;
+	bool gBufferNoTexCmdsNeedUpdate;
+
+	/// TODO: temp
+	GBufferAttachments usedGBuffer = USED_GBUFFER;
 
 	/// --------------------
 	/// Shadow pipeline
@@ -294,7 +360,7 @@ public:
 	void createPBRDescriptorSets();
 	void createPBRCommands();
 	
-	void updatePBRDescriptorSets();
+	void updatePBRDescriptorSets(GBufferAttachments& gbAtt);
 	void updatePBRCommands();
 
 	void destroyPBRAttachments();
@@ -378,6 +444,7 @@ public:
 	void createDataBuffers();
 
 	void updateMaterialDescriptors();
+	void updateFlatMaterialBuffer();
 	void updateSkyboxDescriptor();
 
 	void addFenceDelayedAction(vdu::Fence* fe, std::function<void(void)> action);
@@ -395,6 +462,8 @@ public:
 	CameraUBOData cameraUBOData;
 	vdu::Buffer cameraUBO;
 	vdu::Buffer transformUBO;
+	vdu::Buffer flatPBRUBO;
+
 	LightManager lightManager;
 	
 	void setImageLayout(VkCommandBuffer cmdbuffer, Texture& tex, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);

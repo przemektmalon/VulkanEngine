@@ -50,6 +50,7 @@ ModelInstance* World::addModelInstance(std::string modelName, std::string instan
 	modelNames.insert(std::make_pair(instanceName, insertPosition));
 
 	Engine::renderer->gBufferCmdsNeedUpdate = true;
+	Engine::renderer->gBufferNoTexCmdsNeedUpdate = true;
 
 	Engine::threading->addingModelInstanceMutex.unlock();
 
@@ -58,9 +59,10 @@ ModelInstance* World::addModelInstance(std::string modelName, std::string instan
 		if (!m->checkAvailability(Asset::ON_GPU) && !m->checkAvailability(Asset::LOADING_TO_GPU))
 		{
 			/// TODO: prevent loading the same model more than once
-			auto loadJobFunc = std::bind([](Model* m) -> void {
+			auto loadJobFunc = std::bind([](Model* m, ModelInstance* instance) -> void {
 				m->loadToRAM();
-			}, m);
+				instance->setMaterial(m->material);
+			}, m, insertPosition);
 
 			auto modelToGPUFunc = std::bind([](Model* m) -> void {
 				m->loadToGPU();

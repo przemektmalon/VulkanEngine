@@ -77,6 +77,8 @@ def addBoxes(numBoxes)
 	var defaultScale = fvec3(200,200,200);
 	t.setScale(defaultScale);
 
+	assets.addMaterial("my_mat", fvec3(1.0,0.0,0.0), 0.7,0.1);
+
 	for (var i = 0; i < numBoxes; ++i)
 	{
 		var instanceName = "box" + to_string(i);
@@ -87,7 +89,8 @@ def addBoxes(numBoxes)
 		t.updateMatrix();
 
 		model.setTransform(t);
-		model.setMaterial(assets.getMaterial(materials[i%5]));
+		//model.setMaterial(assets.getMaterial(materials[i%5]));
+		model.setMaterial(assets.getMaterial("my_mat"));
 		model.makePhysical();
 	}	
 }
@@ -114,4 +117,38 @@ def addSpheres(num)
 	}	
 }
 
-startup();
+//startup();
+
+world.addModel("PBRCube", "PBRCube")
+
+var t = Transform();
+t.setTranslation(fvec3(0,-1,0));
+t.updateMatrix();
+
+world.addModel("ground", "ground").setTransform(t);
+
+t.setTranslation(fvec3(3,0,0));
+t.updateMatrix();
+
+//world.addModel("simplepillar2", "simplepillar2").setTransform(t);
+
+
+
+/*world.addModel("simplepillar", "simplepillar").setTransform(t);
+
+t.setTranslation(fvec3(-1000,0,0));
+t.updateMatrix();
+
+world.addModel("arena", "arena").setTransform(t);
+
+t.setTranslation(fvec3(0,1000,0));
+t.updateMatrix();
+
+world.addModel("simpledoor", "simpledoor").setTransform(t);
+
+/*var model = world.addModel("ground", "ground");
+t.setTranslation(fvec3(0, 0, 0));
+t.updateMatrix();
+model.setTransform(t);
+model.setMaterial(assets.getMaterial("dirt"));
+model.makePhysical();*/

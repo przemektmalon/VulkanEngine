@@ -8,6 +8,7 @@ set(FILES
         "File.cpp"
         "Font.cpp"
         "GBufferPipeline.cpp"
+        "GBufferPipelineNoTexture.cpp"
         "Image.cpp"
         "Keyboard.cpp"
         "Lights.cpp"

@@ -38,7 +38,8 @@ void main() {
 
     vec4 worldPos = transform * vec4(inPosition, 1.0);
 
-    viewVec = camera.position - worldPos.xyz;
+    //viewVec = camera.position - worldPos.xyz;
+    viewVec = worldPos.xyz - camera.position;
     gl_Position = camera.proj * camera.view * worldPos;
     fragPos = gl_Position.xyz;
     fragNormal = transpose(inverse(mat3(transform))) * inNormal;
@@ -46,6 +47,8 @@ void main() {
 }
 
 #endif
+
+
 #ifdef FRAGMENT ////////////////////////////////////////////////////
 
 layout(binding = 2) uniform sampler2D texSampler[1000];
@@ -58,14 +61,13 @@ layout(location = 4) in vec3 fragPos;
 
 layout(location = 0) out vec4 colour;
 layout(location = 1) out vec2 normal;
-layout(location = 2) out vec4 pbr;
-//layout(location = 3) out float depthLinear;
+layout(location = 2) out vec2 pbr;
 
 
 vec2 encodeNormal(vec3 n)
 {
     if (n.z < -0.999)
-        n = normalize(vec3(0.001,0.001,-1)); // Temp fix for encoding bug when n.z < ~ -0.999, though this has no visible performace impact, maybe find a better fix
+        n = normalize(vec3(0.0001,0.0001,-1)); // Temp fix for encoding bug when n.z < ~ -0.999, though this has no visible performace impact, maybe find a better fix
 
     float p = sqrt(n.z*8.f+8.f);
     return vec2(n.xy/p + 0.5f);
@@ -104,6 +106,10 @@ void main()
 
     colour = albedoSpec;
     normal = encodeNormal(normalize(perturbNormal(normalize(fragNormal), normalize(viewVec), fragTexCoord, normalRough.xyz)));
+    //normal = encodeNormal(normalize(fragNormal));
+    //normal = encodeNormal(normalize(normalRough.xyz));
+
+    //colour = vec4(fragNormal,1.f);
 
     pbr.x = normalRough.w; // Roughness
 
@@ -112,7 +118,6 @@ void main()
 	const float offset = 1.0;
 	//gl_FragDepth = (log(C * fragPos.z + offset) / log(C * far + offset));
 	gl_FragDepth = (log2(fragPos.z + offset) / log2(far + offset));
-	//depthLinear = fragPos.z;
 }
 
 #endif

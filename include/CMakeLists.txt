@@ -8,6 +8,7 @@ set(FILES
         "EngineConfig.hpp"
         "Event.hpp"
         "File.hpp"
+	"FileSystem.hpp"
         "Font.hpp"
         "Image.hpp"
         "Keyboard.hpp"

@@ -56,7 +56,7 @@ void Renderer::createPBRDescriptorSets()
 	pbrDescriptorSet.allocate(&logicalDevice, &pbrDescriptorSetLayout, &descriptorPool);
 }
 
-void Renderer::updatePBRDescriptorSets()
+void Renderer::updatePBRDescriptorSets(GBufferAttachments& gbAtt)
 {
 	auto defaultUpdater = pbrDescriptorSet.makeUpdater();
 
@@ -95,7 +95,7 @@ void Renderer::updatePBRDescriptorSets()
 	auto outputUpdater = updater->addImageUpdate("output");
 	*outputUpdater = { textureSampler, pbrOutput.getView(), VK_IMAGE_LAYOUT_GENERAL };
 
-	auto albedoUpdater = updater->addImageUpdate("albedo");
+	/*auto albedoUpdater = updater->addImageUpdate("albedo");
 	*albedoUpdater = { textureSampler, gBufferColourAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
 	
 	auto normalUpdater = updater->addImageUpdate("normal");
@@ -105,7 +105,19 @@ void Renderer::updatePBRDescriptorSets()
 	*pbrUpdater = { textureSampler, gBufferPBRAttachment.getView(), VK_IMAGE_LAYOUT_GENERAL };
 
 	auto depthUpdater = updater->addImageUpdate("depth");
-	*depthUpdater = { textureSampler, gBufferDepthAttachment.getView(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
+	*depthUpdater = { textureSampler, gBufferDepthAttachment.getView(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };*/
+
+	auto albedoUpdater = updater->addImageUpdate("albedo");
+	*albedoUpdater = { textureSampler, gbAtt.albedo->getView(), VK_IMAGE_LAYOUT_GENERAL };
+
+	auto normalUpdater = updater->addImageUpdate("normal");
+	*normalUpdater = { textureSampler, gbAtt.normal->getView(), VK_IMAGE_LAYOUT_GENERAL };
+
+	auto pbrUpdater = updater->addImageUpdate("pbr");
+	*pbrUpdater = { textureSampler, gbAtt.pbr->getView(), VK_IMAGE_LAYOUT_GENERAL };
+
+	auto depthUpdater = updater->addImageUpdate("depth");
+	*depthUpdater = { textureSampler, gbAtt.depth->getView(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
 
 	auto skyboxUpdater = updater->addImageUpdate("skybox");
 	*skyboxUpdater = { skySampler, Engine::assets.getTexture("blankCube")->getView(), VK_IMAGE_LAYOUT_GENERAL };

@@ -16,7 +16,3 @@ public:
 
 	Boxed_Value evalString(std::string script);
 };
-
-
-
-

@@ -9,6 +9,7 @@
 #include "Console.hpp"
 #include "Scripting.hpp"
 #include "EngineConfig.hpp"
+#include "Filesystem.hpp"
 
 class Threading;
 class UIElementGroup;
@@ -41,6 +42,7 @@ public:
 	static void vduVkErrorCallback(VkResult result, const std::string& message);
 	static void vduDebugCallback(vdu::LogicalDevice::VduDebugLevel level, const std::string& message);
 
+	static Filesystem fs;
 	static EngineConfig config;
 	static AssetStore assets;
 	static World world;

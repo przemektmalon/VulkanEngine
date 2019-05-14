@@ -91,6 +91,14 @@ void Renderer::initialise()
 		createGBufferFramebuffers();
 		createGBufferDescriptorSets();
 		createGBufferCommands();
+
+		createGBufferNoTexAttachments();
+		createGBufferNoTexRenderPass();
+		createGBufferNoTexDescriptorSetLayouts();
+		createGBufferNoTexPipeline();
+		createGBufferNoTexFramebuffers();
+		createGBufferNoTexDescriptorSets();
+		createGBufferNoTexCommands();
 	}
 
 	// Overlays
@@ -105,7 +113,7 @@ void Renderer::initialise()
 
 	createDataBuffers();
 
-	for (int i = 0; i < 1; ++i)
+	/*for (int i = 0; i < 1; ++i)
 	{
 		auto& pl = lightManager.addSpotLight();
 		auto& r = Engine::rand;
@@ -115,36 +123,25 @@ void Renderer::initialise()
 		pl.setPosition(glm::fvec3(0,1000,0));
 		pl.setDirection(glm::normalize(-pl.getPosition()));
 		pl.setColour(glm::fvec3(2.55, 2.42, 2.26));
-		/*switch (i)
-		{
-		case 0:
-			pl.setColour(glm::fvec3(2.5, 1.5, 0.5));
-			break;
-		case 1:
-			pl.setColour(glm::fvec3(1.5, 2.5, 0.5));
-			break;
-		case 2:
-			pl.setColour(glm::fvec3(0.5, 1.5, 2.5));
-			break;
-		}*/
 		pl.setLinear(0.00000001);
 		pl.setQuadratic(0.00000001);
 		pl.setFadeStart(1000000000000);
 		pl.setFadeLength(500);
 		pl.setInnerSpread(45);
 		pl.setOuterSpread(45.01);
-	}
+	}*/
 
-	for (int i = 0; i < 3; ++i)
+	for (int i = 0; i < 1; ++i)
 	{
 		auto& pl = lightManager.addPointLight();
 		auto& r = Engine::rand;
-		int s = 15000;
+		int s = 250;
 		int sh = s / 2;
-		pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 5000, s64(r() % s) - sh));
-		pl.setColour(glm::fvec3(1,1,1));
-		pl.setLinear(0.00000001);
-		pl.setQuadratic(0.00000001);
+		//pl.setPosition(glm::fvec3(s64(r() % s) - sh, s64(r() % 150) + 5000, s64(r() % s) - sh));
+		pl.setPosition(glm::fvec3(2, 3, 2));
+		pl.setColour(glm::fvec3(2,2,2));
+		pl.setLinear(0.0000001);
+		pl.setQuadratic(0.0000001);
 		pl.setFadeStart(100000000);
 		pl.setFadeLength(500);
 	}
@@ -299,6 +296,7 @@ void Renderer::render()
 	/////////////////////////////////////////
 
 	submissionsGroup1[0].addCommands(&gBufferCommandBuffer);
+	//submissionsGroup1[0].addCommands(&gBufferNoTexCommandBuffer);
 	submissionsGroup1[0].addSignal(gBufferFinishedSemaphore);
 
 	submissionsGroup1[1].addCommands(&shadowCommandBuffer);
@@ -385,7 +383,12 @@ void Renderer::renderJob()
 	PROFILE_START("commands");
 	_this->gBufferGroupFence.wait();
 	_this->updateMaterialDescriptors();
+
+	/// TODO: choose between differnt gBuffer shaders
 	_this->updateGBufferCommands();
+	_this->updateGBufferNoTexCommands();
+	/// /////////////////////////////////////////////
+
 	_this->updateShadowCommands(); // Mutex with engine model transform update
 	PROFILE_END("commands");
 
@@ -555,7 +558,7 @@ void Renderer::updateConfigs()
 				createPBRPipeline();
 				createPBRCommands();
 
-				updatePBRDescriptorSets();
+				updatePBRDescriptorSets(USED_GBUFFER);
 				
 				// We dont need to update all descriptors, just resolution dependant ones
 				auto updater = pbrDescriptorSet.makeUpdater();
@@ -615,6 +618,7 @@ void Renderer::updateConfigs()
 void Renderer::createShaders()
 {
 	gBufferShader.create(&logicalDevice);
+	gBufferNoTexShader.create(&logicalDevice);
 	screenShader.create(&logicalDevice);
 	pbrShader.create(&logicalDevice);
 	overlayShader.create(&logicalDevice);
@@ -629,6 +633,7 @@ void Renderer::createShaders()
 void Renderer::compileShaders()
 {
 	gBufferShader.compile();
+	gBufferNoTexShader.compile();
 	screenShader.compile();
 	pbrShader.compile();
 	overlayShader.compile();
@@ -777,6 +782,12 @@ void Renderer::createDataBuffers()
 	vertexIndexBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 	vertexIndexBuffer.create(&logicalDevice, bufferSize);
 
+	flatPBRUBO.setMemoryProperty(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	flatPBRUBO.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	flatPBRUBO.create(&logicalDevice, sizeof(glm::fvec4) * 2 * 100);
+
+	updateFlatMaterialBuffer();
+
 	std::vector<Vertex2D> quad;
 	quad.push_back({ { -1,-1 },{ 0,0 } });
 	quad.push_back({ { 1,1 },{ 1,1 } });
@@ -822,51 +833,114 @@ void Renderer::createDataBuffers()
 void Renderer::updateMaterialDescriptors()
 {
 	gBufferCmdsNeedUpdate = true;
+	gBufferNoTexCmdsNeedUpdate = true;
 	Engine::threading->addMaterialMutex.lock();
 
 	auto& assets = Engine::assets;
 
-	u32 i = 0;
+	u32 textureArrayIndex = 0, flatPBRArrayIndex = 0;
 	for (auto& material : assets.materials)
 	{
-		if (!material.second.checkAvailability(Asset::AWAITING_DESCRIPTOR_UPDATE))
-		{
-			i += 2;
-			continue;
-		}
+		
+		if (material.second.data.textures.albedoSpec != nullptr) {
 
-		material.second.getAvailability() &= ~Asset::AWAITING_DESCRIPTOR_UPDATE;
+			// This material consists of two PBR textures
 
-		auto updater = gBufferDescriptorSet.makeUpdater();
-		auto texturesUpdate = updater->addImageUpdate("textures", i, 2);
+			if (!material.second.checkAvailability(Asset::AWAITING_DESCRIPTOR_UPDATE))
+			{
+				textureArrayIndex += 2;
+				continue;
+			}
 
-		texturesUpdate[0].sampler = textureSampler;
-		texturesUpdate[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		texturesUpdate[1].sampler = textureSampler;
-		texturesUpdate[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			material.second.getAvailability() &= ~Asset::AWAITING_DESCRIPTOR_UPDATE;
 
-		if (material.second.albedoSpec->getHandle())
-			texturesUpdate[0].imageView = material.second.albedoSpec->getView();
-		else
-			texturesUpdate[0].imageView = assets.getTexture("blank")->getView();
+			auto updater = gBufferDescriptorSet.makeUpdater();
+			auto texturesUpdate = updater->addImageUpdate("textures", textureArrayIndex, 2);
 
-		if (material.second.normalRough)
-		{
-			if (material.second.normalRough->getView())
-				texturesUpdate[1].imageView = material.second.normalRough->getView();
+			texturesUpdate[0].sampler = textureSampler;
+			texturesUpdate[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			texturesUpdate[1].sampler = textureSampler;
+			texturesUpdate[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			if (material.second.data.textures.albedoSpec->getHandle())
+				texturesUpdate[0].imageView = material.second.data.textures.albedoSpec->getView();
+			else
+				texturesUpdate[0].imageView = assets.getTexture("blank")->getView();
+
+			if (material.second.data.textures.normalRough)
+			{
+				if (material.second.data.textures.normalRough->getView())
+					texturesUpdate[1].imageView = material.second.data.textures.normalRough->getView();
+				else
+					texturesUpdate[1].imageView = assets.getTexture("black")->getView();
+			}
 			else
 				texturesUpdate[1].imageView = assets.getTexture("black")->getView();
+
+			textureArrayIndex += 2;
+
+			gBufferDescriptorSet.submitUpdater(updater);
+			gBufferDescriptorSet.destroyUpdater(updater);
 		}
-		else
-			texturesUpdate[1].imageView = assets.getTexture("black")->getView();
+		else {
 
-		i += 2;
+			// This material consists of flat PBR data
 
-		gBufferDescriptorSet.submitUpdater(updater);
-		gBufferDescriptorSet.destroyUpdater(updater);
+			/*if (!material.second.checkAvailability(Asset::AWAITING_DESCRIPTOR_UPDATE))
+			{
+				++flatPBRArrayIndex;
+				continue;
+			}
+
+			material.second.getAvailability() &= ~Asset::AWAITING_DESCRIPTOR_UPDATE;
+
+			auto updater = gBufferNoTexDescriptorSet.makeUpdater();
+			auto pbrDataUpdate = updater->addBufferUpdate("pbrdata", flatPBRArrayIndex);
+
+			pbrDataUpdate->buffer = flatPBRUBO.getHandle();
+			pbrDataUpdate->offset = 0;
+			pbrDataUpdate->range = sizeof(glm::fvec4) * 2;*/
+
+		}
+
+		
 	}
 
 	Engine::threading->addMaterialMutex.unlock();
+}
+
+void Renderer::updateFlatMaterialBuffer()
+{
+	struct PBRData {
+		glm::fvec3 c;
+		float m;
+		float r;
+		glm::fvec3 PAD;
+	};
+
+	glm::fvec3 cs[5] = { 
+		{0.9,0.5,0.2},
+		{0.5,0.9,0.4},
+		{0.3,0.2,0.9},
+		{0.6,0.6,0.5},
+		{0.2,0.7,0.1},
+	};
+
+	float ms[5] = { 0.0, 0.3, 0.5, 0.7, 0.9 };
+	float rs[5] = { 0.0, 0.3, 0.5, 0.7, 0.9 };
+
+	PBRData* b = (PBRData*)flatPBRUBO.getMemory()->map();
+
+	for (int i = 0; i < 100; ++i) {
+		b[i].c = cs[i % 5];
+		b[i].m = ms[i % 5];
+		b[i].r = rs[i % 5];
+		b[i].PAD = glm::fvec3(2, 3, 4);
+	}
+
+	b[0].c = { 1, 0, 1 };
+
+	flatPBRUBO.getMemory()->unmap();
 }
 
 void Renderer::updateSkyboxDescriptor()
@@ -956,7 +1030,7 @@ void Renderer::createTextureSampler()
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	samplerInfo.mipLodBias = -1.0f;
+	samplerInfo.mipLodBias = 0.0f;
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 11.0f;
 
@@ -1024,6 +1098,7 @@ void Renderer::createUBOs()
 void Renderer::createDescriptorPool()
 {
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 20);
+	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1100);
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1430);
 	descriptorPool.addPoolCount(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 13);
 	descriptorPool.addSetCount(20);

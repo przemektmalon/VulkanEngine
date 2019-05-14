@@ -12,7 +12,11 @@ void Renderer::createGBufferAttachments()
 	tci.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	tci.usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 
+	/// Attachment (1) - Albedo RGB colour
 	gBufferColourAttachment.loadToGPU(&tci);
+
+	tci.format = VK_FORMAT_R8G8_UNORM;
+
 	gBufferPBRAttachment.loadToGPU(&tci);
 
 	tci.format = VK_FORMAT_R32G32_SFLOAT;
@@ -51,11 +55,6 @@ void Renderer::createGBufferRenderPass()
 	pbrInfo->setFinalLayout(VK_IMAGE_LAYOUT_GENERAL);
 	pbrInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-	/*auto depthLinearInfo = gBufferRenderPass.addColourAttachment(&gBufferDepthLinearAttachment, "depthLinear");
-	depthLinearInfo->setInitialLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	depthLinearInfo->setFinalLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	depthLinearInfo->setUsageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);*/
-
 	auto depthInfo = gBufferRenderPass.setDepthAttachment(&gBufferDepthAttachment);
 	depthInfo->setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
 	//depthInfo->setFinalLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
@@ -72,6 +71,7 @@ void Renderer::createGBufferDescriptorSetLayouts()
 	dsl.addBinding("camera", vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex | vdu::ShaderStage::Fragment);
 	dsl.addBinding("transforms", vdu::DescriptorType::UniformBuffer, 1, 1, vdu::ShaderStage::Vertex);
 	dsl.addBinding("textures", vdu::DescriptorType::CombinedImageSampler, 2, 1000, vdu::ShaderStage::Fragment);
+	dsl.addBinding("pbrdata", vdu::DescriptorType::UniformBuffer, 3, 100, vdu::ShaderStage::Fragment);
 
 	dsl.create(&logicalDevice);
 }
@@ -96,7 +96,6 @@ void Renderer::createGBufferFramebuffers()
 	gBufferFramebuffer.addAttachment(&gBufferColourAttachment, "gBuffer");
 	gBufferFramebuffer.addAttachment(&gBufferNormalAttachment, "normal");
 	gBufferFramebuffer.addAttachment(&gBufferPBRAttachment, "pbr");
-	//gBufferFramebuffer.addAttachment(&gBufferDepthLinearAttachment, "depthLinear");
 	gBufferFramebuffer.addAttachment(&gBufferDepthAttachment, "depth");
 
 	gBufferFramebuffer.create(&logicalDevice, &gBufferRenderPass);
@@ -139,6 +138,10 @@ void Renderer::updateGBufferDescriptorSets()
 		texturesUpdate[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 		texturesUpdate[i].imageView = Engine::assets.getTexture("blank")->getView();
 	}
+
+	auto pbrUpdate = updater->addBufferUpdate("pbrdata", 0);
+
+	*pbrUpdate = { flatPBRUBO.getHandle(), 0, sizeof(glm::fvec4) * 2 * 100 };
 
 	gBufferDescriptorSet.submitUpdater(updater);
 	gBufferDescriptorSet.destroyUpdater(updater);
@@ -218,7 +221,6 @@ void Renderer::destroyGBufferAttachments()
 	gBufferColourAttachment.destroy();
 	gBufferNormalAttachment.destroy();
 	gBufferPBRAttachment.destroy();
-	gBufferDepthLinearAttachment.destroy();
 	gBufferDepthAttachment.destroy();
 }
 

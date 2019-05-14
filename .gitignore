@@ -6,6 +6,8 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.cap
+*.exe
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -24,6 +26,9 @@ bld/
 build/
 bin/
 lib/
+res/models/
+res/models_test/
+
 
 # Visual Studio 2015 cache/options directory
 .vs/
@@ -51,6 +56,7 @@ artifacts/
 *.blend
 *.mtl
 *.obj
+*.glb
 *.png
 *_i.c
 *_p.c

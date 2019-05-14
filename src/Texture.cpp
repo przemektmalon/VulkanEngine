@@ -61,7 +61,7 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 
 		ramPointer = img->data.data();
 	}
-	else
+	else if (ci->pData)
 	{
 		// Asset is being create from stream by the app
 		// The create struct should contain a name and other data to calculate size etc
@@ -76,6 +76,13 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 			memcpy(img->data.data(), ci->pData, size);			
 			ramPointer = img->data.data();
 		}
+	}
+	else if (ci->image) {
+		m_width = ci->image->width;
+		m_height = ci->image->height;
+		size = ci->image->data.size() * m_layers;
+
+		img = ci->image;
 	}
 
 	availability |= ON_RAM;
@@ -276,6 +283,7 @@ void Texture::loadToGPU(void * pCreateStruct)
 
 void Texture::cleanupRAM(FreeFunc fr)
 {
+	/// TODO: free image resources
 }
 
 void Texture::cleanupGPU()

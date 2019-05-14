@@ -3,9 +3,9 @@
 
 void Material::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 {
-	if (!albedoSpec->checkAvailability(ON_RAM) && !albedoSpec->checkAvailability(LOADING_TO_RAM))
+	if (!data.textures.albedoSpec->checkAvailability(ON_RAM) && !data.textures.albedoSpec->checkAvailability(LOADING_TO_RAM))
 	{
-		albedoSpec->getAvailability() |= LOADING_TO_RAM;
+		data.textures.albedoSpec->getAvailability() |= LOADING_TO_RAM;
 
 		TextureCreateInfo ci;
 		ci.genMipMaps = true;
@@ -15,12 +15,12 @@ void Material::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
 
-		albedoSpec->loadToRAM(&ci);
+		data.textures.albedoSpec->loadToRAM(&ci);
 	}
 
-	if (!normalRough->checkAvailability(ON_RAM) && !normalRough->checkAvailability(LOADING_TO_RAM))
+	if (!data.textures.normalRough->checkAvailability(ON_RAM) && !data.textures.normalRough->checkAvailability(LOADING_TO_RAM))
 	{
-		normalRough->getAvailability() |= LOADING_TO_RAM;
+		data.textures.normalRough->getAvailability() |= LOADING_TO_RAM;
 
 		TextureCreateInfo ci;
 		ci.genMipMaps = true;
@@ -30,23 +30,23 @@ void Material::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 		ci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		ci.format = VK_FORMAT_R8G8B8A8_UNORM;
 
-		normalRough->loadToRAM(&ci);
+		data.textures.normalRough->loadToRAM(&ci);
 	}
 }
 
 void Material::loadToGPU(void * pCreateStruct)
 {
-	if (!albedoSpec->checkAvailability(ON_GPU) && !albedoSpec->checkAvailability(LOADING_TO_GPU))
+	if (!data.textures.albedoSpec->checkAvailability(ON_GPU) && !data.textures.albedoSpec->checkAvailability(LOADING_TO_GPU))
 	{
-		albedoSpec->getAvailability() |= LOADING_TO_GPU;
-		albedoSpec->loadToGPU();
+		data.textures.albedoSpec->getAvailability() |= LOADING_TO_GPU;
+		data.textures.albedoSpec->loadToGPU();
 		availability |= AWAITING_DESCRIPTOR_UPDATE;
 	}
 
-	if (!normalRough->checkAvailability(ON_GPU) && !normalRough->checkAvailability(LOADING_TO_GPU))
+	if (!data.textures.normalRough->checkAvailability(ON_GPU) && !data.textures.normalRough->checkAvailability(LOADING_TO_GPU))
 	{
-		normalRough->getAvailability() |= LOADING_TO_GPU;
-		normalRough->loadToGPU();
+		data.textures.normalRough->getAvailability() |= LOADING_TO_GPU;
+		data.textures.normalRough->loadToGPU();
 		availability |= AWAITING_DESCRIPTOR_UPDATE;
 	}
 }
