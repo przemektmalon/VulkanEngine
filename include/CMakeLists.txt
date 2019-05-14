@@ -16,7 +16,6 @@ set(FILES
         "Material.hpp"
         "Model.hpp"
         "Mouse.hpp"
-        "PBRImage.hpp"
         "PCH.hpp"
         "PhysicsObject.hpp"
         "PhysicsWorld.hpp"

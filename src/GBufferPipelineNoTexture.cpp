@@ -71,7 +71,7 @@ void Renderer::createGBufferNoTexDescriptorSetLayouts()
 
 	dsl.addBinding("camera", vdu::DescriptorType::UniformBuffer, 0, 1, vdu::ShaderStage::Vertex | vdu::ShaderStage::Fragment);
 	dsl.addBinding("transforms", vdu::DescriptorType::UniformBuffer, 1, 1, vdu::ShaderStage::Vertex);
-	dsl.addBinding("pbrdata", vdu::DescriptorType::UniformBuffer, 2, 100, vdu::ShaderStage::Fragment);
+	dsl.addBinding("pbrdata", vdu::DescriptorType::UniformBuffer, 2, 1, vdu::ShaderStage::Fragment);
 
 	dsl.create(&logicalDevice);
 }
@@ -108,13 +108,13 @@ void Renderer::createGBufferNoTexDescriptorSets()
 
 void Renderer::updateGBufferNoTexDescriptorSets()
 {
-	if (!gBufferNoTexDescriptorSetNeedsUpdate)
-		return;
+	//if (!gBufferNoTexDescriptorSetNeedsUpdate)
+	//	return;
 
 	gBufferNoTexDescriptorSetNeedsUpdate = false;
 	gBufferNoTexCmdsNeedUpdate = true;
 
-	Engine::console->postMessage("Updating gBufferNoTex descriptor set!", glm::fvec3(0.1, 0.1, 0.9));
+	//Engine::console->postMessage("Updating gBufferNoTex descriptor set!", glm::fvec3(0.1, 0.1, 0.9));
 
 	auto updater = gBufferNoTexDescriptorSet.makeUpdater();
 
@@ -131,10 +131,10 @@ void Renderer::updateGBufferNoTexDescriptorSets()
 	transformsUpdate->range = 60000;
 
 
-	updateFlatMaterialBuffer();
+	//updateFlatMaterialBuffer();
 
-	auto pbrUpdate = updater->addBufferUpdate("pbrdata", 0);
-	*pbrUpdate = { flatPBRUBO.getHandle(), 0, sizeof(glm::fvec4) * 2 * 100 };
+	auto pbrUpdate = updater->addBufferUpdate("pbrdata");
+	*pbrUpdate = { flatPBRUBO.getHandle(), 0, VK_WHOLE_SIZE };
 
 	gBufferNoTexDescriptorSet.submitUpdater(updater);
 	gBufferNoTexDescriptorSet.destroyUpdater(updater);

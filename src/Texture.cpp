@@ -27,27 +27,27 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 		for (int i = 0; i < m_layers; ++i)
 		{
 			img[i].load(diskPaths[i], components);
-			if (img[i].data.size() == 0)
+			if (img[i].m_data.size() == 0)
 			{
 				DBG_WARNING("Failed to load image: " << diskPaths[i]);
 				availability &= ~LOADING_TO_RAM;
 				return;
 			}
-			if (i > 0 && img->components != components && img->bpp != components)
+			if (i > 0 && img->m_channels != components && img->m_bitsPerPixel != components)
 				DBG_WARNING("Components of all cube images must be equal");
-			components = img->components;
+			components = img->m_channels;
 		}
 
-		int w = img[0].width, h = img[0].height;
+		int w = img[0].m_width, h = img[0].m_height;
 		for (int i = 1; i < m_layers; ++i)
 		{
-			if (img[i].width != w || img[i].height != h)
+			if (img[i].m_width != w || img[i].m_height != h)
 			{
 				DBG_WARNING("Cube texture layer dimensions must be equal");
 				availability &= ~LOADING_TO_RAM;
 				return;
 			}
-			w = img[i].width; h = img[i].height;
+			w = img[i].m_width; h = img[i].m_height;
 		}
 
 		if (getNumComponents() != components || getNumComponents() == 0)
@@ -55,11 +55,11 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 			DBG_SEVERE("Texture format component mismatch");
 		}
 
-		m_width = img->width;
-		m_height = img->height;
-		size = img->data.size() * m_layers;
+		m_width = img->m_width;
+		m_height = img->m_height;
+		size = img->m_data.size() * m_layers;
 
-		ramPointer = img->data.data();
+		ramPointer = img->m_data.data();
 	}
 	else if (ci->pData)
 	{
@@ -73,14 +73,14 @@ void Texture::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 		{
 			img = new Image;
 			img->setSize(m_width, m_height, components);
-			memcpy(img->data.data(), ci->pData, size);			
-			ramPointer = img->data.data();
+			memcpy(img->m_data.data(), ci->pData, size);			
+			ramPointer = img->m_data.data();
 		}
 	}
 	else if (ci->image) {
-		m_width = ci->image->width;
-		m_height = ci->image->height;
-		size = ci->image->data.size() * m_layers;
+		m_width = ci->image->m_width;
+		m_height = ci->image->m_height;
+		size = ci->image->m_data.size() * m_layers;
 
 		img = ci->image;
 	}
@@ -126,7 +126,7 @@ void Texture::loadToGPU(void * pCreateStruct)
 		{
 			VkDeviceSize layerSize = size / m_layers;
 			stagingBuffers[i].createStaging(&r->logicalDevice, layerSize);
-			memcpy(stagingBuffers[i].getMemory()->map(), img[i].data.data(), (size_t)layerSize);
+			memcpy(stagingBuffers[i].getMemory()->map(), img[i].m_data.data(), (size_t)layerSize);
 			stagingBuffers[i].getMemory()->unmap();
 			stagingBuffers[i].cmdCopyTo(cmd, this, 0, 0, i, 1);
 		}

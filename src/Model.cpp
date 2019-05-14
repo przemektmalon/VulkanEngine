@@ -64,7 +64,7 @@ void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 				if (tex->mHeight == 0) {
 					auto data = tex->pcData;
 					texImage[i].load(data, tex->mWidth);
-					if (texImage[i].components != 3) {
+					if (texImage[i].m_channels != 3) {
 						DBG_SEVERE("For now only 3 channel textures are supported as inputs in model file embeddings");
 					}
 				}
@@ -77,31 +77,31 @@ void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 
 			Image* albedoMetal = new Image, *normalRough = new Image;
 
-			u32 texWidth = texImage[0].width, texHeight = texImage[0].height;
+			u32 texWidth = texImage[0].m_width, texHeight = texImage[0].m_height;
 
 			albedoMetal->setSize(texWidth, texHeight, 4);
 			normalRough->setSize(texWidth, texHeight, 4);
 
-			glm::u8vec3* albedoPixels = (glm::u8vec3*)texImage[0].data.data();
-			glm::u8vec3* pbrPixels = (glm::u8vec3*)texImage[1].data.data();
-			glm::u8vec3* normalPixels = (glm::u8vec3*)texImage[2].data.data();
+			glm::u8vec3* albedoPixels = (glm::u8vec3*)texImage[0].m_data.data();
+			glm::u8vec3* pbrPixels = (glm::u8vec3*)texImage[1].m_data.data();
+			glm::u8vec3* normalPixels = (glm::u8vec3*)texImage[2].m_data.data();
 			
 
 			int sourceIndex = 0, destIndex = 0;
 
 			/// TODO: performance improvement -> parallelise ??
 
-			for (destIndex; destIndex < albedoMetal->data.size(); destIndex += 4)
+			for (destIndex; destIndex < albedoMetal->m_data.size(); destIndex += 4)
 			{
-				albedoMetal->data[destIndex] = albedoPixels[sourceIndex / 3].r;
-				albedoMetal->data[destIndex + 1] = albedoPixels[sourceIndex / 3].g;
-				albedoMetal->data[destIndex + 2] = albedoPixels[sourceIndex / 3].b;
-				albedoMetal->data[destIndex + 3] = pbrPixels[sourceIndex / 3].b;
+				albedoMetal->m_data[destIndex] = albedoPixels[sourceIndex / 3].r;
+				albedoMetal->m_data[destIndex + 1] = albedoPixels[sourceIndex / 3].g;
+				albedoMetal->m_data[destIndex + 2] = albedoPixels[sourceIndex / 3].b;
+				albedoMetal->m_data[destIndex + 3] = pbrPixels[sourceIndex / 3].b;
 
-				normalRough->data[destIndex] = normalPixels[sourceIndex / 3].r;
-				normalRough->data[destIndex + 1] = normalPixels[sourceIndex / 3].g;
-				normalRough->data[destIndex + 2] = normalPixels[sourceIndex / 3].b;
-				normalRough->data[destIndex + 3] = pbrPixels[sourceIndex / 3].g;
+				normalRough->m_data[destIndex] = normalPixels[sourceIndex / 3].r;
+				normalRough->m_data[destIndex + 1] = normalPixels[sourceIndex / 3].g;
+				normalRough->m_data[destIndex + 2] = normalPixels[sourceIndex / 3].b;
+				normalRough->m_data[destIndex + 3] = pbrPixels[sourceIndex / 3].g;
 
 				sourceIndex += 3;
 			}
@@ -115,7 +115,7 @@ void Model::loadToRAM(void * pCreateStruct, AllocFunc alloc)
 
 			tci.format = VK_FORMAT_R8G8B8A8_UNORM;
 			tci.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			tci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			tci.usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			tci.genMipMaps = true;
 
 			albedoMetalTexture.loadToRAM(&tci);

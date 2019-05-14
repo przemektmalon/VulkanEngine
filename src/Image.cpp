@@ -7,62 +7,44 @@
 #include "Engine.hpp"
 #include "Console.hpp"
 
-void Image::setSize(int pWidth, int pHeight, int pComponents)
+void Image::setSize(int width, int height, int channels)
 {
-	width = pWidth; height = pHeight; components = pComponents;
-	data.resize(width * height * components);
+	m_width = width; m_height = height; m_channels = channels;
+	m_data.resize(m_width * m_height * m_channels);
 }
 
-void Image::load(std::string path, int pComponents)
+void Image::load(std::string path, int requestedChannels)
 {
-	/// TODO: use cwd stored in Engine class
-	char buff[FILENAME_MAX];
-  	GetCurrentDir( buff, FILENAME_MAX );
-  	std::string current_working_dir(buff);
-
-	Engine::console->postMessage("Loading image: " + path, glm::fvec3(0.8, 0.8, 0.3));
-
-	if (path[0] == '/')
-		path = current_working_dir + path;
-	else
-		path = current_working_dir + "/" + path;
-
-	
-	unsigned char* loadedData = stbi_load(path.c_str(), &width, &height, &components, pComponents);
-	if (pComponents != 0)
-	{
-		components = pComponents;
-	}
-	bpp = 8 * components;
-	if (!loadedData) {
-		DBG_WARNING("Failed to load image: " << path);
-		return;
-	}
-	data.resize(width * height * components);
-	memcpy(&data[0], loadedData, width * height * components);
-	stbi_image_free(loadedData);
+	path = Engine::workingDirectory + path;
+	u8* loadedData = stbi_load(path.c_str(), &m_width, &m_height, &m_channels, requestedChannels);
+	internalLoadImage(loadedData, requestedChannels);
 }
 
 void Image::load(void* const memory, int length, int requestedChannels)
 {
-	unsigned char* loadedData = stbi_load_from_memory(static_cast<stbi_uc const *>(memory), length, &width, &height, &components, requestedChannels);
-	if (!loadedData) {
-		DBG_WARNING("Failed to load image from memory stream");
-		return;
-	}
-
-	if (requestedChannels != 0) {
-		components = requestedChannels;
-	}
-	bpp = 8 * components;
-
-	data.resize(width * height * components);
-	memcpy(&data[0], loadedData, width * height * components);
-	stbi_image_free(loadedData);
+	u8* loadedData = stbi_load_from_memory(static_cast<stbi_uc const *>(memory), length, &m_width, &m_height, &m_channels, requestedChannels);
+	internalLoadImage(loadedData, requestedChannels);
 }
 
 void Image::save(std::string path)
 {
-	int result = stbi_write_png(path.c_str(), width, height, components, &data[0], 0);
+	int result = stbi_write_png(path.c_str(), m_width, m_height, m_channels, &m_data[0], 0);
+}
+
+void Image::internalLoadImage(u8* loadedData, int requestedChannels)
+{
+	if (!loadedData) {
+		DBG_WARNING("Failed to load image");
+		return;
+	}
+
+	if (requestedChannels != 0) {
+		m_channels = requestedChannels;
+	}
+
+	m_bitsPerPixel = 8 * m_channels;
+	m_data.resize(m_width * m_height * m_channels);
+	memcpy(&m_data[0], loadedData, m_width * m_height * m_channels);
+	stbi_image_free(loadedData);
 }
 

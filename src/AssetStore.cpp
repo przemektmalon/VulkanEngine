@@ -23,7 +23,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 	auto root = xml.doc.first_node("resources");
 	auto resFolder = xml.getString(xml.firstNode(root, "resfolder"));
 	auto texFolder = resFolder + xml.getString(xml.firstNode(root, "texfolder"));
-	auto modelFolder = resFolder + xml.getString(xml.firstNode(root, "modelfolder"));
+	//auto modelFolder = resFolder + xml.getString(xml.firstNode(root, "modelfolder"));
 	auto fontFolder = resFolder + xml.getString(xml.firstNode(root, "fontfolder"));
 
 	// Textures ---------------------------------------------------------------------
@@ -107,7 +107,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 	// Models -----------------------------------------------------------------------
 
-	auto modelNode = xml.firstNode(root, "model");
+	/*auto modelNode = xml.firstNode(root, "model");
 	while (modelNode)
 	{
 		auto name = xml.getString(xml.firstNode(modelNode, "name"));
@@ -156,7 +156,7 @@ void AssetStore::loadAssets(std::string assetListFilePath)
 
 		model.prepare(lodPaths, name);
 		model.material = getMaterial(material);
-	}
+	}*/
 
 	// Models -----------------------------------------------------------------------
 
@@ -245,7 +245,7 @@ void AssetStore::loadDefaultAssets()
 		addMaterial("null", "blank", "blank");
 	}
 
-	{
+	/*{
 		auto& model = models.try_emplace("nullModel").first->second;
 		model.lodPaths = { "/res/models/nullmodel.obj" };
 		model.lodLimits = { 0 };
@@ -254,7 +254,7 @@ void AssetStore::loadDefaultAssets()
 		model.material = getMaterial("null");
 		model.loadToRAM();
 		model.loadToGPU();
-	}
+	}*/
 }
 
 void AssetStore::gatherAvailableAssets()

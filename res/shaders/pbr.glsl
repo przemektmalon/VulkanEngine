@@ -341,7 +341,7 @@ void main()
 
 	vec3 litPixel = vec3(0.0);
 	//float ambient = 0.01;
-	vec3 ambient = vec3(0.01);
+	vec3 ambient = vec3(0.2);
 	vec4 albedoSpec = vec4(0.0);
 	float ssaoVal = 1.0;
 

@@ -2,6 +2,7 @@
 #include "Font.hpp"
 #include "Engine.hpp"
 #include "Renderer.hpp"
+#include "Threading.hpp"
 
 GlyphContainer* Font::requestGlyphs(u16 pCharSize, Text * pUser)
 {
@@ -139,10 +140,10 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 		int size = (sizes[i].x * sizes[i].y);
 		int sizeAligned = size + 4 - (size % 4);
 
-		chars[i].data.resize(sizeAligned);
-		memcpy(chars[i].data.data(), pFace->glyph->bitmap.buffer, size);
+		chars[i].m_data.resize(sizeAligned);
+		memcpy(chars[i].m_data.data(), pFace->glyph->bitmap.buffer, size);
 
-		totalGlyphSetTexSize += chars[i].data.size();
+		totalGlyphSetTexSize += chars[i].m_data.size();
 
 		xOffset += sizes[i].x;
 	}
@@ -160,7 +161,15 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 	ci.usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	glyphs = new Texture;
-	glyphs->loadToGPU(&ci);
+
+	auto loadGlyphsFunc = [&ci, this]() -> void {
+		glyphs->loadToGPU(&ci);
+	};
+
+	Engine::threading->addGPUJob(new Job<>(loadGlyphsFunc));
+
+	/// TODO: provide mechanism for checking whether specific job finished (+ wait until finish)
+	Engine::threading->m_gpuWorker->waitForAllJobsToFinish();
 
 	const auto& r = Engine::renderer;
 
@@ -172,8 +181,8 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 	for (int i = 1; i < NO_PRINTABLE_CHARS; ++i)
 	{
 		char* dst = (char*)data; dst += copyOffset;
-		memcpy(dst, chars[i].data.data(), (size_t)chars[i].data.size());
-		copyOffset += chars[i].data.size();
+		memcpy(dst, chars[i].m_data.data(), (size_t)chars[i].m_data.size());
+		copyOffset += chars[i].m_data.size();
 	}
 
 	stagingBuffer->getMemory()->unmap();
@@ -200,7 +209,7 @@ void GlyphContainer::load(u16 pCharSize, FT_Face pFace)
 
 		vkCmdCopyBufferToImage(cmd->getHandle(), stagingBuffer->getHandle(), glyphs->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-		copyOffset += chars[i].data.size();
+		copyOffset += chars[i].m_data.size();
 	}
 
 	auto fence = new vdu::Fence();

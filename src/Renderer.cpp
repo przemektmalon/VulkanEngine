@@ -175,6 +175,15 @@ void Renderer::cleanup()
 		destroyGBufferFramebuffers();
 	}
 
+	// GBufferNoTex pipeline
+	{
+		destroyGBufferNoTexAttachments();
+		destroyGBufferNoTexRenderPass();
+		destroyGBufferNoTexDescriptorSetLayouts();
+		destroyGBufferNoTexPipeline();
+		destroyGBufferNoTexFramebuffers();
+	}
+
 	// Shadow pipeline
 	{
 		destroyShadowRenderPass();
@@ -229,6 +238,7 @@ void Renderer::cleanup()
 	pbrGroupFence.destroy();
 
 	cameraUBO.destroy();
+	flatPBRUBO.destroy();
 	transformUBO.destroy();
 	vertexIndexBuffer.destroy();
 	drawCmdBuffer.destroy();
@@ -245,6 +255,7 @@ void Renderer::cleanup()
 	spotShadowShader.destroy();
 	sunShadowShader.destroy();
 	gBufferShader.destroy();
+	gBufferNoTexShader.destroy();
 	pbrShader.destroy();
 	screenShader.destroy();
 	logicalDevice.destroy();
@@ -447,6 +458,7 @@ void Renderer::reloadShaders()
 	compileShaders();
 
 	destroyGBufferPipeline();
+	destroyGBufferNoTexPipeline();
 	destroyPBRPipeline();
 	destroyScreenPipeline();
 	destroyShadowPipeline();
@@ -454,6 +466,7 @@ void Renderer::reloadShaders()
 	uiRenderer.destroyOverlayPipeline();
 
 	destroyGBufferCommands();
+	destroyGBufferNoTexCommands();
 	destroyPBRCommands();
 	destroyScreenCommands();
 	destroyShadowCommands();
@@ -461,6 +474,7 @@ void Renderer::reloadShaders()
 	uiRenderer.destroyOverlayCommands();
 
 	createGBufferPipeline();
+	createGBufferNoTexPipeline();
 	createPBRPipeline();
 	createScreenPipeline();
 	createShadowPipeline();
@@ -468,6 +482,7 @@ void Renderer::reloadShaders()
 	uiRenderer.createOverlayPipeline();
 
 	createGBufferCommands();
+	createGBufferNoTexCommands();
 	createPBRCommands();
 	createScreenCommands();
 	createShadowCommands();
@@ -475,6 +490,7 @@ void Renderer::reloadShaders()
 	uiRenderer.createOverlayCommands();
 
 	updateGBufferCommands();
+	updateGBufferNoTexCommands();
 	updatePBRCommands();
 	updateScreenCommands();
 	updateShadowCommands();

@@ -64,7 +64,7 @@ struct PBRData {
 };
 
 layout(binding = 2) uniform PBRDataBuffer {
-    PBRData data[100];
+    PBRData data[1000];
 } pbrIn;
 
 vec2 encodeNormal(vec3 n)

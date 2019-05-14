@@ -4,7 +4,6 @@
 #include "Renderer.hpp"
 #include "Image.hpp"
 #include "Profiler.hpp"
-#include "PBRImage.hpp"
 #include "UIRenderer.hpp"
 #include "Threading.hpp"
 
@@ -36,19 +35,6 @@ void Engine::start()
 	queryVulkanPhysicalDeviceDetails();
 	rand.seed(0);
 
-	/// TODO: A more convenient utility for this \/ \/ \/
-	/// This code joins separate albedo(3 byte)/spec(1 byte) and normal(3 byte)/rough(1 byte) images into single(4 byte) images
-	/* std::array<std::string, 7> tn = { "bamboo", "copper", "dirt", "greasymetal", "mahog", "marble", "rustediron" };
-
-	std::string td = "res/textures/";
-
-	for (int i = 0; i < tn.size(); ++i)
-	{
-		PBRImage c; c.create(Image(td + tn[i] + "_D.png"), Image(td + tn[i] + "_N.png"), Image(td + tn[i] + "_S.png"), Image(td + tn[i] + "_R.png"));
-		c.albedoSpec.save(td + tn[i] + "_DS.png");
-		c.normalRough.save(td + tn[i] + "_NR.png");
-	} */
-
 	/// TODO: temporary, we need a configurations manager
 	maxDepth = 1000000.f;
 
@@ -56,7 +42,6 @@ void Engine::start()
 	camera.initialiseProj(float(window->resX) / float(window->resY), glm::radians(90.f), 0.1, maxDepth);
 	camera.setPosition(glm::fvec3(5, 5, 5));
 	camera.update();
-
 
 	/*
 		Initialise vulkan logical device
@@ -130,7 +115,9 @@ void Engine::start()
 	*/
 	assets.loadDefaultAssets();
 	assets.loadAssets("/res/consolefontresource.xml");
-	world.addModelInstance("nullModel", "nullModel"); // Null model needed in the world to prevent warning about empty vertex/index buffers
+	assets.loadAsset(Asset::Model, "nullmodel");
+	//world.addModelInstance("nullmodel", "nullmodel")->setMaterial(assets.getMaterial("null")); // Null model needed in the world to prevent warning about empty vertex/index buffers
+	world.addModelInstance("nullmodel", "nullmodel"); // Null model needed in the world to prevent warning about empty vertex/index buffers
 
 	threading->m_gpuWorker->waitForAllJobsToFinish();
 
@@ -244,7 +231,7 @@ void Engine::start()
 	}
 
 	/*
-		These jobs push themselves back into the job queue while Engine::engineRunning == true
+		These jobs push themselves back into the job queue upon completion while Engine::engineRunning == true
 	*/
 	threading->addGPUJob(new Job<>(&Renderer::renderJob));
 	threading->addCPUJob(new Job<>(&PhysicsWorld::updateJob));
